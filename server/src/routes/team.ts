@@ -11,14 +11,32 @@ router.post('/create', async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const { teamName } = req.body;
+  const { teamName, teamTag, teamLogo, color1, color2, color3 } = req.body;
 
+  // 팀 이름 검증
   if (!teamName || teamName.trim().length === 0) {
     return res.status(400).json({ error: '팀 이름을 입력해주세요' });
   }
 
-  if (teamName.length > 50) {
-    return res.status(400).json({ error: '팀 이름은 50자 이내여야 합니다' });
+  if (!/^[a-zA-Z0-9\s]+$/.test(teamName)) {
+    return res.status(400).json({ error: '팀 이름은 영어와 숫자만 사용 가능합니다' });
+  }
+
+  if (teamName.length > 20) {
+    return res.status(400).json({ error: '팀 이름은 20자 이내여야 합니다' });
+  }
+
+  // 팀 태그 검증
+  if (!teamTag || teamTag.trim().length === 0) {
+    return res.status(400).json({ error: '팀 태그를 입력해주세요' });
+  }
+
+  if (!/^[a-zA-Z0-9]+$/.test(teamTag)) {
+    return res.status(400).json({ error: '팀 태그는 영어와 숫자만 사용 가능합니다' });
+  }
+
+  if (teamTag.length < 2 || teamTag.length > 4) {
+    return res.status(400).json({ error: '팀 태그는 2~4글자여야 합니다' });
   }
 
   try {
@@ -34,10 +52,11 @@ router.post('/create', async (req: Request, res: Response) => {
       return res.status(400).json({ error: '이미 팀이 존재합니다' });
     }
 
-    // 팀 생성
+    // 팀 생성 (team_logo는 이모지, color1/2/3 저장)
     await query(
-      'INSERT INTO teams (user_id, team_name) VALUES (?, ?)',
-      [userId, teamName.trim()]
+      `INSERT INTO teams (user_id, team_name, team_logo, slogan)
+       VALUES (?, ?, ?, ?)`,
+      [userId, teamName.trim(), teamLogo || '🎮', `${teamTag}|${color1}|${color2}|${color3}`]
     );
 
     // 생성된 팀 조회
