@@ -62,7 +62,7 @@ passport.use(
         }
 
         // Create new user
-        const [insertResult] = await pool.query<ResultSetHeader>(
+        await pool.query<ResultSetHeader>(
           `INSERT INTO users (google_id, email, display_name, profile_picture)
            VALUES (?, ?, ?, ?)`,
           [
@@ -73,16 +73,15 @@ passport.use(
           ]
         );
 
-        const newUserId = insertResult.insertId;
+        // Get the newly created user (UUID는 자동 생성되므로 google_id로 조회)
+        const newUser = await query('SELECT * FROM users WHERE google_id = ?', [profile.id]);
+        const newUserId = newUser[0].id;
 
         // IP 주소 기록
         await query(
           `INSERT INTO user_ip_tracking (user_id, ip_address) VALUES (?, ?)`,
           [newUserId, ipAddress]
         );
-
-        // Get the newly created user
-        const newUser = await query('SELECT * FROM users WHERE id = ?', [newUserId]);
 
         // Create default team for new user
         await query(
