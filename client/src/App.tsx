@@ -11,6 +11,7 @@ import Admin from './pages/Admin';
 import Posting from './pages/Posting';
 import Achievements from './pages/Achievements';
 import Sponsors from './pages/Sponsors';
+import Fandom from './pages/Fandom';
 import './App.css';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
             <Route path="/posting" element={<Posting />} />
             <Route path="/achievements" element={<Achievements />} />
             <Route path="/sponsors" element={<Sponsors />} />
+            <Route path="/fandom" element={<Fandom />} />
             {/* More routes will be added later */}
           </Routes>
         </div>

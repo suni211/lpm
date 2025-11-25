@@ -15,6 +15,7 @@ import adminRoutes from './routes/admin';
 import postingRoutes from './routes/posting';
 import achievementsRoutes from './routes/achievements';
 import sponsorsRoutes from './routes/sponsors';
+import fandomRoutes from './routes/fandom';
 
 // Load environment variables
 dotenv.config();
@@ -119,6 +120,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/posting', postingRoutes);
 app.use('/api/achievements', achievementsRoutes);
 app.use('/api/sponsors', sponsorsRoutes);
+app.use('/api/fandom', fandomRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {
