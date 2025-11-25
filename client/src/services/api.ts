@@ -1,10 +1,9 @@
 import axios from 'axios';
 
-// 프로덕션에서는 Nginx가 /api를 프록시하므로 상대 경로 사용
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_API_URL || 'https://berrple.com';
 
 const api = axios.create({
-  baseURL: API_URL ? `${API_URL}/api` : '/api',
+  baseURL: `${API_URL}/api`,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
