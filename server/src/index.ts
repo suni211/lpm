@@ -24,7 +24,11 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: [
+      process.env.CLIENT_URL || 'http://localhost:5173',
+      'http://berrple.com',
+      'https://berrple.com',
+    ],
     credentials: true,
   },
 });
@@ -33,7 +37,11 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: [
+    process.env.CLIENT_URL || 'http://localhost:5173',
+    'http://berrple.com',
+    'https://berrple.com',
+  ],
   credentials: true,
 }));
 app.use(express.json());
@@ -46,9 +54,10 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // HTTP에서도 작동하도록 false로 설정 (HTTPS 사용 시 true로 변경)
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      sameSite: 'lax',
     },
   })
 );

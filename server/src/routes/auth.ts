@@ -20,19 +20,19 @@ router.get(
       if (err) {
         // IP 중복 에러 처리
         if (err.message && err.message.includes('DUPLICATE_IP_ERROR')) {
-          return res.redirect(`${process.env.CLIENT_URL}/login?error=duplicate_ip`);
+          return res.redirect(`${process.env.CLIENT_URL}/?error=duplicate_ip`);
         }
         // 기타 인증 에러
-        return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
+        return res.redirect(`${process.env.CLIENT_URL}/?error=auth_failed`);
       }
 
       if (!user) {
-        return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
+        return res.redirect(`${process.env.CLIENT_URL}/?error=auth_failed`);
       }
 
       req.logIn(user, (loginErr) => {
         if (loginErr) {
-          return res.redirect(`${process.env.CLIENT_URL}/login?error=login_failed`);
+          return res.redirect(`${process.env.CLIENT_URL}/?error=login_failed`);
         }
         // Successful authentication
         return res.redirect(`${process.env.CLIENT_URL}/dashboard`);
