@@ -35,8 +35,8 @@ sudo apt install -y nodejs
 # PM2 전역 설치
 sudo npm install -g pm2
 
-# PostgreSQL 설치
-sudo apt install -y postgresql postgresql-contrib
+# MariaDB 설치
+sudo apt install -y mariadb-server mariadb-client
 
 # Nginx 설치
 sudo apt install -y nginx
@@ -48,29 +48,38 @@ sudo apt install -y certbot python3-certbot-nginx
 sudo apt install -y git
 ```
 
-### 2. PostgreSQL 설정
+### 2. MariaDB 설정
 ```bash
-# PostgreSQL 서비스 시작
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+# MariaDB 서비스 시작
+sudo systemctl start mariadb
+sudo systemctl enable mariadb
 
-# postgres 사용자로 전환
-sudo -u postgres psql
+# MariaDB 보안 설정
+sudo mysql_secure_installation
+# - Set root password? Y (LPM 입력)
+# - Remove anonymous users? Y
+# - Disallow root login remotely? N (원격 필요시)
+# - Remove test database? Y
+# - Reload privilege tables? Y
 
-# 데이터베이스 및 사용자 생성
-CREATE DATABASE lpm;
-CREATE USER root WITH PASSWORD 'LPM';
-GRANT ALL PRIVILEGES ON DATABASE lpm TO root;
-\q
+# MariaDB 접속
+sudo mysql -u root -p
+# 비밀번호: LPM
+
+# 데이터베이스 생성
+CREATE DATABASE lpm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+# root 사용자 권한 설정
+GRANT ALL PRIVILEGES ON lpm.* TO 'root'@'localhost' IDENTIFIED BY 'LPM';
+GRANT ALL PRIVILEGES ON lpm.* TO 'root'@'%' IDENTIFIED BY 'LPM';
+FLUSH PRIVILEGES;
+EXIT;
 
 # 외부 접속 허용 (필요시)
-sudo nano /etc/postgresql/14/main/postgresql.conf
-# listen_addresses = 'localhost' -> listen_addresses = '*'
+sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
+# bind-address = 127.0.0.1 -> bind-address = 0.0.0.0
 
-sudo nano /etc/postgresql/14/main/pg_hba.conf
-# 맨 아래 추가: host all all 0.0.0.0/0 md5
-
-sudo systemctl restart postgresql
+sudo systemctl restart mariadb
 ```
 
 ## 📦 프로젝트 배포
@@ -96,9 +105,9 @@ nano server/.env
 NODE_ENV=production
 PORT=5000
 
-# Database
+# Database (MariaDB)
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=3306
 DB_NAME=lpm
 DB_USER=root
 DB_PASSWORD=LPM
@@ -118,11 +127,12 @@ CLIENT_URL=https://berrple.com
 ### 3. 데이터베이스 초기화
 ```bash
 # SQL 파일 실행
-psql -h localhost -U root -d lpm -f server/src/database/schema.sql
-psql -h localhost -U root -d lpm -f server/src/database/initial_players.sql
-psql -h localhost -U root -d lpm -f server/src/database/update_power_formula.sql
+mysql -h localhost -u root -pLPM lpm < server/src/database/schema.sql
+mysql -h localhost -u root -pLPM lpm < server/src/database/initial_players.sql
+mysql -h localhost -u root -pLPM lpm < server/src/database/update_power_formula.sql
 
-# 비밀번호 입력: LPM
+# 또는 비밀번호 프롬프트로 입력
+# mysql -h localhost -u root -p lpm < server/src/database/schema.sql
 ```
 
 ### 4. 서버 빌드
@@ -395,16 +405,19 @@ sudo tail -f /var/log/nginx/access.log
 sudo tail -f /var/log/nginx/error.log
 ```
 
-### 3. PostgreSQL 명령어
+### 3. MariaDB 명령어
 ```bash
 # 데이터베이스 접속
-psql -h localhost -U root -d lpm
+mysql -h localhost -u root -p lpm
 
 # 데이터베이스 백업
-pg_dump -h localhost -U root lpm > backup.sql
+mysqldump -h localhost -u root -p lpm > backup.sql
 
 # 데이터베이스 복원
-psql -h localhost -U root lpm < backup.sql
+mysql -h localhost -u root -p lpm < backup.sql
+
+# 데이터베이스 상태 확인
+sudo systemctl status mariadb
 ```
 
 ## 🔥 방화벽 설정
@@ -422,8 +435,8 @@ sudo ufw allow 'Nginx Full'
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 
-# PostgreSQL (외부 접속 필요시)
-# sudo ufw allow 5432/tcp
+# MariaDB (외부 접속 필요시)
+# sudo ufw allow 3306/tcp
 
 # 방화벽 상태 확인
 sudo ufw status
@@ -431,12 +444,13 @@ sudo ufw status
 
 ## 🛡️ 보안 강화
 
-### 1. PostgreSQL 보안
+### 1. MariaDB 보안
 ```bash
-# postgres 사용자 비밀번호 변경
-sudo -u postgres psql
-ALTER USER postgres WITH PASSWORD 'new-strong-password';
-\q
+# root 사용자 비밀번호 변경
+sudo mysql -u root -p
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'new-strong-password';
+FLUSH PRIVILEGES;
+EXIT;
 ```
 
 ### 2. 파일 권한 설정
@@ -458,7 +472,8 @@ nano ~/backup.sh
 ```bash
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M%S)
-pg_dump -h localhost -U root lpm > ~/backups/lpm_$DATE.sql
+mkdir -p ~/backups
+mysqldump -h localhost -u root -pLPM lpm > ~/backups/lpm_$DATE.sql
 find ~/backups -name "lpm_*.sql" -mtime +7 -delete
 ```
 
@@ -476,7 +491,7 @@ crontab -e
 배포 전:
 - [ ] GCP VM 인스턴스 생성
 - [ ] 도메인 DNS 설정 (A 레코드)
-- [ ] PostgreSQL 설치 및 설정
+- [ ] MariaDB 설치 및 설정
 - [ ] Node.js, PM2, Nginx 설치
 - [ ] 환경 변수 설정 (.env)
 - [ ] Google OAuth 콜백 URL 업데이트
@@ -515,11 +530,11 @@ sudo systemctl restart nginx
 
 ### 3. 데이터베이스 연결 오류
 ```bash
-# PostgreSQL 상태 확인
-sudo systemctl status postgresql
+# MariaDB 상태 확인
+sudo systemctl status mariadb
 
 # 연결 테스트
-psql -h localhost -U root -d lpm
+mysql -h localhost -u root -p lpm
 
 # 환경 변수 확인
 cat server/.env
@@ -530,4 +545,4 @@ cat server/.env
 - [PM2 Documentation](https://pm2.keymetrics.io/docs/)
 - [Nginx Documentation](https://nginx.org/en/docs/)
 - [Let's Encrypt](https://letsencrypt.org/)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [MariaDB Documentation](https://mariadb.com/kb/en/documentation/)
