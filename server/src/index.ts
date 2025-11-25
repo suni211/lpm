@@ -8,6 +8,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import pool from './database/db';
 import authRoutes from './routes/auth';
+import gachaRoutes from './routes/gacha';
 
 // Load environment variables
 dotenv.config();
@@ -105,13 +106,12 @@ export { io };
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/gacha', gachaRoutes);
 
 // Other routes (will be created later)
-// import cardRoutes from './routes/cards';
 // import matchRoutes from './routes/match';
 // import postingRoutes from './routes/posting';
 // import guildRoutes from './routes/guild';
-// app.use('/api/cards', cardRoutes);
 // app.use('/api/match', matchRoutes);
 // app.use('/api/posting', postingRoutes);
 // app.use('/api/guild', guildRoutes);
