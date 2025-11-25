@@ -20,19 +20,10 @@ export const isAdmin = async (
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  try {
-    const pool = require('../database/db').default;
-    const result = await pool.query(
-      'SELECT * FROM admins WHERE user_id = $1',
-      [req.user.id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(403).json({ error: 'Forbidden: Admin access required' });
-    }
-
-    next();
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+  // users 테이블의 is_admin 컬럼 체크
+  if ((req.user as any).is_admin === true || (req.user as any).is_admin === 1) {
+    return next();
   }
+
+  return res.status(403).json({ error: 'Forbidden: Admin access required' });
 };
