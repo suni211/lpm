@@ -57,7 +57,7 @@ app.use(
     cookie: {
       secure: false, // HTTP에서도 작동하도록 false로 설정 (HTTPS 사용 시 true로 변경)
       httpOnly: true,
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days (로그인 유지)
       sameSite: 'lax',
     },
   })
