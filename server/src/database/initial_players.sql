@@ -96,4 +96,4 @@ VALUES
 ('Peter', 'SUPPORT', 5, 58, 65, 15, 70, 63, 68, 'NORMAL');
 
 -- Update card images (placeholder paths - to be uploaded via ADMIN)
-UPDATE player_cards SET card_image = '/cards/players/' || LOWER(REPLACE(card_name, ' ', '_')) || '.png';
+UPDATE player_cards SET card_image = CONCAT('/cards/players/', LOWER(REPLACE(card_name, ' ', '_')), '.png');

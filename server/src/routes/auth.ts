@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import passport from '../middleware/passport';
-import pool from '../database/db';
+import { query } from '../database/db';
 
 const router = express.Router();
 
@@ -49,13 +49,13 @@ router.get('/me', async (req: Request, res: Response) => {
 
   try {
     // Get user info
-    const userResult = await pool.query(
+    const userResult = await query(
       'SELECT * FROM users WHERE id = ?',
       [req.user.id]
     );
 
     // Get team info
-    const teamResult = await pool.query(
+    const teamResult = await query(
       'SELECT * FROM teams WHERE user_id = ?',
       [req.user.id]
     );

@@ -1,6 +1,6 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import pool from '../database/db';
+import { query } from '../database/db';
 import { User } from '../types';
 
 passport.serializeUser((user: any, done) => {
@@ -9,8 +9,8 @@ passport.serializeUser((user: any, done) => {
 
 passport.deserializeUser(async (id: string, done) => {
   try {
-    const result = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
-    done(null, result[0]);
+    const result = await query('SELECT * FROM users WHERE id = ?', [id]);
+    done(null, result[0] || null);
   } catch (error) {
     done(error, null);
   }
@@ -34,14 +34,14 @@ passport.use(
                           '';
 
         // Check if user exists
-        const existingUser = await pool.query(
+        const existingUser = await query(
           'SELECT * FROM users WHERE google_id = ?',
           [profile.id]
         );
 
         if (existingUser.length > 0) {
           // Update last login
-          await pool.query(
+          await query(
             'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
             [existingUser[0].id]
           );
@@ -49,7 +49,7 @@ passport.use(
         }
 
         // ⛔ IP 기반 계정 생성 제한 - 같은 IP로 이미 계정이 있는지 확인
-        const existingIpUser = await pool.query(
+        const existingIpUser = await query(
           'SELECT u.* FROM users u INNER JOIN user_ip_tracking ipt ON u.id = ipt.user_id WHERE ipt.ip_address = ?',
           [ipAddress]
         );
@@ -60,7 +60,7 @@ passport.use(
         }
 
         // Create new user
-        const newUserResult = await pool.query(
+        const [newUserResult]: any = await (await import('../database/db')).default.query(
           `INSERT INTO users (google_id, email, display_name, profile_picture)
            VALUES (?, ?, ?, ?)`,
           [
@@ -74,37 +74,37 @@ passport.use(
         const newUserId = newUserResult.insertId;
 
         // IP 주소 기록
-        await pool.query(
+        await query(
           `INSERT INTO user_ip_tracking (user_id, ip_address) VALUES (?, ?)`,
           [newUserId, ipAddress]
         );
 
         // Get the newly created user
-        const newUser = await pool.query('SELECT * FROM users WHERE id = ?', [newUserId]);
+        const newUser = await query('SELECT * FROM users WHERE id = ?', [newUserId]);
 
         // Create default team for new user
-        await pool.query(
+        await query(
           `INSERT INTO teams (user_id, team_name)
            VALUES (?, ?)`,
           [newUserId, `${profile.displayName || 'Player'}'s Team`]
         );
 
         // Create default facilities
-        await pool.query(
+        await query(
           `INSERT INTO facilities (team_id)
            SELECT id FROM teams WHERE user_id = ?`,
           [newUserId]
         );
 
         // Create default roster
-        await pool.query(
+        await query(
           `INSERT INTO rosters (team_id)
            SELECT id FROM teams WHERE user_id = ?`,
           [newUserId]
         );
 
         // Create team records
-        await pool.query(
+        await query(
           `INSERT INTO team_records (team_id)
            SELECT id FROM teams WHERE user_id = ?`,
           [newUserId]
