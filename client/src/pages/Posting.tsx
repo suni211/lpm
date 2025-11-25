@@ -37,7 +37,7 @@ const Posting: React.FC = () => {
   const [showBidModal, setShowBidModal] = useState(false);
   const [selectedAuction, setSelectedAuction] = useState<Auction | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
-  const [activeTab, setActiveTab] = useState<'market' | 'my'>(''market');
+  const [activeTab, setActiveTab] = useState<'market' | 'my'>('market');
 
   // Create auction form
   const [selectedCard, setSelectedCard] = useState<string>('');
