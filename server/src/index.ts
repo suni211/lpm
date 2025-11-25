@@ -12,6 +12,7 @@ import gachaRoutes from './routes/gacha';
 import rosterRoutes from './routes/roster';
 import matchRoutes from './routes/match';
 import adminRoutes from './routes/admin';
+import postingRoutes from './routes/posting';
 
 // Load environment variables
 dotenv.config();
@@ -113,11 +114,10 @@ app.use('/api/gacha', gachaRoutes);
 app.use('/api/roster', rosterRoutes);
 app.use('/api/match', matchRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/posting', postingRoutes);
 
 // Other routes (will be created later)
-// import postingRoutes from './routes/posting';
 // import guildRoutes from './routes/guild';
-// app.use('/api/posting', postingRoutes);
 // app.use('/api/guild', guildRoutes);
 
 // Error handling middleware
