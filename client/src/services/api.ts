@@ -15,10 +15,7 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Unauthorized - redirect to login
-      window.location.href = '/';
-    }
+    // 401 에러는 조용히 무시 (AuthContext에서 처리)
     return Promise.reject(error);
   }
 );
