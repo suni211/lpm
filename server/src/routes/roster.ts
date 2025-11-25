@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { isAuthenticated } from '../middleware/auth';
-import pool from '../database/db';
+import pool, { query } from '../database/db';
 
 const router = express.Router();
 
@@ -14,24 +14,24 @@ router.get('/', isAuthenticated, async (req: Request, res: Response) => {
     }
 
     // 팀의 로스터 조회
-    const teamResult = await pool.query(
-      'SELECT id FROM teams WHERE user_id = $1',
+    const teamResult = await query(
+      'SELECT id FROM teams WHERE user_id = ?',
       [req.user.id]
     );
 
-    if (teamResult.rows.length === 0) {
+    if (teamResult.length === 0) {
       return res.status(404).json({ error: '팀을 찾을 수 없습니다' });
     }
 
-    const teamId = teamResult.rows[0].id;
+    const teamId = teamResult[0].id;
 
     // 로스터 정보
-    const rosterResult = await pool.query(
-      'SELECT * FROM rosters WHERE team_id = $1',
+    const rosterResult = await query(
+      'SELECT * FROM rosters WHERE team_id = ?',
       [teamId]
     );
 
-    const roster = rosterResult.rows[0];
+    const roster = rosterResult[0];
 
     // 각 포지션의 선수 정보 가져오기
     const positions = ['top', 'jungle', 'mid', 'adc', 'support'];
@@ -40,16 +40,16 @@ router.get('/', isAuthenticated, async (req: Request, res: Response) => {
     for (const pos of positions) {
       const playerId = roster[`${pos}_player_id`];
       if (playerId) {
-        const playerResult = await pool.query(
+        const playerResult = await query(
           `SELECT upc.*, pc.card_name, pc.card_image, pc.position, pc.cost,
                   pc.mental, pc.team_fight, pc.cs_ability, pc.vision,
                   pc.judgment, pc.laning, pc.power, pc.rarity
            FROM user_player_cards upc
            JOIN player_cards pc ON upc.player_card_id = pc.id
-           WHERE upc.id = $1`,
+           WHERE upc.id = ?`,
           [playerId]
         );
-        players[pos] = playerResult.rows[0] || null;
+        players[pos] = playerResult[0] || null;
       } else {
         players[pos] = null;
       }
@@ -79,31 +79,31 @@ router.post('/assign', isAuthenticated, async (req: Request, res: Response) => {
     }
 
     // 팀 조회
-    const teamResult = await pool.query(
-      'SELECT id FROM teams WHERE user_id = $1',
+    const teamResult = await query(
+      'SELECT id FROM teams WHERE user_id = ?',
       [req.user.id]
     );
 
-    if (teamResult.rows.length === 0) {
+    if (teamResult.length === 0) {
       return res.status(404).json({ error: '팀을 찾을 수 없습니다' });
     }
 
-    const teamId = teamResult.rows[0].id;
+    const teamId = teamResult[0].id;
 
     // 선수 카드 조회
-    const cardResult = await pool.query(
+    const cardResult = await query(
       `SELECT upc.*, pc.position, pc.cost
        FROM user_player_cards upc
        JOIN player_cards pc ON upc.player_card_id = pc.id
-       WHERE upc.id = $1 AND upc.user_id = $2`,
+       WHERE upc.id = ? AND upc.user_id = ?`,
       [userCardId, req.user.id]
     );
 
-    if (cardResult.rows.length === 0) {
+    if (cardResult.length === 0) {
       return res.status(404).json({ error: '선수 카드를 찾을 수 없습니다' });
     }
 
-    const card = cardResult.rows[0];
+    const card = cardResult[0];
 
     // 포지션 확인
     const positionMap: any = {
@@ -121,12 +121,12 @@ router.post('/assign', isAuthenticated, async (req: Request, res: Response) => {
     }
 
     // 현재 로스터
-    const rosterResult = await pool.query(
-      'SELECT * FROM rosters WHERE team_id = $1',
+    const rosterResult = await query(
+      'SELECT * FROM rosters WHERE team_id = ?',
       [teamId]
     );
 
-    const roster = rosterResult.rows[0];
+    const roster = rosterResult[0];
 
     // 새로운 총 코스트 계산
     let newTotalCost = 0;
@@ -137,14 +137,14 @@ router.post('/assign', isAuthenticated, async (req: Request, res: Response) => {
       } else {
         const currentPlayerId = roster[`${pos}_player_id`];
         if (currentPlayerId) {
-          const currentPlayerResult = await pool.query(
+          const currentPlayerResult = await query(
             `SELECT pc.cost FROM user_player_cards upc
              JOIN player_cards pc ON upc.player_card_id = pc.id
-             WHERE upc.id = $1`,
+             WHERE upc.id = ?`,
             [currentPlayerId]
           );
-          if (currentPlayerResult.rows.length > 0) {
-            newTotalCost += currentPlayerResult.rows[0].cost;
+          if (currentPlayerResult.length > 0) {
+            newTotalCost += currentPlayerResult[0].cost;
           }
         }
       }
@@ -160,22 +160,22 @@ router.post('/assign', isAuthenticated, async (req: Request, res: Response) => {
     // 이전에 로스터에 있던 선수 제거
     const oldPlayerId = roster[`${position}_player_id`];
     if (oldPlayerId) {
-      await pool.query(
-        'UPDATE user_player_cards SET in_roster = false WHERE id = $1',
+      await query(
+        'UPDATE user_player_cards SET in_roster = false WHERE id = ?',
         [oldPlayerId]
       );
     }
 
     // 새 선수 배치
-    await pool.query(
-      `UPDATE rosters SET ${position}_player_id = $1, total_cost = $2, updated_at = CURRENT_TIMESTAMP
-       WHERE team_id = $3`,
+    await query(
+      `UPDATE rosters SET ${position}_player_id = ?, total_cost = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE team_id = ?`,
       [userCardId, newTotalCost, teamId]
     );
 
     // 선수를 로스터에 추가
-    await pool.query(
-      'UPDATE user_player_cards SET in_roster = true WHERE id = $1',
+    await query(
+      'UPDATE user_player_cards SET in_roster = true WHERE id = ?',
       [userCardId]
     );
 
@@ -200,24 +200,24 @@ router.post('/remove', isAuthenticated, async (req: Request, res: Response) => {
     }
 
     // 팀 조회
-    const teamResult = await pool.query(
-      'SELECT id FROM teams WHERE user_id = $1',
+    const teamResult = await query(
+      'SELECT id FROM teams WHERE user_id = ?',
       [req.user.id]
     );
 
-    if (teamResult.rows.length === 0) {
+    if (teamResult.length === 0) {
       return res.status(404).json({ error: '팀을 찾을 수 없습니다' });
     }
 
-    const teamId = teamResult.rows[0].id;
+    const teamId = teamResult[0].id;
 
     // 현재 로스터
-    const rosterResult = await pool.query(
-      'SELECT * FROM rosters WHERE team_id = $1',
+    const rosterResult = await query(
+      'SELECT * FROM rosters WHERE team_id = ?',
       [teamId]
     );
 
-    const roster = rosterResult.rows[0];
+    const roster = rosterResult[0];
     const playerId = roster[`${position}_player_id`];
 
     if (!playerId) {
@@ -225,26 +225,26 @@ router.post('/remove', isAuthenticated, async (req: Request, res: Response) => {
     }
 
     // 선수의 코스트 가져오기
-    const playerResult = await pool.query(
+    const playerResult = await query(
       `SELECT pc.cost FROM user_player_cards upc
        JOIN player_cards pc ON upc.player_card_id = pc.id
-       WHERE upc.id = $1`,
+       WHERE upc.id = ?`,
       [playerId]
     );
 
-    const cost = playerResult.rows[0].cost;
+    const cost = playerResult[0].cost;
     const newTotalCost = roster.total_cost - cost;
 
     // 로스터에서 제거
-    await pool.query(
-      `UPDATE rosters SET ${position}_player_id = NULL, total_cost = $1, updated_at = CURRENT_TIMESTAMP
-       WHERE team_id = $2`,
+    await query(
+      `UPDATE rosters SET ${position}_player_id = NULL, total_cost = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE team_id = ?`,
       [newTotalCost, teamId]
     );
 
     // 선수 상태 업데이트
-    await pool.query(
-      'UPDATE user_player_cards SET in_roster = false WHERE id = $1',
+    await query(
+      'UPDATE user_player_cards SET in_roster = false WHERE id = ?',
       [playerId]
     );
 
@@ -277,18 +277,18 @@ router.get('/available/:position', isAuthenticated, async (req: Request, res: Re
     }
 
     // 해당 포지션의 사용 가능한 선수들
-    const playersResult = await pool.query(
+    const playersResult = await query(
       `SELECT upc.*, pc.card_name, pc.card_image, pc.position, pc.cost,
               pc.mental, pc.team_fight, pc.cs_ability, pc.vision,
               pc.judgment, pc.laning, pc.power, pc.rarity
        FROM user_player_cards upc
        JOIN player_cards pc ON upc.player_card_id = pc.id
-       WHERE upc.user_id = $1 AND pc.position = $2 AND upc.in_roster = false
+       WHERE upc.user_id = ? AND pc.position = ? AND upc.in_roster = false
        ORDER BY pc.power DESC`,
       [req.user.id, positionMap[position]]
     );
 
-    res.json({ players: playersResult.rows });
+    res.json({ players: playersResult });
   } catch (error) {
     console.error('선수 목록 조회 오류:', error);
     res.status(500).json({ error: '선수 목록 조회에 실패했습니다' });

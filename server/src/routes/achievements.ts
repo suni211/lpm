@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import pool from '../database/db';
+import pool, { query, getConnection } from '../database/db';
 import { isAuthenticated } from '../middleware/auth';
 
 const router = express.Router();
@@ -8,23 +8,23 @@ const router = express.Router();
 router.get('/', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    const teamResult = await pool.query('SELECT id FROM teams WHERE user_id = $1', [userId]);
-    const teamId = teamResult.rows[0].id;
+    const teamResult = await query('SELECT id FROM teams WHERE user_id = ?', [userId]);
+    const teamId = teamResult[0].id;
 
     // 모든 업적 조회
-    const achievementsResult = await pool.query(`
+    const achievementsResult = await query(`
       SELECT
         a.*,
         ua.is_claimed,
         ua.claimed_at,
         ua.progress
       FROM achievements a
-      LEFT JOIN user_achievements ua ON a.id = ua.achievement_id AND ua.team_id = $1
+      LEFT JOIN user_achievements ua ON a.id = ua.achievement_id AND ua.team_id = ?
       ORDER BY a.category, a.id
     `, [teamId]);
 
     // 카테고리별로 그룹화
-    const grouped = achievementsResult.rows.reduce((acc: any, achievement: any) => {
+    const grouped = achievementsResult.reduce((acc: any, achievement: any) => {
       if (!acc[achievement.category]) {
         acc[achievement.category] = [];
       }
@@ -45,77 +45,77 @@ router.get('/', isAuthenticated, async (req: Request, res: Response) => {
 
 // 업적 보상 수령
 router.post('/claim/:achievementId', isAuthenticated, async (req: Request, res: Response) => {
-  const client = await pool.connect();
+  const client = await getConnection();
 
   try {
     const userId = req.user?.id;
     const { achievementId } = req.params;
 
-    await client.query('BEGIN');
+    await client.beginTransaction();
 
     // 팀 정보 조회
-    const teamResult = await client.query('SELECT id FROM teams WHERE user_id = $1', [userId]);
-    const teamId = teamResult.rows[0].id;
+    const [teamResult]: any = await client.query('SELECT id FROM teams WHERE user_id = ?', [userId]);
+    const teamId = teamResult[0].id;
 
     // 업적 정보 조회
-    const achievementResult = await client.query(
-      'SELECT * FROM achievements WHERE id = $1',
+    const [achievementResult]: any = await client.query(
+      'SELECT * FROM achievements WHERE id = ?',
       [achievementId]
     );
 
-    if (achievementResult.rows.length === 0) {
-      await client.query('ROLLBACK');
+    if (achievementResult.length === 0) {
+      await client.rollback();
       return res.status(404).json({ error: '업적을 찾을 수 없습니다' });
     }
 
-    const achievement = achievementResult.rows[0];
+    const achievement = achievementResult[0];
 
     // 사용자 업적 진행도 조회
-    const userAchievementResult = await client.query(
-      'SELECT * FROM user_achievements WHERE team_id = $1 AND achievement_id = $2',
+    const [userAchievementResult]: any = await client.query(
+      'SELECT * FROM user_achievements WHERE team_id = ? AND achievement_id = ?',
       [teamId, achievementId]
     );
 
-    if (userAchievementResult.rows.length === 0) {
-      await client.query('ROLLBACK');
+    if (userAchievementResult.length === 0) {
+      await client.rollback();
       return res.status(400).json({ error: '업적이 완료되지 않았습니다' });
     }
 
-    const userAchievement = userAchievementResult.rows[0];
+    const userAchievement = userAchievementResult[0];
 
     // 이미 수령했는지 확인
     if (userAchievement.is_claimed) {
-      await client.query('ROLLBACK');
+      await client.rollback();
       return res.status(400).json({ error: '이미 보상을 수령했습니다' });
     }
 
     // 완료 여부 확인
     if (userAchievement.progress < achievement.requirement) {
-      await client.query('ROLLBACK');
+      await client.rollback();
       return res.status(400).json({ error: '업적이 완료되지 않았습니다' });
     }
 
     // 보상 지급
     await client.query(
-      'UPDATE teams SET balance = balance + $1 WHERE id = $2',
+      'UPDATE teams SET balance = balance + ? WHERE id = ?',
       [achievement.reward_money, teamId]
     );
 
     // 명성도 지급
     if (achievement.reward_reputation) {
       await client.query(
-        'UPDATE teams SET reputation = reputation + $1 WHERE id = $2',
+        'UPDATE teams SET reputation = reputation + ? WHERE id = ?',
         [achievement.reward_reputation, teamId]
       );
     }
 
     // 업적 수령 표시
     await client.query(
-      'UPDATE user_achievements SET is_claimed = true, claimed_at = NOW() WHERE team_id = $1 AND achievement_id = $2',
+      'UPDATE user_achievements SET is_claimed = true, claimed_at = NOW() WHERE team_id = ? AND achievement_id = ?',
       [teamId, achievementId]
     );
 
-    await client.query('COMMIT');
+    await client.commit();
 
     res.json({
       message: '보상을 수령했습니다!',
@@ -125,7 +125,7 @@ router.post('/claim/:achievementId', isAuthenticated, async (req: Request, res: 
       },
     });
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error('보상 수령 실패:', error);
     res.status(500).json({ error: '보상 수령에 실패했습니다' });
   } finally {
@@ -139,34 +139,34 @@ export async function updateAchievementProgress(
   achievementId: string,
   progress: number
 ) {
-  const client = await pool.connect();
+  const client = await getConnection();
 
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
 
     // 기존 진행도 확인
-    const existingResult = await client.query(
-      'SELECT * FROM user_achievements WHERE team_id = $1 AND achievement_id = $2',
+    const [existingResult]: any = await client.query(
+      'SELECT * FROM user_achievements WHERE team_id = ? AND achievement_id = ?',
       [teamId, achievementId]
     );
 
-    if (existingResult.rows.length === 0) {
+    if (existingResult.length === 0) {
       // 새로 생성
       await client.query(
-        'INSERT INTO user_achievements (team_id, achievement_id, progress) VALUES ($1, $2, $3)',
+        'INSERT INTO user_achievements (team_id, achievement_id, progress) VALUES (?, ?, ?)',
         [teamId, achievementId, progress]
       );
     } else {
       // 진행도 업데이트 (최대값만)
       await client.query(
-        'UPDATE user_achievements SET progress = GREATEST(progress, $1) WHERE team_id = $2 AND achievement_id = $3',
+        'UPDATE user_achievements SET progress = GREATEST(progress, ?) WHERE team_id = ? AND achievement_id = ?',
         [progress, teamId, achievementId]
       );
     }
 
-    await client.query('COMMIT');
+    await client.commit();
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error('업적 진행도 업데이트 실패:', error);
   } finally {
     client.release();
@@ -177,13 +177,13 @@ export async function updateAchievementProgress(
 export async function checkAchievements(teamId: string, type: string, value: number) {
   try {
     // 해당 타입의 모든 업적 조회
-    const achievementsResult = await pool.query(
-      'SELECT * FROM achievements WHERE category = $1',
+    const achievementsResult = await query(
+      'SELECT * FROM achievements WHERE category = ?',
       [type]
     );
 
     // 각 업적의 진행도 업데이트
-    for (const achievement of achievementsResult.rows) {
+    for (const achievement of achievementsResult) {
       await updateAchievementProgress(teamId, achievement.id, value);
     }
   } catch (error) {
@@ -195,40 +195,40 @@ export async function checkAchievements(teamId: string, type: string, value: num
 router.get('/stats', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    const teamResult = await pool.query('SELECT id FROM teams WHERE user_id = $1', [userId]);
-    const teamId = teamResult.rows[0].id;
+    const teamResult = await query('SELECT id FROM teams WHERE user_id = ?', [userId]);
+    const teamId = teamResult[0].id;
 
     // 총 업적 수
-    const totalResult = await pool.query('SELECT COUNT(*) as total FROM achievements');
-    const total = parseInt(totalResult.rows[0].total);
+    const totalResult = await query('SELECT COUNT(*) as total FROM achievements');
+    const total = parseInt(totalResult[0].total);
 
     // 완료한 업적 수
-    const completedResult = await pool.query(`
+    const completedResult = await query(`
       SELECT COUNT(*) as completed
       FROM user_achievements ua
       JOIN achievements a ON ua.achievement_id = a.id
-      WHERE ua.team_id = $1 AND ua.progress >= a.requirement
+      WHERE ua.team_id = ? AND ua.progress >= a.requirement
     `, [teamId]);
-    const completed = parseInt(completedResult.rows[0].completed);
+    const completed = parseInt(completedResult[0].completed);
 
     // 수령한 보상 합계
-    const rewardsResult = await pool.query(`
+    const rewardsResult = await query(`
       SELECT
         SUM(a.reward_money) as total_money,
         SUM(a.reward_reputation) as total_reputation
       FROM user_achievements ua
       JOIN achievements a ON ua.achievement_id = a.id
-      WHERE ua.team_id = $1 AND ua.is_claimed = true
+      WHERE ua.team_id = ? AND ua.is_claimed = true
     `, [teamId]);
 
     res.json({
       total,
       completed,
-      claimed: completedResult.rows[0].completed,
+      claimed: completedResult[0].completed,
       percentage: Math.round((completed / total) * 100),
       rewards: {
-        money: parseInt(rewardsResult.rows[0].total_money) || 0,
-        reputation: parseInt(rewardsResult.rows[0].total_reputation) || 0,
+        money: parseInt(rewardsResult[0].total_money) || 0,
+        reputation: parseInt(rewardsResult[0].total_reputation) || 0,
       },
     });
   } catch (error) {

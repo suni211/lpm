@@ -144,13 +144,12 @@ httpServer.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('⚠️  SIGTERM signal received: closing HTTP server');
-  httpServer.close(() => {
+  httpServer.close(async () => {
     console.log('✅ HTTP server closed');
-    pool.end(() => {
-      console.log('✅ Database pool closed');
-      process.exit(0);
-    });
+    await pool.end();
+    console.log('✅ Database pool closed');
+    process.exit(0);
   });
 });

@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: IP 기반 계정 생성 제한 시스템 및 MariaDB 마이그레이션\n\n- IP 추적 테이블 추가 (user_ip_tracking)\n- 같은 IP로 중복 계정 생성 절대 불가\n- OAuth 인증 시 IP 자동 기록 및 검증\n- 중복 IP 감지 시 에러 메시지 표시\n- PostgreSQL → MariaDB 완전 마이그레이션\n- mysql2/promise 드라이버 적용\n- MariaDB 호환 스키마 파일 생성 (schema_mariadb.sql)\n- 프로덕션 배포 문서 업데이트\n\n🔒 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

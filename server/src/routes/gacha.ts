@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { isAuthenticated } from '../middleware/auth';
 import { drawCard, CardPackType, CARD_PACK_PRICES } from '../services/gachaService';
+import pool, { query } from '../database/db';
 
 const router = express.Router();
 
@@ -64,10 +65,8 @@ router.get('/collection', isAuthenticated, async (req: Request, res: Response) =
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const pool = require('../database/db').default;
-
     // 선수 카드
-    const playerCards = await pool.query(
+    const playerCards = await query(
       `SELECT
         upc.*,
         pc.card_name,
@@ -84,13 +83,13 @@ router.get('/collection', isAuthenticated, async (req: Request, res: Response) =
         pc.rarity
        FROM user_player_cards upc
        JOIN player_cards pc ON upc.player_card_id = pc.id
-       WHERE upc.user_id = $1
+       WHERE upc.user_id = ?
        ORDER BY pc.power DESC, upc.acquired_at DESC`,
       [req.user.id]
     );
 
     // 감독 카드
-    const coachCards = await pool.query(
+    const coachCards = await query(
       `SELECT
         ucc.*,
         cc.coach_name,
@@ -104,13 +103,13 @@ router.get('/collection', isAuthenticated, async (req: Request, res: Response) =
         cc.rarity
        FROM user_coach_cards ucc
        JOIN coach_cards cc ON ucc.coach_card_id = cc.id
-       WHERE ucc.user_id = $1
+       WHERE ucc.user_id = ?
        ORDER BY cc.power DESC, ucc.acquired_at DESC`,
       [req.user.id]
     );
 
     // 작전 카드
-    const tacticCards = await pool.query(
+    const tacticCards = await query(
       `SELECT
         utc.*,
         tc.tactic_name,
@@ -122,13 +121,13 @@ router.get('/collection', isAuthenticated, async (req: Request, res: Response) =
         tc.rarity
        FROM user_tactic_cards utc
        JOIN tactic_cards tc ON utc.tactic_card_id = tc.id
-       WHERE utc.user_id = $1
+       WHERE utc.user_id = ?
        ORDER BY utc.quantity DESC, utc.acquired_at DESC`,
       [req.user.id]
     );
 
     // 서포트 카드
-    const supportCards = await pool.query(
+    const supportCards = await query(
       `SELECT
         usc.*,
         sc.support_name,
@@ -139,16 +138,16 @@ router.get('/collection', isAuthenticated, async (req: Request, res: Response) =
         sc.rarity
        FROM user_support_cards usc
        JOIN support_cards sc ON usc.support_card_id = sc.id
-       WHERE usc.user_id = $1
+       WHERE usc.user_id = ?
        ORDER BY usc.quantity DESC, usc.acquired_at DESC`,
       [req.user.id]
     );
 
     res.json({
-      players: playerCards.rows,
-      coaches: coachCards.rows,
-      tactics: tacticCards.rows,
-      supports: supportCards.rows,
+      players: playerCards,
+      coaches: coachCards,
+      tactics: tacticCards,
+      supports: supportCards,
     });
   } catch (error) {
     console.error('컬렉션 조회 오류:', error);

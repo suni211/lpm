@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { isAuthenticated, isAdmin } from '../middleware/auth';
-import pool from '../database/db';
+import pool, { query } from '../database/db';
 
 const router = express.Router();
 
@@ -49,8 +49,8 @@ router.post(
 
       const imagePath = `/uploads/cards/${req.file.filename}`;
 
-      await pool.query(
-        'UPDATE player_cards SET card_image = $1 WHERE id = $2',
+      await query(
+        'UPDATE player_cards SET card_image = ? WHERE id = ?',
         [imagePath, cardId]
       );
 
@@ -78,8 +78,8 @@ router.post(
 
       const imagePath = `/uploads/cards/${req.file.filename}`;
 
-      await pool.query(
-        'UPDATE coach_cards SET coach_image = $1 WHERE id = $2',
+      await query(
+        'UPDATE coach_cards SET coach_image = ? WHERE id = ?',
         [imagePath, cardId]
       );
 
@@ -107,8 +107,8 @@ router.post(
 
       const imagePath = `/uploads/cards/${req.file.filename}`;
 
-      await pool.query(
-        'UPDATE tactic_cards SET tactic_image = $1 WHERE id = $2',
+      await query(
+        'UPDATE tactic_cards SET tactic_image = ? WHERE id = ?',
         [imagePath, cardId]
       );
 
@@ -136,8 +136,8 @@ router.post(
 
       const imagePath = `/uploads/cards/${req.file.filename}`;
 
-      await pool.query(
-        'UPDATE support_cards SET support_image = $1 WHERE id = $2',
+      await query(
+        'UPDATE support_cards SET support_image = ? WHERE id = ?',
         [imagePath, cardId]
       );
 
@@ -154,33 +154,28 @@ router.get('/cards', isAuthenticated, isAdmin, async (req: Request, res: Respons
   try {
     const { type } = req.query;
 
-    let query = '';
-    let tableName = '';
+    let sql = '';
 
     switch (type) {
       case 'player':
-        tableName = 'player_cards';
-        query = 'SELECT * FROM player_cards ORDER BY power DESC';
+        sql = 'SELECT * FROM player_cards ORDER BY power DESC';
         break;
       case 'coach':
-        tableName = 'coach_cards';
-        query = 'SELECT * FROM coach_cards ORDER BY power DESC';
+        sql = 'SELECT * FROM coach_cards ORDER BY power DESC';
         break;
       case 'tactic':
-        tableName = 'tactic_cards';
-        query = 'SELECT * FROM tactic_cards ORDER BY created_at DESC';
+        sql = 'SELECT * FROM tactic_cards ORDER BY created_at DESC';
         break;
       case 'support':
-        tableName = 'support_cards';
-        query = 'SELECT * FROM support_cards ORDER BY created_at DESC';
+        sql = 'SELECT * FROM support_cards ORDER BY created_at DESC';
         break;
       default:
         return res.status(400).json({ error: '유효하지 않은 카드 타입입니다' });
     }
 
-    const result = await pool.query(query);
+    const result = await query(sql);
 
-    res.json({ cards: result.rows });
+    res.json({ cards: result });
   } catch (error) {
     console.error('카드 목록 조회 오류:', error);
     res.status(500).json({ error: '카드 목록 조회에 실패했습니다' });
@@ -203,15 +198,16 @@ router.post('/cards/player', isAuthenticated, isAdmin, async (req: Request, res:
       rarity,
     } = req.body;
 
-    const result = await pool.query(
+    const [result]: any = await pool.query(
       `INSERT INTO player_cards
        (card_name, position, cost, mental, team_fight, cs_ability, vision, judgment, laning, rarity)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING *`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [card_name, position, cost, mental, team_fight, cs_ability, vision, judgment, laning, rarity]
     );
 
-    res.json({ message: '선수 카드가 생성되었습니다', card: result.rows[0] });
+    const newCard = await query('SELECT * FROM player_cards WHERE id = ?', [result.insertId]);
+
+    res.json({ message: '선수 카드가 생성되었습니다', card: newCard[0] });
   } catch (error) {
     console.error('선수 카드 생성 오류:', error);
     res.status(500).json({ error: '선수 카드 생성에 실패했습니다' });
@@ -223,15 +219,16 @@ router.post('/cards/coach', isAuthenticated, isAdmin, async (req: Request, res: 
   try {
     const { coach_name, command, ban_pick, meta, cold, warm, rarity } = req.body;
 
-    const result = await pool.query(
+    const [result]: any = await pool.query(
       `INSERT INTO coach_cards
        (coach_name, command, ban_pick, meta, cold, warm, rarity)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [coach_name, command, ban_pick, meta, cold, warm, rarity]
     );
 
-    res.json({ message: '감독 카드가 생성되었습니다', card: result.rows[0] });
+    const newCard = await query('SELECT * FROM coach_cards WHERE id = ?', [result.insertId]);
+
+    res.json({ message: '감독 카드가 생성되었습니다', card: newCard[0] });
   } catch (error) {
     console.error('감독 카드 생성 오류:', error);
     res.status(500).json({ error: '감독 카드 생성에 실패했습니다' });
@@ -244,15 +241,16 @@ router.post('/cards/tactic', isAuthenticated, isAdmin, async (req: Request, res:
     const { tactic_name, position, effect_description, effect_type, effect_value, rarity } =
       req.body;
 
-    const result = await pool.query(
+    const [result]: any = await pool.query(
       `INSERT INTO tactic_cards
        (tactic_name, position, effect_description, effect_type, effect_value, rarity)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
+       VALUES (?, ?, ?, ?, ?, ?)`,
       [tactic_name, position, effect_description, effect_type, effect_value, rarity]
     );
 
-    res.json({ message: '작전 카드가 생성되었습니다', card: result.rows[0] });
+    const newCard = await query('SELECT * FROM tactic_cards WHERE id = ?', [result.insertId]);
+
+    res.json({ message: '작전 카드가 생성되었습니다', card: newCard[0] });
   } catch (error) {
     console.error('작전 카드 생성 오류:', error);
     res.status(500).json({ error: '작전 카드 생성에 실패했습니다' });
@@ -264,15 +262,16 @@ router.post('/cards/support', isAuthenticated, isAdmin, async (req: Request, res
   try {
     const { support_name, effect_description, effect_type, effect_value, rarity } = req.body;
 
-    const result = await pool.query(
+    const [result]: any = await pool.query(
       `INSERT INTO support_cards
        (support_name, effect_description, effect_type, effect_value, rarity)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
+       VALUES (?, ?, ?, ?, ?)`,
       [support_name, effect_description, effect_type, effect_value, rarity]
     );
 
-    res.json({ message: '서포트 카드가 생성되었습니다', card: result.rows[0] });
+    const newCard = await query('SELECT * FROM support_cards WHERE id = ?', [result.insertId]);
+
+    res.json({ message: '서포트 카드가 생성되었습니다', card: newCard[0] });
   } catch (error) {
     console.error('서포트 카드 생성 오류:', error);
     res.status(500).json({ error: '서포트 카드 생성에 실패했습니다' });

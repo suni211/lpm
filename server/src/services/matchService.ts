@@ -1,4 +1,4 @@
-import pool from '../database/db';
+import { getConnection } from '../database/db';
 
 interface Player {
   position: string;
@@ -45,17 +45,17 @@ const CONDITION_BONUS: any = {
  * 랭크 경기 시뮬레이션
  */
 export async function simulateMatch(team1Id: string, team2Id: string): Promise<MatchResult> {
-  const client = await pool.connect();
+  const client = await getConnection();
 
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
 
     // 팀 정보 가져오기
-    const team1Result = await client.query('SELECT * FROM teams WHERE id = $1', [team1Id]);
-    const team2Result = await client.query('SELECT * FROM teams WHERE id = $1', [team2Id]);
+    const [team1Result]: any = await client.query('SELECT * FROM teams WHERE id = ?', [team1Id]);
+    const [team2Result]: any = await client.query('SELECT * FROM teams WHERE id = ?', [team2Id]);
 
-    const team1 = team1Result.rows[0];
-    const team2 = team2Result.rows[0];
+    const team1 = team1Result[0];
+    const team2 = team2Result[0];
 
     // 로스터 가져오기
     const team1Players = await getTeamPlayers(client, team1Id);
@@ -91,12 +91,11 @@ export async function simulateMatch(team1Id: string, team2Id: string): Promise<M
     }
 
     // 경기 기록 저장
-    const matchResult = await client.query(
+    await client.query(
       `INSERT INTO matches
        (match_type, team1_id, team2_id, winner_id, team1_power, team2_power,
         phase1_result, phase2_result, phase3_result, match_log, lp_change)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING *`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'RANKED',
         team1Id,
@@ -104,20 +103,20 @@ export async function simulateMatch(team1Id: string, team2Id: string): Promise<M
         winnerId,
         team1Power,
         team2Power,
-        phase1,
-        phase2,
-        phase3,
-        { team1Players, team2Players },
+        JSON.stringify(phase1),
+        JSON.stringify(phase2),
+        JSON.stringify(phase3),
+        JSON.stringify({ team1Players, team2Players }),
         lpChange,
       ]
     );
 
-    await client.query('COMMIT');
+    await client.commit();
 
     return {
       winner_id: winnerId,
-      team1_power,
-      team2_power,
+      team1_power: team1Power,
+      team2_power: team2Power,
       phase1_result: phase1,
       phase2_result: phase2,
       phase3_result: phase3,
@@ -125,7 +124,7 @@ export async function simulateMatch(team1Id: string, team2Id: string): Promise<M
       lp_change: lpChange,
     };
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     throw error;
   } finally {
     client.release();
@@ -136,12 +135,12 @@ export async function simulateMatch(team1Id: string, team2Id: string): Promise<M
  * 팀 선수 정보 가져오기
  */
 async function getTeamPlayers(client: any, teamId: string): Promise<Player[]> {
-  const rosterResult = await client.query(
-    'SELECT * FROM rosters WHERE team_id = $1',
+  const [rosterResult]: any = await client.query(
+    'SELECT * FROM rosters WHERE team_id = ?',
     [teamId]
   );
 
-  const roster = rosterResult.rows[0];
+  const roster = rosterResult[0];
   const players: Player[] = [];
 
   const positions = ['top', 'jungle', 'mid', 'adc', 'support'];
@@ -152,16 +151,16 @@ async function getTeamPlayers(client: any, teamId: string): Promise<Player[]> {
       throw new Error(`${pos} 포지션에 선수가 없습니다`);
     }
 
-    const playerResult = await client.query(
+    const [playerResult]: any = await client.query(
       `SELECT upc.*, pc.position, pc.mental, pc.team_fight, pc.cs_ability,
               pc.vision, pc.judgment, pc.laning, pc.power
        FROM user_player_cards upc
        JOIN player_cards pc ON upc.player_card_id = pc.id
-       WHERE upc.id = $1`,
+       WHERE upc.id = ?`,
       [playerId]
     );
 
-    players.push(playerResult.rows[0]);
+    players.push(playerResult[0]);
   }
 
   return players;
@@ -378,8 +377,8 @@ async function updateTeamStats(
  * 티어 승급/강등 체크
  */
 async function checkTierPromotion(client: any, teamId: string) {
-  const teamResult = await client.query('SELECT * FROM teams WHERE id = $1', [teamId]);
-  const team = teamResult.rows[0];
+  const [teamResult]: any = await client.query('SELECT * FROM teams WHERE id = ?', [teamId]);
+  const team = teamResult[0];
 
   const tierThresholds: any = {
     BRONZE: 0,
@@ -403,7 +402,7 @@ async function checkTierPromotion(client: any, teamId: string) {
 
   if (newTier !== team.current_tier) {
     await client.query(
-      'UPDATE teams SET current_tier = $1 WHERE id = $2',
+      'UPDATE teams SET current_tier = ? WHERE id = ?',
       [newTier, teamId]
     );
   }
