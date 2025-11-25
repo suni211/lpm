@@ -9,6 +9,8 @@ import Roster from './pages/Roster';
 import Match from './pages/Match';
 import Admin from './pages/Admin';
 import Posting from './pages/Posting';
+import Achievements from './pages/Achievements';
+import Sponsors from './pages/Sponsors';
 import './App.css';
 
 function App() {
@@ -25,6 +27,8 @@ function App() {
             <Route path="/match" element={<Match />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/posting" element={<Posting />} />
+            <Route path="/achievements" element={<Achievements />} />
+            <Route path="/sponsors" element={<Sponsors />} />
             {/* More routes will be added later */}
           </Routes>
         </div>

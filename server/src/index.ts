@@ -13,6 +13,8 @@ import rosterRoutes from './routes/roster';
 import matchRoutes from './routes/match';
 import adminRoutes from './routes/admin';
 import postingRoutes from './routes/posting';
+import achievementsRoutes from './routes/achievements';
+import sponsorsRoutes from './routes/sponsors';
 
 // Load environment variables
 dotenv.config();
@@ -115,10 +117,8 @@ app.use('/api/roster', rosterRoutes);
 app.use('/api/match', matchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/posting', postingRoutes);
-
-// Other routes (will be created later)
-// import guildRoutes from './routes/guild';
-// app.use('/api/guild', guildRoutes);
+app.use('/api/achievements', achievementsRoutes);
+app.use('/api/sponsors', sponsorsRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {
