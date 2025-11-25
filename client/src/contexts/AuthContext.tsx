@@ -44,7 +44,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = () => {
-    window.location.href = 'https://berrple.com/api/auth/google';
+    // .env의 VITE_API_URL만 사용 (없으면 상대 경로)
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    window.location.href = apiUrl ? `${apiUrl}/api/auth/google` : '/api/auth/google';
   };
 
   const logout = async () => {

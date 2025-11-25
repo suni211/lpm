@@ -1,9 +1,10 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://berrple.com';
+// .env의 VITE_API_URL만 사용 (없으면 상대 경로)
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: API_URL ? `${API_URL}/api` : '/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
