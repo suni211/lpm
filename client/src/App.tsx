@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
+import CreateTeam from './pages/CreateTeam';
 import Dashboard from './pages/Dashboard';
 import Gacha from './pages/Gacha';
 import Roster from './pages/Roster';
@@ -21,6 +22,7 @@ function App() {
           <Navbar />
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/create-team" element={<CreateTeam />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/gacha" element={<Gacha />} />
             <Route path="/roster" element={<Roster />} />
@@ -30,7 +32,6 @@ function App() {
             <Route path="/achievements" element={<Achievements />} />
             <Route path="/sponsors" element={<Sponsors />} />
             <Route path="/fandom" element={<Fandom />} />
-            {/* More routes will be added later */}
           </Routes>
         </div>
       </AuthProvider>

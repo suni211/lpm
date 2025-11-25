@@ -83,34 +83,7 @@ passport.use(
           [newUserId, ipAddress]
         );
 
-        // Create default team for new user
-        await query(
-          `INSERT INTO teams (user_id, team_name)
-           VALUES (?, ?)`,
-          [newUserId, `${profile.displayName || 'Player'}'s Team`]
-        );
-
-        // Create default facilities
-        await query(
-          `INSERT INTO facilities (team_id)
-           SELECT id FROM teams WHERE user_id = ?`,
-          [newUserId]
-        );
-
-        // Create default roster
-        await query(
-          `INSERT INTO rosters (team_id)
-           SELECT id FROM teams WHERE user_id = ?`,
-          [newUserId]
-        );
-
-        // Create team records
-        await query(
-          `INSERT INTO team_records (team_id)
-           SELECT id FROM teams WHERE user_id = ?`,
-          [newUserId]
-        );
-
+        // 팀은 프론트엔드에서 별도 생성하도록 변경
         done(null, newUser[0]);
       } catch (error) {
         console.error('❌ Passport Google Strategy Error:', error);

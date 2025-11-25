@@ -8,6 +8,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import pool from './database/db';
 import authRoutes from './routes/auth';
+import teamRoutes from './routes/team';
 import gachaRoutes from './routes/gacha';
 import rosterRoutes from './routes/roster';
 import matchRoutes from './routes/match';
@@ -122,6 +123,7 @@ export { io };
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/team', teamRoutes);
 app.use('/api/gacha', gachaRoutes);
 app.use('/api/roster', rosterRoutes);
 app.use('/api/match', matchRoutes);

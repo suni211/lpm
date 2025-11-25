@@ -4,13 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import './Home.css';
 
 const Home: React.FC = () => {
-  const { user, login, loading } = useAuth();
+  const { user, team, login, loading } = useAuth();
   const navigate = useNavigate();
   const [errorMessage, setErrorMessage] = React.useState<string>('');
 
   React.useEffect(() => {
     if (user && !loading) {
-      navigate('/dashboard');
+      // 팀이 없으면 팀 생성 페이지로, 있으면 대시보드로
+      if (!team) {
+        navigate('/create-team');
+      } else {
+        navigate('/dashboard');
+      }
     }
 
     // URL에서 에러 파라미터 확인
@@ -24,7 +29,7 @@ const Home: React.FC = () => {
     } else if (error === 'login_failed') {
       setErrorMessage('❌ 로그인에 실패했습니다. 다시 시도해주세요.');
     }
-  }, [user, loading, navigate]);
+  }, [user, team, loading, navigate]);
 
   if (loading) {
     return (

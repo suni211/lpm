@@ -34,8 +34,8 @@ router.get(
         if (loginErr) {
           return res.redirect(`${process.env.CLIENT_URL}/?error=login_failed`);
         }
-        // Successful authentication
-        return res.redirect(`${process.env.CLIENT_URL}/dashboard`);
+        // Successful authentication - 홈으로 리다이렉트 (팀 체크는 프론트에서)
+        return res.redirect(`${process.env.CLIENT_URL}/`);
       });
     })(req, res, next);
   }
