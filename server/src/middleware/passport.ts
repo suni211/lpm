@@ -1,6 +1,8 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { query } from '../database/db';
+import pool from '../database/db';
+import { ResultSetHeader } from 'mysql2';
 import { User } from '../types';
 
 passport.serializeUser((user: any, done) => {
@@ -60,7 +62,7 @@ passport.use(
         }
 
         // Create new user
-        const [newUserResult]: any = await (await import('../database/db')).default.query(
+        const [insertResult] = await pool.query<ResultSetHeader>(
           `INSERT INTO users (google_id, email, display_name, profile_picture)
            VALUES (?, ?, ?, ?)`,
           [
@@ -71,7 +73,7 @@ passport.use(
           ]
         );
 
-        const newUserId = newUserResult.insertId;
+        const newUserId = insertResult.insertId;
 
         // IP 주소 기록
         await query(
@@ -112,6 +114,7 @@ passport.use(
 
         done(null, newUser[0]);
       } catch (error) {
+        console.error('❌ Passport Google Strategy Error:', error);
         done(error as Error, undefined);
       }
     }
