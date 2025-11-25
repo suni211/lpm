@@ -6,10 +6,23 @@ import './Home.css';
 const Home: React.FC = () => {
   const { user, login, loading } = useAuth();
   const navigate = useNavigate();
+  const [errorMessage, setErrorMessage] = React.useState<string>('');
 
   React.useEffect(() => {
     if (user && !loading) {
       navigate('/dashboard');
+    }
+
+    // URL에서 에러 파라미터 확인
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+
+    if (error === 'duplicate_ip') {
+      setErrorMessage('⛔ 이 IP 주소로 이미 계정이 생성되었습니다. 같은 IP로는 여러 계정을 만들 수 없습니다.');
+    } else if (error === 'auth_failed') {
+      setErrorMessage('❌ 인증에 실패했습니다. 다시 시도해주세요.');
+    } else if (error === 'login_failed') {
+      setErrorMessage('❌ 로그인에 실패했습니다. 다시 시도해주세요.');
     }
   }, [user, loading, navigate]);
 
@@ -59,6 +72,21 @@ const Home: React.FC = () => {
               <p>팀을 결성하고 함께 싸우세요</p>
             </div>
           </div>
+
+          {errorMessage && (
+            <div className="error-message" style={{
+              backgroundColor: '#ff4444',
+              color: 'white',
+              padding: '15px 20px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+            }}>
+              {errorMessage}
+            </div>
+          )}
 
           <button onClick={login} className="btn-start">
             <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" />

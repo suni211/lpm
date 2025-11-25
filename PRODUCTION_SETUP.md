@@ -56,7 +56,7 @@ sudo systemctl enable mariadb
 
 # MariaDB 보안 설정
 sudo mysql_secure_installation
-# - Set root password? Y (LPM 입력)
+# - Set root password? Y (ss092888? 입력)
 # - Remove anonymous users? Y
 # - Disallow root login remotely? N (원격 필요시)
 # - Remove test database? Y
@@ -64,14 +64,14 @@ sudo mysql_secure_installation
 
 # MariaDB 접속
 sudo mysql -u root -p
-# 비밀번호: LPM
+# 비밀번호: ss092888?
 
 # 데이터베이스 생성
 CREATE DATABASE lpm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 # root 사용자 권한 설정
-GRANT ALL PRIVILEGES ON lpm.* TO 'root'@'localhost' IDENTIFIED BY 'LPM';
-GRANT ALL PRIVILEGES ON lpm.* TO 'root'@'%' IDENTIFIED BY 'LPM';
+GRANT ALL PRIVILEGES ON lpm.* TO 'root'@'localhost' IDENTIFIED BY 'ss092888?';
+GRANT ALL PRIVILEGES ON lpm.* TO 'root'@'%' IDENTIFIED BY 'ss092888?';
 FLUSH PRIVILEGES;
 EXIT;
 
@@ -110,7 +110,7 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=lpm
 DB_USER=root
-DB_PASSWORD=LPM
+DB_PASSWORD=ss092888?
 
 # Session
 SESSION_SECRET=your-super-secret-session-key-change-this
@@ -127,9 +127,9 @@ CLIENT_URL=https://berrple.com
 ### 3. 데이터베이스 초기화
 ```bash
 # SQL 파일 실행
-mysql -h localhost -u root -pLPM lpm < server/src/database/schema.sql
-mysql -h localhost -u root -pLPM lpm < server/src/database/initial_players.sql
-mysql -h localhost -u root -pLPM lpm < server/src/database/update_power_formula.sql
+mysql -h localhost -u root -p'ss092888?' lpm < server/src/database/schema.sql
+mysql -h localhost -u root -p'ss092888?' lpm < server/src/database/initial_players.sql
+mysql -h localhost -u root -p'ss092888?' lpm < server/src/database/update_power_formula.sql
 
 # 또는 비밀번호 프롬프트로 입력
 # mysql -h localhost -u root -p lpm < server/src/database/schema.sql
@@ -473,7 +473,7 @@ nano ~/backup.sh
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M%S)
 mkdir -p ~/backups
-mysqldump -h localhost -u root -pLPM lpm > ~/backups/lpm_$DATE.sql
+mysqldump -h localhost -u root -p'ss092888?' lpm > ~/backups/lpm_$DATE.sql
 find ~/backups -name "lpm_*.sql" -mtime +7 -delete
 ```
 

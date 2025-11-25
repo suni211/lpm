@@ -15,12 +15,29 @@ router.get(
 // Google OAuth callback
 router.get(
   '/google/callback',
-  passport.authenticate('google', {
-    failureRedirect: `${process.env.CLIENT_URL}/login?error=auth_failed`,
-  }),
-  (req: Request, res: Response) => {
-    // Successful authentication
-    res.redirect(`${process.env.CLIENT_URL}/dashboard`);
+  (req: Request, res: Response, next: Function) => {
+    passport.authenticate('google', (err: any, user: any, info: any) => {
+      if (err) {
+        // IP 중복 에러 처리
+        if (err.message && err.message.includes('DUPLICATE_IP_ERROR')) {
+          return res.redirect(`${process.env.CLIENT_URL}/login?error=duplicate_ip`);
+        }
+        // 기타 인증 에러
+        return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
+      }
+
+      if (!user) {
+        return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
+      }
+
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
+          return res.redirect(`${process.env.CLIENT_URL}/login?error=login_failed`);
+        }
+        // Successful authentication
+        return res.redirect(`${process.env.CLIENT_URL}/dashboard`);
+      });
+    })(req, res, next);
   }
 );
 
@@ -33,19 +50,19 @@ router.get('/me', async (req: Request, res: Response) => {
   try {
     // Get user info
     const userResult = await pool.query(
-      'SELECT * FROM users WHERE id = $1',
+      'SELECT * FROM users WHERE id = ?',
       [req.user.id]
     );
 
     // Get team info
     const teamResult = await pool.query(
-      'SELECT * FROM teams WHERE user_id = $1',
+      'SELECT * FROM teams WHERE user_id = ?',
       [req.user.id]
     );
 
     res.json({
-      user: userResult.rows[0],
-      team: teamResult.rows[0] || null,
+      user: userResult[0],
+      team: teamResult[0] || null,
     });
   } catch (error) {
     console.error('Error fetching user:', error);
