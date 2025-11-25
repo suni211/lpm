@@ -44,9 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = () => {
-    // 프로덕션에서는 상대 경로 사용 (Nginx가 /api를 프록시)
-    const apiUrl = import.meta.env.VITE_API_URL || '';
-    window.location.href = apiUrl ? `${apiUrl}/api/auth/google` : '/api/auth/google';
+    window.location.href = 'https://berrple.com/api/auth/google';
   };
 
   const logout = async () => {
