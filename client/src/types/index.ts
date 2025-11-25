@@ -16,6 +16,7 @@ export interface Team {
   balance: number;
   reputation_level: number;
   reputation_points: number;
+  reputation: number; // 명성도 (reputation_points와 동일하거나 계산된 값)
   fans: number;
   current_tier: string;
   lp: number;

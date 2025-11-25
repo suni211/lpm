@@ -131,7 +131,7 @@ const Gacha: React.FC = () => {
                 <button
                   className="btn-draw"
                   onClick={() => handleDrawCard(pack.type, pack.price)}
-                  disabled={team && team.balance < pack.price}
+                  disabled={!!(team && team.balance < pack.price)}
                 >
                   {team && team.balance < pack.price ? '잔액 부족' : '뽑기'}
                 </button>
