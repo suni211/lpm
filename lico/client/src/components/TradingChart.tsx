@@ -62,9 +62,10 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
 
       chartRef.current = chart;
 
-      // addCandlestickSeries 메서드가 런타임에 존재하는지 확인하고 호출
-      if ('addCandlestickSeries' in chartRef.current && typeof (chartRef.current as any).addCandlestickSeries === 'function') {
-        const candlestickSeries = (chartRef.current as any).addCandlestickSeries({
+      // lightweight-charts v5에서는 addSeries를 사용해야 함
+      try {
+        const candlestickSeries = chartRef.current.addSeries({
+          type: 'Candlestick',
           upColor: '#22c55e',
           downColor: '#ef4444',
           borderUpColor: '#22c55e',
@@ -74,8 +75,20 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
         }) as ISeriesApi<'Candlestick'>;
 
         candlestickSeriesRef.current = candlestickSeries;
-      } else {
-        console.error('addCandlestickSeries method not available on chart');
+      } catch (error) {
+        console.error('Failed to add candlestick series:', error);
+        // v5 이전 버전 호환성을 위한 폴백
+        if ('addCandlestickSeries' in chartRef.current && typeof (chartRef.current as any).addCandlestickSeries === 'function') {
+          const candlestickSeries = (chartRef.current as any).addCandlestickSeries({
+            upColor: '#22c55e',
+            downColor: '#ef4444',
+            borderUpColor: '#22c55e',
+            borderDownColor: '#ef4444',
+            wickUpColor: '#22c55e',
+            wickDownColor: '#ef4444',
+          }) as ISeriesApi<'Candlestick'>;
+          candlestickSeriesRef.current = candlestickSeries;
+        }
       }
     }
 
