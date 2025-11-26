@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { coinService } from '../services/coinService';
-import type { Coin } from '../types';
 import './TradingViewWidgets.css';
 
 // Ticker Tape 컴포넌트

@@ -129,6 +129,8 @@ const AdminDashboard = () => {
         description: formData.description || null,
         circulating_supply: parseInt(formData.circulating_supply),
         current_price: parseFloat(formData.current_price),
+        min_volatility: parseFloat(formData.min_volatility) / 100, // %를 소수로 변환
+        max_volatility: parseFloat(formData.max_volatility) / 100, // %를 소수로 변환
       });
       alert('코인이 성공적으로 수정되었습니다!');
       setEditingCoin(null);
@@ -160,6 +162,8 @@ const AdminDashboard = () => {
       description: coin.description || '',
       circulating_supply: coin.circulating_supply.toString(),
       current_price: coin.current_price.toString(),
+      min_volatility: coin.min_volatility ? (coin.min_volatility * 100).toFixed(4) : '0.01',
+      max_volatility: coin.max_volatility ? (coin.max_volatility * 100).toFixed(2) : '5.00',
     });
   };
 
@@ -171,6 +175,8 @@ const AdminDashboard = () => {
       description: '',
       circulating_supply: '',
       current_price: '',
+      min_volatility: '0.01',
+      max_volatility: '5.00',
     });
   };
 
@@ -262,6 +268,7 @@ const AdminDashboard = () => {
                 <th>현재 가격</th>
                 <th>유통량</th>
                 <th>시가총액</th>
+                <th>변동성 범위</th>
                 <th>상태</th>
                 <th>작업</th>
               </tr>
@@ -281,6 +288,11 @@ const AdminDashboard = () => {
                   <td>{formatNumber(coin.current_price)} G</td>
                   <td>{formatNumber(coin.circulating_supply)}</td>
                   <td>{formatNumber(coin.market_cap)} G</td>
+                  <td>
+                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                      {coin.min_volatility ? (parseFloat(coin.min_volatility.toString()) * 100).toFixed(4) : '0.01'}% ~ {coin.max_volatility ? (parseFloat(coin.max_volatility.toString()) * 100).toFixed(2) : '5.00'}%
+                    </span>
+                  </td>
                   <td>
                     <span className={`status-badge ${coin.status.toLowerCase()}`}>
                       {coin.status}
