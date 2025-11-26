@@ -147,6 +147,23 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
       current_price,
     } = req.body;
 
+    // 입력 검증
+    if (!symbol || !name) {
+      return res.status(400).json({ error: '심볼과 이름은 필수입니다' });
+    }
+
+    if (!symbol.match(/^[A-Z0-9]{2,10}$/)) {
+      return res.status(400).json({ error: '심볼은 2-10자의 영문 대문자와 숫자만 가능합니다' });
+    }
+
+    if (!circulating_supply || circulating_supply <= 0) {
+      return res.status(400).json({ error: '유통량은 0보다 커야 합니다' });
+    }
+
+    if (!current_price || current_price <= 0) {
+      return res.status(400).json({ error: '초기 가격은 0보다 커야 합니다' });
+    }
+
     // 심볼 중복 확인
     const existing = await query('SELECT * FROM coins WHERE symbol = ?', [symbol.toUpperCase()]);
 
@@ -158,8 +175,8 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
     // initial_supply는 circulating_supply와 동일하게 설정, initial_price는 current_price와 동일하게 설정
     await query(
       `INSERT INTO coins
-       (id, symbol, name, logo_url, description, initial_supply, circulating_supply, initial_price, current_price)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, symbol, name, logo_url, description, initial_supply, circulating_supply, initial_price, current_price, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')`,
       [
         coinId,
         symbol.toUpperCase(),
@@ -178,10 +195,11 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
     res.json({
       success: true,
       coin: coins[0],
+      message: '코인이 성공적으로 생성되었습니다',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('코인 생성 오류:', error);
-    res.status(500).json({ error: '코인 생성 실패' });
+    res.status(500).json({ error: '코인 생성 실패', message: error.message });
   }
 });
 
@@ -191,30 +209,45 @@ router.patch('/:id', isAdmin, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name, logo_url, description, circulating_supply, current_price, status } = req.body;
 
+    // 코인 존재 확인
+    const existingCoins = await query('SELECT * FROM coins WHERE id = ?', [id]);
+    if (existingCoins.length === 0) {
+      return res.status(404).json({ error: '코인을 찾을 수 없습니다' });
+    }
+
     const updates: string[] = [];
     const params: any[] = [];
 
-    if (name !== undefined) {
+    if (name !== undefined && name.trim() !== '') {
       updates.push('name = ?');
-      params.push(name);
+      params.push(name.trim());
     }
     if (logo_url !== undefined) {
       updates.push('logo_url = ?');
-      params.push(logo_url);
+      params.push(logo_url || null);
     }
     if (description !== undefined) {
       updates.push('description = ?');
-      params.push(description);
+      params.push(description || null);
     }
     if (circulating_supply !== undefined) {
+      if (circulating_supply <= 0) {
+        return res.status(400).json({ error: '유통량은 0보다 커야 합니다' });
+      }
       updates.push('circulating_supply = ?');
       params.push(circulating_supply);
     }
     if (current_price !== undefined) {
+      if (current_price <= 0) {
+        return res.status(400).json({ error: '가격은 0보다 커야 합니다' });
+      }
       updates.push('current_price = ?');
       params.push(current_price);
     }
     if (status !== undefined) {
+      if (!['ACTIVE', 'PAUSED', 'DELISTED'].includes(status)) {
+        return res.status(400).json({ error: '유효하지 않은 상태입니다 (ACTIVE, PAUSED, DELISTED)' });
+      }
       updates.push('status = ?');
       params.push(status);
     }
@@ -232,10 +265,11 @@ router.patch('/:id', isAdmin, async (req: Request, res: Response) => {
     res.json({
       success: true,
       coin: coins[0],
+      message: '코인이 성공적으로 수정되었습니다',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('코인 수정 오류:', error);
-    res.status(500).json({ error: '코인 수정 실패' });
+    res.status(500).json({ error: '코인 수정 실패', message: error.message });
   }
 });
 

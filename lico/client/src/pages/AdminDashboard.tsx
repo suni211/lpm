@@ -231,6 +231,27 @@ const AdminDashboard = () => {
       {/* 코인 관리 탭 */}
       {activeTab === 'coins' && (
         <div className="coins-table-container">
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, color: '#fff' }}>코인 목록</h3>
+            <button
+              onClick={() => {
+                resetForm();
+                setShowCreateModal(true);
+              }}
+              className="create-button"
+              style={{
+                padding: '10px 20px',
+                background: '#3b82f6',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '600',
+              }}
+            >
+              + 코인 생성
+            </button>
+          </div>
           <table className="coins-table">
             <thead>
               <tr>

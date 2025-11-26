@@ -10,7 +10,7 @@ const router = express.Router();
 // 주문 생성 (매수/매도) - 로그인 필요
 router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const { wallet_address, coin_id, order_type, order_method, price, quantity } = req.body;
+    const { wallet_address, coin_id, order_type, order_method, price, quantity, amount } = req.body;
 
     // 지갑 조회
     const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
@@ -39,7 +39,17 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(400).json({ error: '유효하지 않은 가격입니다' });
     }
 
-    if (!quantity || quantity <= 0) {
+    // 금액 기반 주문 지원: amount가 있으면 quantity 계산
+    let finalQuantity = quantity;
+    if (amount && amount > 0) {
+      // 금액으로 수량 계산 (소수점 8자리까지)
+      finalQuantity = parseFloat((amount / orderPrice).toFixed(8));
+      if (finalQuantity <= 0) {
+        return res.status(400).json({ error: '입력한 금액으로는 구매할 수 있는 수량이 없습니다' });
+      }
+    }
+
+    if (!finalQuantity || finalQuantity <= 0) {
       return res.status(400).json({ error: '유효하지 않은 수량입니다' });
     }
 
@@ -51,9 +61,9 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
       if (order_method === 'MARKET') {
         // 시장가 주문: 즉시 매칭
         if (order_type === 'BUY') {
-          matchResult = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'MARKET', quantity) as { matched: number; remaining: number };
+          matchResult = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'MARKET', finalQuantity) as { matched: number; remaining: number };
         } else {
-          matchResult = await tradingEngine.processSellOrder(wallet.id, coin_id, 'MARKET', quantity) as { matched: number; remaining: number };
+          matchResult = await tradingEngine.processSellOrder(wallet.id, coin_id, 'MARKET', finalQuantity) as { matched: number; remaining: number };
         }
 
         // 시장가 주문 결과 처리
@@ -66,13 +76,13 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
       } else {
         // 지정가 주문: tradingEngine 사용
         if (order_type === 'BUY') {
-          orderId = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'LIMIT', quantity, orderPrice) as string;
+          orderId = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'LIMIT', finalQuantity, orderPrice) as string;
         } else {
-          orderId = await tradingEngine.processSellOrder(wallet.id, coin_id, 'LIMIT', quantity, orderPrice) as string;
+          orderId = await tradingEngine.processSellOrder(wallet.id, coin_id, 'LIMIT', finalQuantity, orderPrice) as string;
         }
 
         // 블록체인 거래 기록 생성
-        const totalAmount = orderPrice * quantity;
+        const totalAmount = orderPrice * finalQuantity;
         const fee = Math.floor(totalAmount * 0.05);
         await blockchainService.createTransaction(
           wallet.wallet_address,

@@ -33,7 +33,22 @@ function LicoConnectionPage({ userData }: LicoConnectionPageProps) {
         api.get('/api/lico/connection'),
         api.get('/api/accounts/me'),
       ]);
-      setConnection(connectionRes.data.connection);
+      
+      // 응답 구조 확인 및 디버깅
+      console.log('LICO 연결 응답:', connectionRes.data);
+      
+      // connection과 lico_wallet이 모두 포함된 경우
+      if (connectionRes.data.connection) {
+        const connectionData = {
+          ...connectionRes.data.connection,
+          // lico_wallet이 별도로 있는 경우 병합
+          lico_wallet: connectionRes.data.connection.lico_wallet || connectionRes.data.lico_wallet || null,
+        };
+        setConnection(connectionData);
+      } else {
+        setConnection(null);
+      }
+      
       setAccounts(accountsRes.data.accounts.filter((a: any) => a.account_type === 'STOCK'));
     } catch (error) {
       console.error('데이터 조회 실패:', error);

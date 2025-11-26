@@ -277,22 +277,27 @@ export class TradingEngine {
     );
   }
 
-  // 코인 잔액 업데이트
+  // 코인 잔액 업데이트 (소수점 지원)
   private async updateCoinBalance(walletId: string, coinId: string, amount: number) {
+    // 소수점 8자리까지 정밀도 유지
+    const preciseAmount = parseFloat(amount.toFixed(8));
+    
     const existing = await query(
       'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
       [walletId, coinId]
     );
 
     if (existing.length > 0) {
+      // 기존 잔액 업데이트 (소수점 정밀도 유지)
       await query(
         'UPDATE user_coin_balances SET available_amount = available_amount + ? WHERE wallet_id = ? AND coin_id = ?',
-        [amount, walletId, coinId]
+        [preciseAmount, walletId, coinId]
       );
     } else {
+      // 새 잔액 생성
       await query(
         'INSERT INTO user_coin_balances (id, wallet_id, coin_id, available_amount) VALUES (?, ?, ?, ?)',
-        [uuidv4(), walletId, coinId, amount]
+        [uuidv4(), walletId, coinId, preciseAmount]
       );
     }
   }

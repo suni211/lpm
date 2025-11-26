@@ -187,3 +187,42 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.input-mode-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mode-button {
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #2a2e3e;
+  color: #9ca3af;
+}
+
+.mode-button.active {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.mode-button:hover {
+  background: #3a3e4e;
+}
+
+.mode-button.active:hover {
+  background: #2563eb;
+}
+
+.calculated-info {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+  font-style: italic;
+}

@@ -88,7 +88,19 @@ router.get('/connection', isAuthenticated, async (req: Request, res: Response) =
 
     // Lico 지갑 정보 조회
     try {
-      const licoResponse = await axios.get(`${LICO_API_URL}/api/wallets/address/${connection.lico_wallet_address}`);
+      const licoResponse = await axios.get(`${LICO_API_URL}/api/wallets/address/${connection.lico_wallet_address}`, {
+        timeout: 5000, // 5초 타임아웃
+      });
+      
+      if (!licoResponse.data || !licoResponse.data.wallet) {
+        console.error('LICO 지갑 조회 실패: 응답 데이터 없음', licoResponse.data);
+        return res.json({ 
+          connection, 
+          lico_wallet: null,
+          error: 'LICO 지갑 정보를 가져올 수 없습니다'
+        });
+      }
+
       const licoWallet = licoResponse.data.wallet;
 
       res.json({
@@ -96,13 +108,20 @@ router.get('/connection', isAuthenticated, async (req: Request, res: Response) =
           ...connection,
           lico_wallet: {
             wallet_address: licoWallet.wallet_address,
-            gold_balance: licoWallet.gold_balance,
+            gold_balance: licoWallet.gold_balance || 0,
             minecraft_username: licoWallet.minecraft_username,
           },
         },
       });
-    } catch (error) {
-      res.json({ connection, lico_wallet: null });
+    } catch (error: any) {
+      console.error('LICO 지갑 조회 오류:', error.message);
+      console.error('LICO API URL:', `${LICO_API_URL}/api/wallets/address/${connection.lico_wallet_address}`);
+      console.error('에러 상세:', error.response?.data || error.message);
+      res.json({ 
+        connection, 
+        lico_wallet: null,
+        error: error.response?.data?.error || 'LICO 지갑 정보를 가져올 수 없습니다'
+      });
     }
   } catch (error) {
     console.error('Lico 연결 조회 오류:', error);
