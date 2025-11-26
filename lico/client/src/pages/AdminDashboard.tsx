@@ -2,10 +2,16 @@ import { useState, useEffect } from 'react';
 import { coinService } from '../services/coinService';
 import api from '../services/api';
 import type { Coin } from '../types';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
+  const [activeTab, setActiveTab] = useState<'coins' | 'users' | 'trades' | 'charts'>('coins');
   const [coins, setCoins] = useState<Coin[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [trades, setTrades] = useState<any[]>([]);
+  const [priceHistory, setPriceHistory] = useState<any[]>([]);
+  const [selectedCoin, setSelectedCoin] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCoin, setEditingCoin] = useState<Coin | null>(null);
@@ -21,12 +27,23 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchCoins();
-  }, []);
+    if (activeTab === 'users') fetchUsers();
+    if (activeTab === 'trades') fetchTrades();
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedCoin && activeTab === 'charts') {
+      fetchPriceHistory();
+    }
+  }, [selectedCoin, activeTab]);
 
   const fetchCoins = async () => {
     try {
       const data = await coinService.getCoins();
       setCoins(data);
+      if (data.length > 0 && !selectedCoin) {
+        setSelectedCoin(data[0].id);
+      }
     } catch (error) {
       console.error('코인 목록 조회 실패:', error);
     } finally {
@@ -34,10 +51,56 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/api/admin/users');
+      setUsers(response.data.users || []);
+    } catch (error) {
+      console.error('사용자 목록 조회 실패:', error);
+    }
+  };
+
+  const fetchTrades = async () => {
+    try {
+      const response = await api.get('/api/admin/trades');
+      setTrades(response.data.trades || []);
+    } catch (error) {
+      console.error('거래 내역 조회 실패:', error);
+    }
+  };
+
+  const fetchPriceHistory = async () => {
+    if (!selectedCoin) return;
+    try {
+      const response = await api.get(`/api/admin/coins/${selectedCoin}/price-history?interval=1h&limit=100`);
+      const candles = response.data.candles || [];
+      const chartData = candles.map((candle: any) => ({
+        time: new Date(candle.open_time).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit' }),
+        price: parseFloat(candle.close_price || candle.close || 0),
+        volume: parseFloat(candle.volume || 0),
+      }));
+      setPriceHistory(chartData);
+    } catch (error) {
+      console.error('가격 변동 그래프 조회 실패:', error);
+    }
+  };
+
+  const handleUserStatusChange = async (userId: string, newStatus: string) => {
+    if (!confirm(`사용자 상태를 ${newStatus === 'SUSPENDED' ? '정지' : newStatus === 'CLOSED' ? '종료' : '활성화'}로 변경하시겠습니까?`)) return;
+
+    try {
+      await api.patch(`/api/admin/users/${userId}/status`, { status: newStatus });
+      alert('사용자 상태가 변경되었습니다.');
+      fetchUsers();
+    } catch (error: any) {
+      alert(error.response?.data?.error || '상태 변경 실패');
+    }
+  };
+
   const handleCreateCoin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/coins', {
+      await api.post('/api/coins', {
         symbol: formData.symbol,
         name: formData.name,
         logo_url: formData.logo_url || null,
@@ -60,7 +123,7 @@ const AdminDashboard = () => {
     if (!editingCoin) return;
 
     try {
-      await api.patch(`/coins/${editingCoin.id}`, {
+      await api.patch(`/api/coins/${editingCoin.id}`, {
         name: formData.name,
         logo_url: formData.logo_url || null,
         description: formData.description || null,
@@ -80,7 +143,7 @@ const AdminDashboard = () => {
     if (!confirm('정말로 이 코인을 삭제하시겠습니까?')) return;
 
     try {
-      await api.patch(`/coins/${coinId}`, { status: 'DELISTED' });
+      await api.patch(`/api/coins/${coinId}`, { status: 'DELISTED' });
       alert('코인이 삭제되었습니다!');
       fetchCoins();
     } catch (error: any) {
@@ -134,62 +197,234 @@ const AdminDashboard = () => {
     <div className="admin-dashboard">
       <div className="admin-header">
         <h1>관리자 대시보드</h1>
-        <button className="create-button" onClick={() => setShowCreateModal(true)}>
-          + 코인 생성
+        {activeTab === 'coins' && (
+          <button className="create-button" onClick={() => setShowCreateModal(true)}>
+            + 코인 생성
+          </button>
+        )}
+      </div>
+
+      {/* 탭 메뉴 */}
+      <div className="admin-tabs">
+        <button
+          className={activeTab === 'coins' ? 'active' : ''}
+          onClick={() => setActiveTab('coins')}
+        >
+          코인 관리
+        </button>
+        <button
+          className={activeTab === 'users' ? 'active' : ''}
+          onClick={() => setActiveTab('users')}
+        >
+          사용자 관리
+        </button>
+        <button
+          className={activeTab === 'trades' ? 'active' : ''}
+          onClick={() => setActiveTab('trades')}
+        >
+          거래 내역
+        </button>
+        <button
+          className={activeTab === 'charts' ? 'active' : ''}
+          onClick={() => setActiveTab('charts')}
+        >
+          변동 그래프
         </button>
       </div>
 
-      <div className="coins-table-container">
-        <table className="coins-table">
-          <thead>
-            <tr>
-              <th>심볼</th>
-              <th>이름</th>
-              <th>현재 가격</th>
-              <th>유통량</th>
-              <th>시가총액</th>
-              <th>상태</th>
-              <th>작업</th>
-            </tr>
-          </thead>
-          <tbody>
-            {coins.map((coin) => (
-              <tr key={coin.id}>
-                <td>
-                  <div className="coin-cell">
-                    {coin.logo_url && (
-                      <img src={coin.logo_url} alt={coin.symbol} className="coin-table-logo" />
-                    )}
-                    <span className="coin-symbol-text">{coin.symbol}</span>
-                  </div>
-                </td>
-                <td>{coin.name}</td>
-                <td>{formatNumber(coin.current_price)} G</td>
-                <td>{formatNumber(coin.circulating_supply)}</td>
-                <td>{formatNumber(coin.market_cap)} G</td>
-                <td>
-                  <span className={`status-badge ${coin.status.toLowerCase()}`}>
-                    {coin.status}
-                  </span>
-                </td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="edit-button" onClick={() => handleEditClick(coin)}>
-                      수정
-                    </button>
-                    <button
-                      className="delete-button"
-                      onClick={() => handleDeleteCoin(coin.id)}
-                    >
-                      삭제
-                    </button>
-                  </div>
-                </td>
+      {/* 코인 관리 탭 */}
+      {activeTab === 'coins' && (
+        <div className="coins-table-container">
+          <table className="coins-table">
+            <thead>
+              <tr>
+                <th>심볼</th>
+                <th>이름</th>
+                <th>현재 가격</th>
+                <th>유통량</th>
+                <th>시가총액</th>
+                <th>상태</th>
+                <th>작업</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {coins.map((coin) => (
+                <tr key={coin.id}>
+                  <td>
+                    <div className="coin-cell">
+                      {coin.logo_url && (
+                        <img src={coin.logo_url} alt={coin.symbol} className="coin-table-logo" />
+                      )}
+                      <span className="coin-symbol-text">{coin.symbol}</span>
+                    </div>
+                  </td>
+                  <td>{coin.name}</td>
+                  <td>{formatNumber(coin.current_price)} G</td>
+                  <td>{formatNumber(coin.circulating_supply)}</td>
+                  <td>{formatNumber(coin.market_cap)} G</td>
+                  <td>
+                    <span className={`status-badge ${coin.status.toLowerCase()}`}>
+                      {coin.status}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="action-buttons">
+                      <button className="edit-button" onClick={() => handleEditClick(coin)}>
+                        수정
+                      </button>
+                      <button
+                        className="delete-button"
+                        onClick={() => handleDeleteCoin(coin.id)}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* 사용자 관리 탭 */}
+      {activeTab === 'users' && (
+        <div className="users-table-container">
+          <table className="users-table">
+            <thead>
+              <tr>
+                <th>지갑 주소</th>
+                <th>Minecraft 닉네임</th>
+                <th>Gold 잔액</th>
+                <th>코인 보유 가치</th>
+                <th>보유 코인 수</th>
+                <th>상태</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="empty-state">사용자가 없습니다</td>
+                </tr>
+              ) : (
+                users.map((user) => (
+                  <tr key={user.id}>
+                    <td className="monospace">{user.wallet_address}</td>
+                    <td>{user.minecraft_username}</td>
+                    <td>{formatNumber(user.gold_balance)} G</td>
+                    <td>{formatNumber(user.total_coin_value)} G</td>
+                    <td>{user.coin_count || 0}</td>
+                    <td>
+                      <span className={`status-badge ${user.status?.toLowerCase() || 'active'}`}>
+                        {user.status === 'ACTIVE' ? '활성' :
+                         user.status === 'SUSPENDED' ? '정지' : '종료'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        {user.status === 'ACTIVE' ? (
+                          <button
+                            onClick={() => handleUserStatusChange(user.id, 'SUSPENDED')}
+                            className="suspend-button"
+                          >
+                            정지
+                          </button>
+                        ) : user.status === 'SUSPENDED' ? (
+                          <button
+                            onClick={() => handleUserStatusChange(user.id, 'ACTIVE')}
+                            className="activate-button"
+                          >
+                            활성화
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* 거래 내역 탭 */}
+      {activeTab === 'trades' && (
+        <div className="trades-table-container">
+          <table className="trades-table">
+            <thead>
+              <tr>
+                <th>시간</th>
+                <th>코인</th>
+                <th>매수자</th>
+                <th>매도자</th>
+                <th>가격</th>
+                <th>수량</th>
+                <th>총액</th>
+              </tr>
+            </thead>
+            <tbody>
+              {trades.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="empty-state">거래 내역이 없습니다</td>
+                </tr>
+              ) : (
+                trades.map((trade) => (
+                  <tr key={trade.id}>
+                    <td>{new Date(trade.created_at).toLocaleString('ko-KR')}</td>
+                    <td>
+                      <div className="coin-cell">
+                        <span className="coin-symbol-text">{trade.symbol}</span>
+                        <span className="coin-name-text">{trade.name}</span>
+                      </div>
+                    </td>
+                    <td>{trade.buyer_username}</td>
+                    <td>{trade.seller_username}</td>
+                    <td>{formatNumber(trade.price)} G</td>
+                    <td>{formatNumber(trade.quantity)}</td>
+                    <td>{formatNumber(trade.total_amount)} G</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* 변동 그래프 탭 */}
+      {activeTab === 'charts' && (
+        <div className="charts-container">
+          <div className="chart-controls">
+            <label>코인 선택:</label>
+            <select
+              value={selectedCoin}
+              onChange={(e) => setSelectedCoin(e.target.value)}
+            >
+              {coins.map((coin) => (
+                <option key={coin.id} value={coin.id}>
+                  {coin.symbol} - {coin.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {priceHistory.length > 0 ? (
+            <div className="chart-wrapper">
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={priceHistory}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="time" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="price" stroke="#8884d8" name="가격 (G)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="empty-state">그래프 데이터가 없습니다</div>
+          )}
+        </div>
+      )}
 
       {/* 생성 모달 */}
       {showCreateModal && (

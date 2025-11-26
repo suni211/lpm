@@ -162,13 +162,13 @@ function RecoveryPage() {
               placeholder="예: 069a79f444e94726a5befca90e38aaf5"
               required
             />
-            <small style={{ color: '#666', fontSize: '14px' }}>
+            <small style={{ color: '#9ca3af', fontSize: '14px' }}>
               UUID는 <a href="https://mcuuid.net/" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>mcuuid.net</a>에서 확인 가능합니다
             </small>
           </div>
 
-          <div style={{ background: '#f0f0f0', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
-            <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>5. 보안 질문 답변</h3>
+          <div style={{ background: '#2a2e3e', border: '1px solid #3a3e4e', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
+            <h3 style={{ marginBottom: '12px', fontSize: '16px', color: '#e5e7eb' }}>5. 보안 질문 답변</h3>
 
             <div className="form-group">
               <label className="form-label">다니는/다녔던 학교는?</label>

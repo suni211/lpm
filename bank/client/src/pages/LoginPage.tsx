@@ -71,7 +71,7 @@ function LoginPage({ setAuth }: LoginPageProps) {
               maxLength={32}
               required
             />
-            <small style={{ color: '#666', fontSize: '14px' }}>
+            <small style={{ color: '#9ca3af', fontSize: '14px' }}>
               {authCode.length}/32자
             </small>
           </div>

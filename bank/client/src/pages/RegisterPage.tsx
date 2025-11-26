@@ -169,8 +169,8 @@ function RegisterPage() {
             />
           </div>
 
-          <div style={{ background: '#f0f0f0', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
-            <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>보안 질문 (인증 코드 복구용)</h3>
+          <div style={{ background: '#2a2e3e', border: '1px solid #3a3e4e', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
+            <h3 style={{ marginBottom: '12px', fontSize: '16px', color: '#e5e7eb' }}>보안 질문 (인증 코드 복구용)</h3>
 
             <div className="form-group">
               <label className="form-label">다니는/다녔던 학교는?</label>

@@ -1,0 +1,175 @@
+.admin-page-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
+  padding: 40px;
+  color: #fff;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.admin-page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.back-button {
+  padding: 10px 20px;
+  background: #2a2e3e;
+  border: 1px solid #3a3e4e;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-button:hover {
+  background: #3a3e4e;
+  border-color: #667eea;
+}
+
+.admin-page-header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #fff;
+}
+
+.transfers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.transfer-card {
+  background: #1a1d29;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  animation: slideIn 0.4s ease-out;
+  transition: all 0.3s ease;
+}
+
+.transfer-card:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.transfer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.transfer-id {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: monospace;
+  margin-bottom: 8px;
+}
+
+.transfer-from,
+.transfer-to {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e5e7eb;
+  font-family: monospace;
+  margin-bottom: 4px;
+}
+
+.transfer-user {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.transfer-amount {
+  font-size: 24px;
+  font-weight: bold;
+  color: #93c5fd;
+}
+
+.transfer-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.detail-item {
+  display: flex;
+  gap: 12px;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #9ca3af;
+  min-width: 100px;
+}
+
+.detail-value {
+  color: #e5e7eb;
+}
+
+.transfer-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.approve-button,
+.reject-button {
+  flex: 1;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.approve-button {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+}
+
+.approve-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+}
+
+.reject-button {
+  background: #ef4444;
+  color: white;
+}
+
+.reject-button:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.approve-button:disabled,
+.reject-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+  font-size: 18px;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  color: #9ca3af;
+  font-size: 18px;
+}
+

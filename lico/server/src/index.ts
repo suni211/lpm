@@ -82,6 +82,7 @@ import walletsRoutes from './routes/wallets';
 import coinsRoutes from './routes/coins';
 import tradingRoutes from './routes/trading';
 import blockchainRoutes from './routes/blockchain';
+import adminRoutes from './routes/admin';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questionnaire', questionnaireRoutes);
@@ -89,6 +90,7 @@ app.use('/api/wallets', walletsRoutes);
 app.use('/api/coins', coinsRoutes);
 app.use('/api/trading', tradingRoutes);
 app.use('/api/blockchain', blockchainRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {

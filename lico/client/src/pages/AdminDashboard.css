@@ -249,6 +249,305 @@
   font-size: 18px;
 }
 
+/* 탭 스타일 */
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #2a2e3e;
+}
+
+.admin-tabs button {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+}
+
+.admin-tabs button:hover {
+  color: #fff;
+}
+
+.admin-tabs button.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+/* 사용자/거래 테이블 스타일 */
+.users-table-container,
+.trades-table-container {
+  background: #1a1d29;
+  border-radius: 8px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.users-table,
+.trades-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table thead,
+.trades-table thead {
+  background: #2a2e3e;
+}
+
+.users-table th,
+.trades-table th {
+  padding: 16px;
+  text-align: left;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.users-table td,
+.trades-table td {
+  padding: 16px;
+  border-top: 1px solid #2a2e3e;
+  color: #fff;
+  font-size: 14px;
+}
+
+.monospace {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.suspend-button,
+.activate-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.suspend-button {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.suspend-button:hover {
+  background: #d97706;
+}
+
+.activate-button {
+  background: #22c55e;
+  color: #fff;
+}
+
+.activate-button:hover {
+  background: #16a34a;
+}
+
+.coin-name-text {
+  color: #9ca3af;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
+  font-size: 16px;
+}
+
+/* 그래프 스타일 */
+.charts-container {
+  background: #1a1d29;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.chart-controls label {
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.chart-controls select {
+  padding: 8px 16px;
+  background: #2a2e3e;
+  border: 1px solid #3a3e4e;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+}
+
+.chart-controls select:focus {
+  border-color: #3b82f6;
+}
+
+.chart-wrapper {
+  margin-top: 24px;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #2a2e3e;
+}
+
+.admin-tabs button {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.admin-tabs button:hover {
+  color: #fff;
+}
+
+.admin-tabs button.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.users-table-container,
+.trades-table-container {
+  background: #1a1d29;
+  border-radius: 8px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.users-table,
+.trades-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table thead,
+.trades-table thead {
+  background: #2a2e3e;
+}
+
+.users-table th,
+.trades-table th {
+  padding: 16px;
+  text-align: left;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.users-table td,
+.trades-table td {
+  padding: 16px;
+  border-top: 1px solid #2a2e3e;
+  color: #fff;
+  font-size: 14px;
+}
+
+.monospace {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.suspend-button,
+.activate-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.suspend-button {
+  background: #ef4444;
+  color: #fff;
+}
+
+.suspend-button:hover {
+  background: #dc2626;
+}
+
+.activate-button {
+  background: #22c55e;
+  color: #fff;
+}
+
+.activate-button:hover {
+  background: #16a34a;
+}
+
+.coin-name-text {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-left: 8px;
+}
+
+.charts-container {
+  background: #1a1d29;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.chart-controls label {
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.chart-controls select {
+  padding: 8px 16px;
+  background: #2a2e3e;
+  border: 1px solid #3a3e4e;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.chart-wrapper {
+  margin-top: 24px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+  font-size: 18px;
+}
+
 @media (max-width: 768px) {
   .admin-dashboard {
     padding: 16px;
@@ -260,11 +559,15 @@
     gap: 16px;
   }
 
-  .coins-table-container {
+  .coins-table-container,
+  .users-table-container,
+  .trades-table-container {
     overflow-x: auto;
   }
 
-  .coins-table {
+  .coins-table,
+  .users-table,
+  .trades-table {
     min-width: 800px;
   }
 

@@ -14,6 +14,13 @@ import SavingsGoalsPage from './pages/SavingsGoalsPage';
 import LicoConnectionPage from './pages/LicoConnectionPage';
 import StatsPage from './pages/StatsPage';
 import TransactionsPage from './pages/TransactionsPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminDepositsPage from './pages/AdminDepositsPage';
+import AdminWithdrawalsPage from './pages/AdminWithdrawalsPage';
+import AdminTransfersPage from './pages/AdminTransfersPage';
+import AdminAccountsPage from './pages/AdminAccountsPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminTransactionsPage from './pages/AdminTransactionsPage';
 import NotificationBell from './components/NotificationBell';
 import api from './services/api';
 import './App.css';
@@ -95,6 +102,13 @@ function App() {
           <Route path="/transactions" element={
             isAuthenticated ? <TransactionsPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
           } />
+          <Route path="/admin" element={<AdminDashboardPage setAuth={setIsAuthenticated} />} />
+          <Route path="/admin/deposits" element={<AdminDepositsPage setAuth={setIsAuthenticated} />} />
+          <Route path="/admin/withdrawals" element={<AdminWithdrawalsPage setAuth={setIsAuthenticated} />} />
+          <Route path="/admin/transfers" element={<AdminTransfersPage setAuth={setIsAuthenticated} />} />
+          <Route path="/admin/accounts" element={<AdminAccountsPage setAuth={setIsAuthenticated} />} />
+          <Route path="/admin/users" element={<AdminUsersPage setAuth={setIsAuthenticated} />} />
+          <Route path="/admin/transactions" element={<AdminTransactionsPage setAuth={setIsAuthenticated} />} />
           <Route path="/deposit" element={<Navigate to="/banking" />} />
           <Route path="/withdraw" element={<Navigate to="/banking" />} />
           <Route path="/transfer" element={<Navigate to="/banking" />} />

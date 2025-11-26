@@ -1,0 +1,223 @@
+.admin-page-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
+  padding: 40px;
+  color: #fff;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.admin-page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.back-button {
+  padding: 10px 20px;
+  background: #2a2e3e;
+  border: 1px solid #3a3e4e;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-button:hover {
+  background: #3a3e4e;
+  border-color: #667eea;
+}
+
+.admin-page-header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #fff;
+}
+
+.filters-section {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #1a1d29;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: #e5e7eb;
+  min-width: 100px;
+}
+
+.filter-group select {
+  padding: 10px 16px;
+  background: #2a2e3e;
+  border: 1px solid #3a3e4e;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filter-group select:hover {
+  border-color: #667eea;
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.transactions-table-section {
+  background: #1a1d29;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  animation: slideUp 0.5s ease-out;
+}
+
+.table-header {
+  margin-bottom: 20px;
+}
+
+.table-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+}
+
+.transactions-table {
+  overflow-x: auto;
+}
+
+.transactions-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.transactions-table th {
+  background: #2a2e3e;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #e5e7eb;
+  font-size: 14px;
+  border-bottom: 2px solid #3a3e4e;
+}
+
+.transactions-table td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #d1d5db;
+  font-size: 14px;
+}
+
+.transactions-table tr:hover {
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.transactions-table .monospace {
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.transactions-table .positive {
+  color: #86efac;
+  font-weight: 600;
+}
+
+.transactions-table .negative {
+  color: #fca5a5;
+  font-weight: 600;
+}
+
+.transactions-table .balance-after {
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.type-badge.deposit {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+.type-badge.withdrawal {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.type-badge.transfer_out,
+.type-badge.transfer_in {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.page-button {
+  padding: 8px 16px;
+  background: #2a2e3e;
+  border: 1px solid #3a3e4e;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.page-button:hover:not(:disabled) {
+  background: #3a3e4e;
+  border-color: #667eea;
+}
+
+.page-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  color: #9ca3af;
+  font-size: 18px;
+}
+

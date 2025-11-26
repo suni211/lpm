@@ -5,6 +5,8 @@ import TradingPage from './pages/TradingPage';
 import DepositWithdrawPage from './pages/DepositWithdrawPage';
 import InvestmentHistoryPage from './pages/InvestmentHistoryPage';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminTradesPage from './pages/AdminTradesPage';
 import LoginPage from './pages/LoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -65,6 +67,22 @@ function App() {
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminUsersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/trades"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminTradesPage />
                 </ProtectedRoute>
               }
             />

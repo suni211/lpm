@@ -28,7 +28,7 @@ export class AITradingBot {
     console.log('✅ AI Trading Bot started');
   }
 
-  // 가격 조정 (변동성 추가)
+  // 가격 조정 (변동성 추가) - 0.01% ~ 5% 범위
   async adjustPrices() {
     try {
       const coins = await query('SELECT * FROM coins WHERE status = "ACTIVE"');
@@ -45,8 +45,13 @@ export class AITradingBot {
         const tradeCount = recentTrades[0].count || 0;
         const volume = recentTrades[0].volume || 0;
 
-        // 거래가 활발하면 변동성 증가
-        const dynamicVolatility = this.volatilityFactor * (1 + (tradeCount / 100));
+        // 기본 변동성 범위: 0.01% ~ 5%
+        const minVolatility = 0.0001; // 0.01%
+        const maxVolatility = 0.05; // 5%
+        
+        // 거래가 활발하면 변동성 증가 (최대 5%까지)
+        const baseVolatility = minVolatility + (maxVolatility - minVolatility) * Math.min(tradeCount / 100, 1);
+        const dynamicVolatility = Math.min(baseVolatility, maxVolatility);
 
         // 랜덤 가격 변동 (-volatility% ~ +volatility%)
         const priceChange = (Math.random() * 2 - 1) * dynamicVolatility;
@@ -67,12 +72,12 @@ export class AITradingBot {
             coin.id,
             coin.current_price,
             newPrice,
-            `시장 변동성 조정 (거래량: ${volume})`,
+            `시장 변동성 조정 (거래량: ${volume}, 변동성: ${(dynamicVolatility * 100).toFixed(2)}%)`,
             dynamicVolatility,
           ]
         );
 
-        console.log(`📊 ${coin.symbol}: ${coin.current_price} → ${newPrice} (${(priceChange * 100).toFixed(2)}%)`);
+        console.log(`📊 ${coin.symbol}: ${coin.current_price.toFixed(2)} → ${newPrice.toFixed(2)} (${(priceChange * 100).toFixed(2)}%, 변동성: ${(dynamicVolatility * 100).toFixed(2)}%)`);
       }
     } catch (error) {
       console.error('AI 가격 조정 오류:', error);
@@ -150,4 +155,5 @@ export class AITradingBot {
   }
 }
 
+// AI 변동성 범위: 0.01% ~ 5% (기본값 0.05 = 5%)
 export default new AITradingBot(parseFloat(process.env.AI_VOLATILITY_FACTOR || '0.05'));
