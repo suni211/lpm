@@ -27,6 +27,7 @@ import facilitiesRoutes from './routes/facilities';
 import sponsorRoutes from './routes/sponsors';
 import fusionRoutes from './routes/fusion';
 import leagueRoutes from './routes/league';
+import dashboardRoutes from './routes/dashboard';
 import { startSoloRankCron } from './services/soloRankCron';
 
 // Load environment variables
@@ -153,6 +154,7 @@ app.use('/api/facilities', facilitiesRoutes);
 app.use('/api/sponsor', sponsorRoutes);
 app.use('/api/fusion', fusionRoutes);
 app.use('/api/league', leagueRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {

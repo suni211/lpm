@@ -61,7 +61,9 @@ const Achievements: React.FC = () => {
   const claimReward = async (achievementId: string) => {
     try {
       const response = await api.post(`/achievements/claim/${achievementId}`);
-      alert(`🎉 ${response.data.message}\n💰 ${response.data.rewards.money.toLocaleString()}원\n⭐ 명성도 +${response.data.rewards.reputation}`);
+
+      // 팝업 알림 표시
+      showCompletionPopup(response.data.rewards);
 
       await fetchAchievements();
       await fetchStats();
@@ -69,6 +71,34 @@ const Achievements: React.FC = () => {
     } catch (error: any) {
       alert(error.response?.data?.error || '보상 수령에 실패했습니다');
     }
+  };
+
+  const showCompletionPopup = (rewards: { money: number; reputation: number }) => {
+    const popup = document.createElement('div');
+    popup.className = 'achievement-popup';
+    popup.innerHTML = `
+      <div class="achievement-popup-content">
+        <div class="achievement-popup-icon">🎉</div>
+        <h2 class="achievement-popup-title">업적 달성!</h2>
+        <div class="achievement-popup-rewards">
+          <div class="popup-reward">
+            <span class="popup-reward-icon">💰</span>
+            <span class="popup-reward-text">${rewards.money.toLocaleString()}원</span>
+          </div>
+          <div class="popup-reward">
+            <span class="popup-reward-icon">⭐</span>
+            <span class="popup-reward-text">명성도 +${rewards.reputation}</span>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(popup);
+
+    // 3초 후 자동 제거
+    setTimeout(() => {
+      popup.classList.add('fade-out');
+      setTimeout(() => document.body.removeChild(popup), 500);
+    }, 3000);
   };
 
   const getCategoryIcon = (category: string) => {
@@ -100,12 +130,29 @@ const Achievements: React.FC = () => {
   const categories = ['ALL', ...Object.keys(achievements)];
 
   const getFilteredAchievements = () => {
+    let filtered: Achievement[] = [];
     if (selectedCategory === 'ALL') {
-      return Object.entries(achievements).flatMap(([category, items]) =>
+      filtered = Object.entries(achievements).flatMap(([category, items]) =>
         items.map(item => ({ ...item, category }))
       );
+    } else {
+      filtered = achievements[selectedCategory]?.map(item => ({ ...item, category: selectedCategory })) || [];
     }
-    return achievements[selectedCategory]?.map(item => ({ ...item, category: selectedCategory })) || [];
+
+    // 보상 수령한 업적은 제외
+    filtered = filtered.filter(achievement => !achievement.is_claimed);
+
+    // 정렬: 완료된 업적을 맨 위로
+    filtered.sort((a, b) => {
+      if (a.is_completed && !b.is_completed) return -1;
+      if (!a.is_completed && b.is_completed) return 1;
+      // 같은 상태면 진행도 순으로 정렬
+      const progressA = a.progress / a.requirement;
+      const progressB = b.progress / b.requirement;
+      return progressB - progressA;
+    });
+
+    return filtered;
   };
 
   return (

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import './Fandom.css';
+import './PlayerMeeting.css';
 
 interface FandomInfo {
   teamName: string;
@@ -36,20 +37,33 @@ interface Merchandise {
   canPurchase: boolean;
 }
 
+interface RosterPlayer {
+  id: string;
+  card_name: string;
+  position: string;
+  rarity: string;
+  power: number;
+  cost: number;
+  is_in_roster: boolean;
+}
+
 const Fandom: React.FC = () => {
   const { refreshAuth } = useAuth();
   const [fandomInfo, setFandomInfo] = useState<FandomInfo | null>(null);
   const [events, setEvents] = useState<FandomEvent[]>([]);
   const [merchandise, setMerchandise] = useState<Merchandise[]>([]);
-  const [activeTab, setActiveTab] = useState<'meeting' | 'events' | 'shop'>('meeting');
+  const [rosterPlayers, setRosterPlayers] = useState<RosterPlayer[]>([]);
+  const [activeTab, setActiveTab] = useState<'meeting' | 'player-meeting' | 'events' | 'shop'>('meeting');
   const [showTutorial, setShowTutorial] = useState(false);
   const [selectedMerchandise, setSelectedMerchandise] = useState<Merchandise | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<RosterPlayer | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
 
   useEffect(() => {
     fetchFandomInfo();
     fetchEvents();
     fetchMerchandise();
+    fetchRosterPlayers();
   }, []);
 
   const fetchFandomInfo = async () => {
@@ -76,6 +90,15 @@ const Fandom: React.FC = () => {
       setMerchandise(response.data.merchandise);
     } catch (error) {
       console.error('굿즈 조회 실패:', error);
+    }
+  };
+
+  const fetchRosterPlayers = async () => {
+    try {
+      const response = await api.get('/fandom/roster-players');
+      setRosterPlayers(response.data.players);
+    } catch (error) {
+      console.error('선수 목록 조회 실패:', error);
     }
   };
 
@@ -147,6 +170,35 @@ const Fandom: React.FC = () => {
     }
   };
 
+  const holdPlayerMeeting = async (player: RosterPlayer, meetingType: 'individual' | 'small-group') => {
+    const costs: { [key: string]: number } = {
+      'individual': 2000000,
+      'small-group': 8000000,
+    };
+
+    const typeNames: { [key: string]: string } = {
+      'individual': '1:1 팬미팅',
+      'small-group': '소규모 그룹 팬미팅',
+    };
+
+    if (!confirm(`${player.card_name} 선수의 ${typeNames[meetingType]}을 개최하시겠습니까?\n비용: ${costs[meetingType].toLocaleString()}원\n레어도 보너스 적용됩니다!`)) {
+      return;
+    }
+
+    try {
+      const response = await api.post('/fandom/player-meeting', {
+        playerCardId: player.id,
+        meetingType,
+      });
+      alert(`🎉 ${response.data.message}\n👥 팬 +${response.data.fansGained}\n😊 만족도 +${response.data.satisfactionGained}`);
+
+      await fetchFandomInfo();
+      refreshAuth();
+    } catch (error: any) {
+      alert(error.response?.data?.error || '팬 미팅 개최에 실패했습니다');
+    }
+  };
+
   const getFanLevelName = (level: number) => {
     const levels = ['', '신생 팬덤', '성장 중', '인기', '대중적', '유명', '스타', '메가 스타', '레전드', '국민 팀', '세계적'];
     return levels[level] || '신생 팬덤';
@@ -212,7 +264,13 @@ const Fandom: React.FC = () => {
             className={`tab-btn ${activeTab === 'meeting' ? 'active' : ''}`}
             onClick={() => setActiveTab('meeting')}
           >
-            🎤 팬 미팅
+            🎤 팀 미팅
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'player-meeting' ? 'active' : ''}`}
+            onClick={() => setActiveTab('player-meeting')}
+          >
+            ⭐ 선수 미팅
           </button>
           <button
             className={`tab-btn ${activeTab === 'events' ? 'active' : ''}`}
@@ -305,6 +363,89 @@ const Fandom: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 선수 미팅 탭 */}
+        {activeTab === 'player-meeting' && (
+          <div className="player-meeting-section">
+            <h2 className="section-title">⭐ 선수별 팬 미팅</h2>
+            <p className="section-description">
+              개별 선수와 팬들의 특별한 만남! 레어도가 높을수록 효과도 증가합니다!
+            </p>
+
+            <div className="player-meeting-grid">
+              {rosterPlayers.length === 0 ? (
+                <div className="no-players">보유한 선수가 없습니다</div>
+              ) : (
+                rosterPlayers.map((player) => (
+                  <div
+                    key={player.id}
+                    className={`player-meeting-card rarity-${player.rarity.toLowerCase()}`}
+                  >
+                    <div className="player-card-header">
+                      <div className="player-info">
+                        <h3 className="player-name">{player.card_name}</h3>
+                        <span className="player-position">{player.position}</span>
+                      </div>
+                      <span className={`player-rarity rarity-${player.rarity.toLowerCase()}`}>
+                        {player.rarity}
+                      </span>
+                    </div>
+
+                    <div className="player-stats">
+                      <div className="stat-item">
+                        <span className="stat-label">파워</span>
+                        <span className="stat-value">{player.power}</span>
+                      </div>
+                      <div className="stat-item">
+                        <span className="stat-label">코스트</span>
+                        <span className="stat-value">{player.cost}</span>
+                      </div>
+                      {player.is_in_roster && (
+                        <div className="roster-badge">로스터</div>
+                      )}
+                    </div>
+
+                    <div className="meeting-options">
+                      <div className="meeting-option">
+                        <div className="option-header">
+                          <span className="option-name">1:1 팬미팅</span>
+                          <span className="option-cost">200만원</span>
+                        </div>
+                        <div className="option-effects">
+                          <span>👥 팬 +50 (x{player.rarity === 'LEGEND' ? '2.0' : player.rarity === 'EPIC' ? '1.5' : player.rarity === 'RARE' ? '1.2' : '1.0'})</span>
+                          <span>😊 만족도 +3</span>
+                        </div>
+                        <button
+                          className="btn-player-meeting individual"
+                          onClick={() => holdPlayerMeeting(player, 'individual')}
+                        >
+                          개최하기
+                        </button>
+                      </div>
+
+                      <div className="meeting-option">
+                        <div className="option-header">
+                          <span className="option-name">소규모 그룹</span>
+                          <span className="option-cost">800만원</span>
+                        </div>
+                        <div className="option-effects">
+                          <span>👥 팬 +300 (x{player.rarity === 'LEGEND' ? '2.0' : player.rarity === 'EPIC' ? '1.5' : player.rarity === 'RARE' ? '1.2' : '1.0'})</span>
+                          <span>😊 만족도 +8</span>
+                        </div>
+                        <button
+                          className="btn-player-meeting group"
+                          onClick={() => holdPlayerMeeting(player, 'small-group')}
+                        >
+                          개최하기
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}

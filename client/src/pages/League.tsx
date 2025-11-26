@@ -51,6 +51,20 @@ interface Match {
   status: string;
 }
 
+interface NextMatch {
+  id: string;
+  match_week: number;
+  home_team_id: string;
+  away_team_id: string;
+  home_team_name: string;
+  away_team_name: string;
+  home_team_logo?: string;
+  away_team_logo?: string;
+  match_date: string;
+  league_name: string;
+  league_display: string;
+}
+
 const TeamLogo: React.FC<{ logoUrl?: string, teamName: string }> = ({ logoUrl, teamName }) => (
     <img src={logoUrl || '/default-logo.png'} alt={`${teamName} logo`} className="team-logo" onError={(e) => (e.currentTarget.src = '/default-logo.png')} />
 );
@@ -60,6 +74,7 @@ const League: React.FC = () => {
   const [myLeague, setMyLeague] = useState<any>(null);
   const [standings, setStandings] = useState<Standing[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [nextMatches, setNextMatches] = useState<NextMatch[]>([]);
   const [allLeagues, setAllLeagues] = useState<LeagueInfo[]>([]);
   const [selectedLeagueId, setSelectedLeagueId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,15 +101,19 @@ const League: React.FC = () => {
       const teamId = teamResponse.data.team.id;
       setUserTeamId(teamId);
 
-      const [seasonResponse, myLeagueResponse, leaguesResponse] = await Promise.all([
+      const [seasonResponse, myLeagueResponse, leaguesResponse, nextScheduleResponse] = await Promise.all([
         api.get('/league/current-season'),
         api.get('/league/my-league', { params: { team_id: teamId } }),
-        api.get('/league/all-leagues')
+        api.get('/league/all-leagues'),
+        api.get('/league/next-schedule')
       ]);
 
       if (seasonResponse.data.success) setSeason(seasonResponse.data.season);
       if (leaguesResponse.data.success) setAllLeagues(leaguesResponse.data.leagues);
-      
+      if (nextScheduleResponse.data.success && nextScheduleResponse.data.nextSchedule) {
+        setNextMatches(nextScheduleResponse.data.nextSchedule);
+      }
+
       if (myLeagueResponse.data.success) {
         setMyLeague(myLeagueResponse.data.league);
         setSelectedLeagueId(myLeagueResponse.data.league.league_id);
@@ -144,8 +163,44 @@ const League: React.FC = () => {
           {myLeague && <div className="my-league-badge"><div className="badge-label">내 리그</div><div className="badge-league" style={{ color: getLeagueTierColor(myLeague.tier_level) }}>{myLeague.league_display}</div><div className="badge-rank">{myLeague.current_rank || 'N/A'}위 / {myLeague.max_teams}팀</div></div>}
         </div>
 
+        {/* Next Match Schedule */}
+        {nextMatches.length > 0 && (
+          <div className="next-matches-section">
+            <h2 className="section-title">📅 다음 경기 일정</h2>
+            <div className="next-matches-grid">
+              {nextMatches.slice(0, 3).map((match) => (
+                <div key={match.id} className={`next-match-card ${match.home_team_id === userTeamId || match.away_team_id === userTeamId ? 'my-match' : ''}`}>
+                  <div className="next-match-header">
+                    <span className="next-match-league">{match.league_display}</span>
+                    <span className="next-match-week">Week {match.match_week}</span>
+                  </div>
+                  <div className="next-match-teams">
+                    <div className="next-team home">
+                      <TeamLogo logoUrl={match.home_team_logo} teamName={match.home_team_name} />
+                      <span className={`next-team-name ${match.home_team_id === userTeamId ? 'my-team-highlight' : ''}`}>
+                        {match.home_team_name}
+                      </span>
+                    </div>
+                    <div className="next-match-vs">VS</div>
+                    <div className="next-team away">
+                      <span className={`next-team-name ${match.away_team_id === userTeamId ? 'my-team-highlight' : ''}`}>
+                        {match.away_team_name}
+                      </span>
+                      <TeamLogo logoUrl={match.away_team_logo} teamName={match.away_team_name} />
+                    </div>
+                  </div>
+                  <div className="next-match-date">
+                    <span className="date-icon">🕒</span>
+                    {formatDate(match.match_date)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="league-tabs">{allLeagues.map((league) => <button key={league.id} className={`league-tab ${selectedLeagueId === league.id ? 'active' : ''}`} onClick={() => setSelectedLeagueId(league.id)} style={{'--active-color': getLeagueTierColor(league.tier_level)} as React.CSSProperties}><span className="tab-icon">{['👑', '💎', '⚔️', '🛡️'][league.tier_level-1] || '🛡️'}</span><span className="tab-name">{league.league_display}</span></button>)}</div>
-        
+
         <div className="league-content">
           <div className="standings-section">
             <h2 className="section-title">순위표</h2>

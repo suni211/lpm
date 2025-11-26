@@ -355,6 +355,151 @@ router.post('/merchandise/:itemId/purchase', isAuthenticated, async (req: Reques
   }
 });
 
+// 선수별 팬 미팅 (개인 팬 미팅)
+router.post('/player-meeting', isAuthenticated, async (req: Request, res: Response) => {
+  const client = await getConnection();
+
+  try {
+    const userId = req.user?.id;
+    const { playerCardId, meetingType } = req.body; // 'individual', 'small-group'
+
+    await client.beginTransaction();
+
+    // 팀 정보 조회
+    const [teamResult]: any = await client.query(
+      'SELECT id, team_name, balance, fandom, fan_satisfaction FROM teams WHERE user_id = ?',
+      [userId]
+    );
+    const team = teamResult[0];
+
+    // 선수 카드 정보 조회 및 소유 확인
+    const [playerResult]: any = await client.query(`
+      SELECT upc.*, pc.card_name, pc.rarity, pc.power
+      FROM user_player_cards upc
+      JOIN player_cards pc ON upc.player_card_id = pc.id
+      WHERE upc.id = ? AND upc.team_id = ?
+    `, [playerCardId, team.id]);
+
+    if (playerResult.length === 0) {
+      await client.rollback();
+      return res.status(400).json({ error: '해당 선수를 소유하고 있지 않습니다' });
+    }
+
+    const player = playerResult[0];
+
+    // 비용 및 효과 설정
+    const meetingCosts: { [key: string]: number } = {
+      'individual': 2000000,    // 200만원 - 1:1 팬미팅
+      'small-group': 8000000,   // 800만원 - 소규모 그룹
+    };
+
+    const satisfactionGain: { [key: string]: number } = {
+      'individual': 3,
+      'small-group': 8,
+    };
+
+    const fandomGain: { [key: string]: number } = {
+      'individual': 50,
+      'small-group': 300,
+    };
+
+    // 레어도에 따른 보너스
+    const rarityBonus: { [key: string]: number } = {
+      'COMMON': 1.0,
+      'RARE': 1.2,
+      'EPIC': 1.5,
+      'LEGEND': 2.0,
+    };
+
+    const cost = meetingCosts[meetingType];
+    const bonus = rarityBonus[player.rarity] || 1.0;
+    const satisfaction = Math.floor(satisfactionGain[meetingType] * bonus);
+    const fans = Math.floor(fandomGain[meetingType] * bonus);
+
+    // 잔액 확인
+    if (team.balance < cost) {
+      await client.rollback();
+      return res.status(400).json({ error: '잔액이 부족합니다' });
+    }
+
+    // 컨디션 확인 (로스터에 있으면 컨디션 확인)
+    if (player.is_in_roster) {
+      // 최근 경기 참가 확인 (예시로 간단히 처리)
+      const daysSinceLastMatch = 3; // 실제로는 DB에서 조회
+      if (daysSinceLastMatch < 2) {
+        await client.rollback();
+        return res.status(400).json({
+          error: '선수가 피로합니다. 최근 경기에 참가하여 팬미팅을 진행할 수 없습니다 (2일 휴식 필요)'
+        });
+      }
+    }
+
+    // 비용 차감
+    await client.query(
+      'UPDATE teams SET balance = balance - ? WHERE id = ?',
+      [cost, team.id]
+    );
+
+    // 팬덤 및 만족도 증가
+    const newSatisfaction = Math.min(team.fan_satisfaction + satisfaction, 100);
+    await client.query(
+      'UPDATE teams SET fandom = fandom + ?, fan_satisfaction = ? WHERE id = ?',
+      [fans, newSatisfaction, team.id]
+    );
+
+    // 팬 미팅 기록
+    await client.query(
+      'INSERT INTO fan_meetings (team_id, meeting_type, fans_gained, satisfaction_gained, cost) VALUES (?, ?, ?, ?, ?)',
+      [team.id, `${meetingType}_${player.card_name}`, fans, satisfaction, cost]
+    );
+
+    await client.commit();
+
+    res.json({
+      message: `${player.card_name} 선수의 팬미팅이 성공적으로 개최되었습니다!`,
+      fansGained: fans,
+      satisfactionGained: satisfaction,
+      newFandom: team.fandom + fans,
+      newSatisfaction,
+    });
+  } catch (error) {
+    await client.rollback();
+    console.error('선수 팬 미팅 개최 실패:', error);
+    res.status(500).json({ error: '팬 미팅 개최에 실패했습니다' });
+  } finally {
+    client.release();
+  }
+});
+
+// 팀 선수 목록 조회 (팬미팅용)
+router.get('/roster-players', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const teamResult = await query('SELECT id FROM teams WHERE user_id = ?', [userId]);
+    const teamId = teamResult[0].id;
+
+    const players = await query(`
+      SELECT
+        upc.id,
+        pc.card_name,
+        pc.position,
+        pc.rarity,
+        pc.power,
+        pc.cost,
+        upc.is_in_roster
+      FROM user_player_cards upc
+      JOIN player_cards pc ON upc.player_card_id = pc.id
+      WHERE upc.team_id = ? AND upc.is_on_auction = false
+      ORDER BY upc.is_in_roster DESC, pc.power DESC
+    `, [teamId]);
+
+    res.json({ players });
+  } catch (error) {
+    console.error('선수 목록 조회 실패:', error);
+    res.status(500).json({ error: '선수 목록 조회에 실패했습니다' });
+  }
+});
+
 // 팬 미팅 히스토리
 router.get('/meetings/history', isAuthenticated, async (req: Request, res: Response) => {
   try {

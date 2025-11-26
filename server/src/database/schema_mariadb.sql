@@ -170,6 +170,37 @@ CREATE TABLE user_support_cards (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- FUSION SYSTEM (카드 합성)
+-- ============================================
+
+-- 합성 레시피
+CREATE TABLE fusion_recipes (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    recipe_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    required_cards INT NOT NULL, -- 필요한 카드 수
+    min_cost INT, -- 최소 코스트
+    max_cost INT, -- 최대 코스트
+    result_type VARCHAR(20) NOT NULL, -- UPGRADE, RANDOM, SPECIFIC
+    success_rate INT DEFAULT 100, -- 성공 확률 (%)
+    fusion_cost BIGINT DEFAULT 0, -- 합성 비용
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 합성 기록
+CREATE TABLE fusion_history (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL,
+    recipe_id CHAR(36),
+    input_cards JSON, -- 투입된 카드 정보
+    result_card_id CHAR(36), -- 결과 카드
+    success BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (recipe_id) REFERENCES fusion_recipes(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- ROSTER & LINEUP
 -- ============================================
 
@@ -412,10 +443,13 @@ CREATE TABLE achievements (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     achievement_name VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
+    category VARCHAR(50) NOT NULL, -- 경기, 카드, 승리, 티어, 컬렉션, 경매, 명성
 
     difficulty VARCHAR(20), -- EASY, NORMAL, HARD, HELL
+    requirement INT NOT NULL, -- 달성 조건 값
 
     reward_money BIGINT DEFAULT 0,
+    reward_reputation INT DEFAULT 0, -- 명성도 보상
     reward_items JSON, -- 작전 카드, 카드팩 등
 
     condition_type VARCHAR(50), -- WIN_STREAK, TOTAL_WINS, TIER_REACH 등
@@ -605,19 +639,83 @@ VALUES
     ('Samsung', '/sponsors/samsung.png', 40, 10000000, 150000000, 'ALL_BOOST', 20),
     ('Coca Cola', '/sponsors/cocacola.png', 50, 20000000, 300000000, 'ALL_BOOST', 30);
 
--- 업적 초기 데이터 샘플
-INSERT INTO achievements (achievement_name, description, difficulty, reward_money, condition_type, condition_value)
+-- 업적 초기 데이터 - 자동 생성된 포괄적인 업적 시스템
+INSERT INTO achievements (achievement_name, description, category, difficulty, requirement, reward_money, reward_reputation, condition_type, condition_value)
 VALUES
-    ('첫 승리', '경쟁전 첫 승리 달성', 'EASY', 5000000, 'TOTAL_WINS', 1),
-    ('연승 시작', '2연승 달성', 'EASY', 10000000, 'WIN_STREAK', 2),
-    ('실버의 길', '실버 티어 달성', 'EASY', 20000000, 'TIER_REACH', 1),
-    ('골드 도달', '골드 티어 달성', 'EASY', 30000000, 'TIER_REACH', 2),
-    ('플래티넘 입성', '플래티넘 티어 달성', 'EASY', 50000000, 'TIER_REACH', 3),
-    ('연승 질주', '5연승 달성', 'NORMAL', 50000000, 'WIN_STREAK', 5),
-    ('다이아의 빛', '다이아 티어 달성', 'NORMAL', 100000000, 'TIER_REACH', 4),
-    ('100승의 사나이', '경쟁전 누적 100승', 'NORMAL', 150000000, 'TOTAL_WINS', 100),
-    ('마스터 등극', '마스터 티어 달성', 'HARD', 300000000, 'TIER_REACH', 5),
-    ('연승 폭풍', '10연승 달성', 'HARD', 200000000, 'WIN_STREAK', 10),
-    ('정상의 자리', '챌린저 티어 달성', 'HELL', 1000000000, 'TIER_REACH', 6),
-    ('연승 폭군', '20연승 달성', 'HELL', 800000000, 'WIN_STREAK', 20),
-    ('전설의 시작', '500승 달성', 'HELL', 2000000000, 'TOTAL_WINS', 500);
+    -- 경기 관련 업적
+    ('첫 경기', '첫 경쟁전 경기 참가', '경기', 'EASY', 1, 1000000, 5, 'TOTAL_MATCHES', 1),
+    ('10경기 달성', '경쟁전 10경기 참가', '경기', 'EASY', 10, 5000000, 10, 'TOTAL_MATCHES', 10),
+    ('50경기 달성', '경쟁전 50경기 참가', '경기', 'NORMAL', 50, 15000000, 20, 'TOTAL_MATCHES', 50),
+    ('100경기 달성', '경쟁전 100경기 참가', '경기', 'NORMAL', 100, 30000000, 30, 'TOTAL_MATCHES', 100),
+    ('300경기 달성', '경쟁전 300경기 참가', '경기', 'HARD', 300, 50000000, 50, 'TOTAL_MATCHES', 300),
+    ('500경기 달성', '경쟁전 500경기 참가', '경기', 'HELL', 500, 100000000, 100, 'TOTAL_MATCHES', 500),
+
+    -- 승리 관련 업적
+    ('첫 승리', '첫 경쟁전 승리 달성', '승리', 'EASY', 1, 5000000, 10, 'TOTAL_WINS', 1),
+    ('10승 달성', '경쟁전 10승 달성', '승리', 'EASY', 10, 10000000, 20, 'TOTAL_WINS', 10),
+    ('30승 달성', '경쟁전 30승 달성', '승리', 'NORMAL', 30, 20000000, 30, 'TOTAL_WINS', 30),
+    ('50승 달성', '경쟁전 50승 달성', '승리', 'NORMAL', 50, 35000000, 40, 'TOTAL_WINS', 50),
+    ('100승 달성', '경쟁전 100승 달성', '승리', 'HARD', 100, 60000000, 60, 'TOTAL_WINS', 100),
+    ('200승 달성', '경쟁전 200승 달성', '승리', 'HELL', 200, 120000000, 120, 'TOTAL_WINS', 200),
+
+    -- 연승 관련 업적
+    ('연승 시작', '2연승 달성', '승리', 'EASY', 2, 10000000, 15, 'WIN_STREAK', 2),
+    ('3연승', '3연승 달성', '승리', 'EASY', 3, 15000000, 20, 'WIN_STREAK', 3),
+    ('5연승', '5연승 달성', '승리', 'NORMAL', 5, 25000000, 30, 'WIN_STREAK', 5),
+    ('7연승', '7연승 달성', '승리', 'NORMAL', 7, 40000000, 40, 'WIN_STREAK', 7),
+    ('10연승', '10연승 달성!', '승리', 'HARD', 10, 70000000, 70, 'WIN_STREAK', 10),
+    ('15연승', '15연승 달성!', '승리', 'HELL', 15, 150000000, 150, 'WIN_STREAK', 15),
+
+    -- 티어 관련 업적
+    ('브론즈 탈출', '실버 티어 달성', '티어', 'EASY', 1, 20000000, 20, 'TIER_REACH', 1),
+    ('골드 도달', '골드 티어 달성', '티어', 'NORMAL', 2, 30000000, 30, 'TIER_REACH', 2),
+    ('플래티넘 도달', '플래티넘 티어 달성', '티어', 'NORMAL', 3, 50000000, 50, 'TIER_REACH', 3),
+    ('다이아 도달', '다이아 티어 달성', '티어', 'HARD', 4, 80000000, 80, 'TIER_REACH', 4),
+    ('마스터 도달', '마스터 티어 달성', '티어', 'HARD', 5, 120000000, 120, 'TIER_REACH', 5),
+    ('그랜드마스터 도달', '그랜드마스터 티어 달성', '티어', 'HELL', 6, 200000000, 200, 'TIER_REACH', 6),
+    ('챌린저 도달', '챌린저 티어 달성!', '티어', 'HELL', 7, 500000000, 500, 'TIER_REACH', 7),
+
+    -- 카드 관련 업적
+    ('카드 수집 시작', '선수 카드 5장 보유', '카드', 'EASY', 5, 3000000, 5, 'CARD_COUNT', 5),
+    ('카드 수집가', '선수 카드 10장 보유', '카드', 'EASY', 10, 8000000, 10, 'CARD_COUNT', 10),
+    ('카드 컬렉터', '선수 카드 20장 보유', '카드', 'NORMAL', 20, 20000000, 20, 'CARD_COUNT', 20),
+    ('카드 마니아', '선수 카드 50장 보유', '카드', 'HARD', 50, 50000000, 50, 'CARD_COUNT', 50),
+    ('카드 마스터', '선수 카드 100장 보유', '카드', 'HELL', 100, 120000000, 100, 'CARD_COUNT', 100),
+
+    -- 레어 카드 관련
+    ('첫 레어 카드', 'RARE 등급 카드 획득', '카드', 'EASY', 1, 5000000, 10, 'RARE_CARD', 1),
+    ('레어 수집가', 'RARE 등급 카드 5장 보유', '카드', 'NORMAL', 5, 15000000, 20, 'RARE_CARD', 5),
+    ('첫 에픽 카드', 'EPIC 등급 카드 획득', '카드', 'NORMAL', 1, 15000000, 30, 'EPIC_CARD', 1),
+    ('에픽 수집가', 'EPIC 등급 카드 3장 보유', '카드', 'HARD', 3, 40000000, 50, 'EPIC_CARD', 3),
+    ('첫 전설 카드', 'LEGEND 등급 카드 획득', '카드', 'HARD', 1, 50000000, 100, 'LEGEND_CARD', 1),
+    ('전설 수집가', 'LEGEND 등급 카드 3장 보유', '카드', 'HELL', 3, 200000000, 300, 'LEGEND_CARD', 3),
+
+    -- 컬렉션 관련
+    ('TOP 컬렉션', 'TOP 포지션 선수 5명 보유', '컬렉션', 'NORMAL', 5, 10000000, 15, 'POS_TOP', 5),
+    ('JUNGLE 컬렉션', 'JUNGLE 포지션 선수 5명 보유', '컬렉션', 'NORMAL', 5, 10000000, 15, 'POS_JUNGLE', 5),
+    ('MID 컬렉션', 'MID 포지션 선수 5명 보유', '컬렉션', 'NORMAL', 5, 10000000, 15, 'POS_MID', 5),
+    ('ADC 컬렉션', 'ADC 포지션 선수 5명 보유', '컬렉션', 'NORMAL', 5, 10000000, 15, 'POS_ADC', 5),
+    ('SUPPORT 컬렉션', 'SUPPORT 포지션 선수 5명 보유', '컬렉션', 'NORMAL', 5, 10000000, 15, 'POS_SUPPORT', 5),
+    ('LCK 컬렉션', 'LCK 소속 선수 10명 보유', '컬렉션', 'HARD', 10, 30000000, 40, 'TEAM_LCK', 10),
+    ('LPL 컬렉션', 'LPL 소속 선수 10명 보유', '컬렉션', 'HARD', 10, 30000000, 40, 'TEAM_LPL', 10),
+
+    -- 경매 관련
+    ('첫 경매 참여', '경매에 처음 입찰', '경매', 'EASY', 1, 5000000, 5, 'AUCTION_BID', 1),
+    ('경매 낙찰', '경매에서 선수 낙찰', '경매', 'EASY', 1, 10000000, 10, 'AUCTION_WIN', 1),
+    ('경매 마스터', '경매 10회 낙찰', '경매', 'NORMAL', 10, 30000000, 30, 'AUCTION_WIN', 10),
+    ('경매 판매', '경매에 선수 판매', '경매', 'EASY', 1, 5000000, 5, 'AUCTION_SELL', 1),
+    ('경매 고수', '경매 판매 10회', '경매', 'NORMAL', 10, 25000000, 25, 'AUCTION_SELL', 10),
+
+    -- 명성 관련
+    ('명성의 시작', '명성도 100 달성', '명성', 'EASY', 100, 10000000, 10, 'REPUTATION', 100),
+    ('인지도 상승', '명성도 500 달성', '명성', 'NORMAL', 500, 25000000, 25, 'REPUTATION', 500),
+    ('유명 팀', '명성도 1000 달성', '명성', 'NORMAL', 1000, 50000000, 50, 'REPUTATION', 1000),
+    ('명문 팀', '명성도 2000 달성', '명성', 'HARD', 2000, 100000000, 100, 'REPUTATION', 2000),
+    ('레전드 팀', '명성도 5000 달성', '명성', 'HELL', 5000, 300000000, 300, 'REPUTATION', 5000);
+
+-- 합성 레시피 초기 데이터
+INSERT INTO fusion_recipes (recipe_name, description, required_cards, min_cost, max_cost, result_type, success_rate, fusion_cost)
+VALUES
+    ('기본 합성', '같은 코스트 카드 3장을 합성하여 랜덤 카드 획득', 3, 1, 10, 'RANDOM', 100, 5000000),
+    ('코스트 업그레이드', '같은 카드 2장을 합성하여 상위 카드 획득', 2, 1, 10, 'UPGRADE', 80, 10000000),
+    ('고급 합성', '고코스트 카드 2장으로 레어 등급 이상 보장', 2, 7, 10, 'RANDOM', 100, 20000000);

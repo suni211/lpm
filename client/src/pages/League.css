@@ -124,6 +124,139 @@
   font-weight: 600;
 }
 
+/* Next Matches Section */
+.next-matches-section {
+  margin-bottom: 2.5rem;
+}
+
+.next-matches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.5rem;
+}
+
+.next-match-card {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 16px;
+  padding: 1.75rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.next-match-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+.next-match-card.my-match {
+  border-color: #facc15;
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.15) 0%, rgba(255, 193, 7, 0.15) 100%);
+  box-shadow: 0 4px 16px rgba(250, 204, 21, 0.2);
+}
+
+.next-match-card.my-match::before {
+  background: linear-gradient(90deg, #facc15 0%, #fbbf24 100%);
+}
+
+.next-match-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+.next-match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.next-match-league {
+  padding: 0.375rem 0.875rem;
+  background: rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(102, 126, 234, 0.4);
+  border-radius: 8px;
+  color: #667eea;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.next-match-week {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.next-match-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.next-team {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.next-team.home {
+  justify-content: flex-start;
+}
+
+.next-team.away {
+  justify-content: flex-end;
+  flex-direction: row-reverse;
+}
+
+.next-team-name {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.next-team-name.my-team-highlight {
+  color: #facc15;
+  font-weight: 800;
+}
+
+.next-match-vs {
+  padding: 0.5rem 1rem;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.next-match-date {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.date-icon {
+  font-size: 1rem;
+}
+
 /* League Tabs */
 .league-tabs {
   display: flex;
@@ -599,6 +732,24 @@
 
   .my-league-badge {
     min-width: unset;
+  }
+
+  .next-matches-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .next-match-teams {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .next-team {
+    width: 100%;
+    justify-content: center !important;
+  }
+
+  .next-team.away {
+    flex-direction: row !important;
   }
 
   .league-tabs {

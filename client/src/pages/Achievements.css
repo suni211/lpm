@@ -440,3 +440,96 @@
     width: 100%;
   }
 }
+
+/* Achievement Completion Popup */
+.achievement-popup {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  animation: slideInRight 0.5s ease;
+}
+
+.achievement-popup-content {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  min-width: 300px;
+}
+
+.achievement-popup-icon {
+  font-size: 3rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  animation: bounce 0.6s ease infinite alternate;
+}
+
+.achievement-popup-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.achievement-popup-rewards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.popup-reward {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.popup-reward-icon {
+  font-size: 1.5rem;
+}
+
+.popup-reward-text {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: white;
+}
+
+.achievement-popup.fade-out {
+  animation: slideOutRight 0.5s ease forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+@keyframes bounce {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-10px);
+  }
+}

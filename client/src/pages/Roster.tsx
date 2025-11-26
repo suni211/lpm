@@ -36,8 +36,8 @@ const Roster: React.FC = () => {
     { position: 'TOP', player: null, maxCost: 10 },
     { position: 'JUNGLE', player: null, maxCost: 10 },
     { position: 'MID', player: null, maxCost: 10 },
-    { position: 'ADC', player: null, maxCost: 9 },
-    { position: 'SUPPORT', player: null, maxCost: 9 },
+    { position: 'ADC', player: null, maxCost: 10 },
+    { position: 'SUPPORT', player: null, maxCost: 10 },
     { position: 'SUB1', player: null, maxCost: 11 }, // Subs can have any cost
     { position: 'SUB2', player: null, maxCost: 11 },
   ]);
@@ -46,14 +46,14 @@ const Roster: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const MAX_TOTAL_COST = 58;
+  const MAX_TOTAL_COST = 48;
 
   const initialRosterState = [
     { position: 'TOP', player: null, maxCost: 10 },
     { position: 'JUNGLE', player: null, maxCost: 10 },
     { position: 'MID', player: null, maxCost: 10 },
-    { position: 'ADC', player: null, maxCost: 9 },
-    { position: 'SUPPORT', player: null, maxCost: 9 },
+    { position: 'ADC', player: null, maxCost: 10 },
+    { position: 'SUPPORT', player: null, maxCost: 10 },
     { position: 'SUB1', player: null, maxCost: 11 },
     { position: 'SUB2', player: null, maxCost: 11 },
   ];
