@@ -63,15 +63,16 @@ router.get('/my/:account_number', async (req: Request, res: Response) => {
     }
 
     const requests = await query(
-      `SELECT wr.*, a.minecraft_username, a.account_number
+      `SELECT wr.*, u.minecraft_username, a.account_number
        FROM withdrawal_requests wr
        JOIN accounts a ON wr.account_id = a.id
+       JOIN users u ON a.user_id = u.id
        WHERE wr.account_id = ?
        ORDER BY wr.requested_at DESC`,
       [accounts[0].id]
     );
 
-    res.json({ requests });
+    res.json({ requests, withdrawals: requests }); // 호환성을 위해 둘 다 반환
   } catch (error) {
     console.error('출금 신청 조회 오류:', error);
     res.status(500).json({ error: '출금 신청 조회 실패' });
@@ -82,14 +83,15 @@ router.get('/my/:account_number', async (req: Request, res: Response) => {
 router.get('/pending', isAdmin, async (req: Request, res: Response) => {
   try {
     const requests = await query(
-      `SELECT wr.*, a.minecraft_username, a.account_number, a.balance
+      `SELECT wr.*, u.minecraft_username, a.account_number, a.balance
        FROM withdrawal_requests wr
        JOIN accounts a ON wr.account_id = a.id
+       JOIN users u ON a.user_id = u.id
        WHERE wr.status = 'PENDING'
        ORDER BY wr.requested_at ASC`
     );
 
-    res.json({ requests });
+    res.json({ requests, withdrawals: requests }); // 호환성을 위해 둘 다 반환
   } catch (error) {
     console.error('대기 출금 조회 오류:', error);
     res.status(500).json({ error: '대기 출금 조회 실패' });

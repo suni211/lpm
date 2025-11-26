@@ -93,7 +93,7 @@ router.get('/my/:account_number', async (req: Request, res: Response) => {
       [accounts[0].id, accounts[0].id]
     );
 
-    res.json({ requests });
+    res.json({ requests, transfers: requests }); // 호환성을 위해 둘 다 반환
   } catch (error) {
     console.error('이체 신청 조회 오류:', error);
     res.status(500).json({ error: '이체 신청 조회 실패' });
@@ -116,7 +116,7 @@ router.get('/pending', isAdmin, async (req: Request, res: Response) => {
        ORDER BY tr.requested_at ASC`
     );
 
-    res.json({ requests });
+    res.json({ requests, transfers: requests }); // 호환성을 위해 둘 다 반환
   } catch (error) {
     console.error('대기 이체 조회 오류:', error);
     res.status(500).json({ error: '대기 이체 조회 실패' });

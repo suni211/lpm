@@ -20,7 +20,8 @@ function AdminDepositsPage({ setAuth }: AdminDepositsPageProps) {
   const fetchDeposits = async () => {
     try {
       const response = await api.get('/api/deposits/pending');
-      setDeposits(response.data.deposits || []);
+      // 서버는 requests를 반환하지만, 클라이언트는 deposits를 기대
+      setDeposits(response.data.requests || response.data.deposits || []);
     } catch (error: any) {
       if (error.response?.status === 401) {
         setAuth(false);

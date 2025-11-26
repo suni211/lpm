@@ -114,7 +114,7 @@ router.get('/my/:account_number', async (req: Request, res: Response) => {
       [accounts[0].id]
     );
 
-    res.json({ requests });
+    res.json({ requests, deposits: requests }); // 호환성을 위해 둘 다 반환
   } catch (error) {
     console.error('입금 신청 조회 오류:', error);
     res.status(500).json({ error: '입금 신청 조회 실패' });
@@ -133,7 +133,7 @@ router.get('/pending', isAdmin, async (req: Request, res: Response) => {
        ORDER BY dr.requested_at ASC`
     );
 
-    res.json({ requests });
+    res.json({ requests, deposits: requests }); // 호환성을 위해 둘 다 반환
   } catch (error) {
     console.error('대기 입금 조회 오류:', error);
     res.status(500).json({ error: '대기 입금 조회 실패' });
