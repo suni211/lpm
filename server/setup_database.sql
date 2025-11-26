@@ -58,6 +58,9 @@ DROP TABLE IF EXISTS leagues;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
+-- 0. 기본 스키마 (가장 먼저 실행!)
+SOURCE src/database/schema_mariadb.sql;
+
 -- 1. 리그 시스템
 SOURCE src/database/league_system.sql;
 

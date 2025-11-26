@@ -4,7 +4,7 @@
 -- 특성 테이블
 CREATE TABLE IF NOT EXISTS traits (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    trait_name VARCHAR(100) NOT NULL UNIQUE,
+    trait_name VARCHAR(100) NOT NULL,
     trait_description TEXT,
     position VARCHAR(20), -- TOP, JUNGLE, MID, ADC, SUPPORT, ALL (모든 포지션)
     category VARCHAR(50), -- LANING, TEAMFIGHT, MENTAL, SPECIAL
@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS traits (
     phase INT, -- 1(라인전), 2(오브젝트 한타), 3(마지막 한타), 0(전체)
     is_positive BOOLEAN DEFAULT TRUE, -- 긍정적 특성인지 부정적 특성인지
     rarity VARCHAR(20) DEFAULT 'NORMAL', -- NORMAL, RARE, EPIC, LEGEND
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_trait_per_position (trait_name, position)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 선수 특성 테이블 (선수가 보유한 특성)
