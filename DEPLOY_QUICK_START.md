@@ -524,7 +524,28 @@ pm2 status
 
 ## SSL 인증서 설치 (HTTPS 설정)
 
-HTTPS를 활성화하려면 Let's Encrypt SSL 인증서를 설치하세요:
+### 1단계: Nginx 설정 오류 수정 (필수)
+
+Nginx 설정에 존재하지 않는 SSL 인증서 경로가 있는 경우 먼저 수정해야 합니다:
+
+```bash
+# Nginx 설정 파일에서 SSL 관련 라인 제거
+sudo sed -i '/ssl_certificate/d' /etc/nginx/sites-available/bank
+sudo sed -i '/ssl_certificate_key/d' /etc/nginx/sites-available/bank
+sudo sed -i 's/listen 443 ssl;/listen 80;/g' /etc/nginx/sites-available/bank
+
+sudo sed -i '/ssl_certificate/d' /etc/nginx/sites-available/lico
+sudo sed -i '/ssl_certificate_key/d' /etc/nginx/sites-available/lico
+sudo sed -i 's/listen 443 ssl;/listen 80;/g' /etc/nginx/sites-available/lico
+
+# Nginx 설정 테스트
+sudo nginx -t
+
+# Nginx 재시작
+sudo systemctl restart nginx
+```
+
+### 2단계: SSL 인증서 발급
 
 ```bash
 # Certbot 설치
@@ -535,7 +556,7 @@ sudo apt-get install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d bank.berrple.com --non-interactive --agree-tos --email ine158lovely@gmail.com --redirect
 
 # SSL 인증서 발급 (lico.berrple.com)
-sudo certbot --nginx -d lico.berrple.com --non-interactive --agree-tos --email your-email@example.com --redirect
+sudo certbot --nginx -d lico.berrple.com --non-interactive --agree-tos --email ine158lovely@gmail.com --redirect
 
 # 자동 갱신 테스트
 sudo certbot renew --dry-run
