@@ -96,19 +96,46 @@ router.post('/register', async (req: Request, res: Response) => {
       ]
     );
 
-    // 계좌번호 생성 (랜덤 16자리: 1234-5678-9012-3456)
-    const accountNumber = Array.from({ length: 4 }, () =>
-      Math.floor(1000 + Math.random() * 9000)
-    ).join('-');
+    // 계좌번호 생성 (랜덤 16자리: 1234-5678-9012-3456) - 중복 체크
+    let accountNumber: string;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    do {
+      accountNumber = Array.from({ length: 4 }, () =>
+        Math.floor(1000 + Math.random() * 9000)
+      ).join('-');
+      
+      const existingAccount = await query(
+        'SELECT id FROM accounts WHERE account_number = ?',
+        [accountNumber]
+      );
+      
+      if (existingAccount.length === 0) {
+        break; // 중복 없음
+      }
+      
+      attempts++;
+      if (attempts >= maxAttempts) {
+        throw new Error('계좌번호 생성 실패: 최대 시도 횟수 초과');
+      }
+    } while (true);
 
     // 계좌 ID 생성
     const accountId = crypto.randomUUID();
 
     // 계좌 생성
-    await query(
-      'INSERT INTO accounts (id, user_id, account_number, balance) VALUES (?, ?, ?, 0)',
-      [accountId, userId, accountNumber]
-    );
+    try {
+      await query(
+        'INSERT INTO accounts (id, user_id, account_number, balance) VALUES (?, ?, ?, 0)',
+        [accountId, userId, accountNumber]
+      );
+    } catch (dbError: any) {
+      // 계좌 생성 실패 시 사용자 삭제 (롤백)
+      await query('DELETE FROM users WHERE id = ?', [userId]);
+      console.error('계좌 생성 실패, 사용자 롤백:', dbError);
+      throw dbError;
+    }
 
     res.status(201).json({
       success: true,
@@ -121,9 +148,28 @@ router.post('/register', async (req: Request, res: Response) => {
         account_number: accountNumber
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('회원가입 오류:', error);
-    res.status(500).json({ error: '회원가입 처리 중 오류가 발생했습니다' });
+    console.error('오류 상세:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      sqlMessage: error.sqlMessage,
+      sqlState: error.sqlState,
+    });
+    
+    // 데이터베이스 오류인 경우 더 자세한 정보 제공
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ 
+        error: '이미 사용 중인 정보입니다',
+        details: error.sqlMessage 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: '회원가입 처리 중 오류가 발생했습니다',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
