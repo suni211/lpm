@@ -8,7 +8,7 @@ import type { Coin, Candle } from '../types';
 import Orderbook from '../components/Orderbook';
 import OrderForm from '../components/OrderForm';
 import CoinSidebar from '../components/CoinSidebar';
-import { TickerTape, MarketData } from '../components/TradingViewWidgets';
+import { MarketData } from '../components/TradingViewWidgets';
 import './TradingPage.css';
 
 const TradingPage = () => {
@@ -258,7 +258,6 @@ const TradingPage = () => {
 
   return (
     <div className="trading-page">
-      <TickerTape />
       <div className="trading-container">
         <div className="main-content">
           <div className="coin-header">

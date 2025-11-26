@@ -1,47 +1,8 @@
-import { useEffect, useState } from 'react';
-import { coinService } from '../services/coinService';
 import './TradingViewWidgets.css';
 
-// Ticker Tape 컴포넌트
+// Ticker Tape 컴포넌트 (가상 코인은 TradingView에서 인식하지 못하므로 제거)
 export const TickerTape = () => {
-  const [symbols, setSymbols] = useState<string>('');
-
-  useEffect(() => {
-    const fetchCoins = async () => {
-      try {
-        const data = await coinService.getCoins('ACTIVE');
-        // TradingView 심볼 형식으로 변환 (LICO:SYMBOL)
-        if (data && data.length > 0) {
-          const symbolString = data.map(coin => `LICO:${coin.symbol}`).join(',');
-          setSymbols(symbolString);
-        }
-      } catch (error) {
-        console.error('Failed to fetch coins:', error);
-      }
-    };
-
-    fetchCoins();
-  }, []);
-
-  if (!symbols || symbols.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="tradingview-widget-container ticker-tape">
-      <div className="tradingview-widget-container__widget">
-        <iframe
-          src={`https://s.tradingview.com/embed-widget/ticker-tape/?locale=ko&symbols=${encodeURIComponent(symbols)}&colorTheme=dark&isTransparent=false&displayMode=adaptive&fontSize=12&height=46`}
-          style={{
-            width: '100%',
-            height: '46px',
-            border: 'none',
-          }}
-          title="Ticker Tape"
-        />
-      </div>
-    </div>
-  );
+  return null;
 };
 
 // Market Data 컴포넌트
