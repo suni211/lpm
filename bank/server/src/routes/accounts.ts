@@ -24,6 +24,72 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
   }
 });
 
+// 주식 계좌 자동 생성 (LICO 서버용 내부 API)
+router.post('/create-stock-account', async (req: Request, res: Response) => {
+  try {
+    const { user_id, minecraft_username } = req.body;
+
+    if (!user_id || !minecraft_username) {
+      return res.status(400).json({ error: '필수 필드가 누락되었습니다' });
+    }
+
+    // 이미 주식 계좌가 있는지 확인
+    const existing = await query(
+      'SELECT id FROM accounts WHERE user_id = ? AND account_type = ? AND status = "ACTIVE"',
+      [user_id, 'STOCK']
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: '이미 주식 계좌가 존재합니다' });
+    }
+
+    // 계좌번호 생성 (02: 주식계좌)
+    const prefix = '02';
+    let accountNumber: string;
+    let attempts = 0;
+    const maxAttempts = 100;
+
+    do {
+      const randomPart = Array.from({ length: 3 }, () =>
+        Math.floor(1000 + Math.random() * 9000)
+      ).join('-');
+      accountNumber = `${prefix}-${randomPart}`;
+
+      const existingAccount = await query(
+        'SELECT id FROM accounts WHERE account_number = ?',
+        [accountNumber]
+      );
+
+      if (existingAccount.length === 0) {
+        break;
+      }
+
+      attempts++;
+      if (attempts >= maxAttempts) {
+        throw new Error('계좌번호 생성 실패: 최대 시도 횟수 초과');
+      }
+    } while (true);
+
+    const accountId = require('crypto').randomUUID();
+
+    await query(
+      'INSERT INTO accounts (id, user_id, account_number, account_type, balance) VALUES (?, ?, ?, ?, 0)',
+      [accountId, user_id, accountNumber, 'STOCK']
+    );
+
+    const accounts = await query('SELECT * FROM accounts WHERE id = ?', [accountId]);
+
+    res.status(201).json({
+      success: true,
+      account: accounts[0],
+      message: '주식 계좌가 생성되었습니다',
+    });
+  } catch (error: any) {
+    console.error('주식 계좌 생성 오류:', error);
+    res.status(500).json({ error: '주식 계좌 생성 실패', message: error.message });
+  }
+});
+
 // 계좌 생성 (로그인 사용자)
 router.post('/create', isAuthenticated, async (req: Request, res: Response) => {
   try {
@@ -114,7 +180,7 @@ router.get('/number/:accountNumber', async (req: Request, res: Response) => {
   }
 });
 
-// 계좌 조회 (마인크래프트 닉네임)
+// 계좌 조회 (마인크래프트 닉네임) - 주식 계좌(02) 우선 반환
 router.get('/minecraft/:username', async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
@@ -123,7 +189,14 @@ router.get('/minecraft/:username', async (req: Request, res: Response) => {
       `SELECT a.*, u.minecraft_username, u.email
        FROM accounts a
        JOIN users u ON a.user_id = u.id
-       WHERE u.minecraft_username = ? AND a.status = 'ACTIVE'`,
+       WHERE u.minecraft_username = ? AND a.status = 'ACTIVE'
+       ORDER BY 
+         CASE 
+           WHEN a.account_type = 'STOCK' THEN 1
+           WHEN a.account_number LIKE '02-%' THEN 1
+           ELSE 2
+         END,
+         a.created_at DESC`,
       [username]
     );
 
@@ -131,7 +204,15 @@ router.get('/minecraft/:username', async (req: Request, res: Response) => {
       return res.status(404).json({ error: '계좌를 찾을 수 없습니다' });
     }
 
-    res.json({ account: accounts[0] });
+    // 주식 계좌(02) 우선 반환
+    const stockAccount = accounts.find(acc => 
+      acc.account_type === 'STOCK' || acc.account_number?.startsWith('02-')
+    );
+
+    res.json({ 
+      account: stockAccount || accounts[0],
+      accounts: accounts // 모든 계좌도 함께 반환 (호환성)
+    });
   } catch (error) {
     console.error('계좌 조회 오류:', error);
     res.status(500).json({ error: '계좌 조회 실패' });

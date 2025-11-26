@@ -1,0 +1,202 @@
+.stock-agreement-page {
+  min-height: calc(100vh - 48px);
+  background: #0f1117;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.agreement-container {
+  background: #1a1d29;
+  border-radius: 12px;
+  padding: 40px;
+  width: 100%;
+  max-width: 800px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.agreement-header {
+  text-align: center;
+  margin-bottom: 32px;
+  border-bottom: 1px solid #2a2e3e;
+  padding-bottom: 24px;
+}
+
+.agreement-header h1 {
+  color: #fff;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.agreement-header .subtitle {
+  color: #9ca3af;
+  font-size: 16px;
+  margin: 0;
+}
+
+.agreement-content {
+  color: #e5e7eb;
+}
+
+.terms-section {
+  background: #0f1117;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.terms-section h2 {
+  color: #3b82f6;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 24px 0 12px 0;
+}
+
+.terms-section h2:first-child {
+  margin-top: 0;
+}
+
+.terms-section p {
+  color: #d1d5db;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+}
+
+.terms-section ul {
+  color: #d1d5db;
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 0 16px 0;
+  padding-left: 24px;
+}
+
+.terms-section li {
+  margin-bottom: 8px;
+}
+
+.agreement-checkbox {
+  margin: 24px 0;
+  padding: 16px;
+  background: #2a2e3e;
+  border-radius: 8px;
+  border: 2px solid #3a3e4e;
+}
+
+.agreement-checkbox label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #e5e7eb;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.agreement-checkbox input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.agreement-checkbox span {
+  flex: 1;
+}
+
+.error-message {
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.agreement-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.cancel-button,
+.agree-button {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-button {
+  background: #2a2e3e;
+  color: #9ca3af;
+  border: 1px solid #3a3e4e;
+}
+
+.cancel-button:hover {
+  background: #3a3e4e;
+  color: #fff;
+}
+
+.agree-button {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.agree-button:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.agree-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 스크롤바 스타일링 */
+.terms-section::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terms-section::-webkit-scrollbar-track {
+  background: #0f1117;
+  border-radius: 4px;
+}
+
+.terms-section::-webkit-scrollbar-thumb {
+  background: #3a3e4e;
+  border-radius: 4px;
+}
+
+.terms-section::-webkit-scrollbar-thumb:hover {
+  background: #4a4e5e;
+}
+
+.agreement-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.agreement-container::-webkit-scrollbar-track {
+  background: #1a1d29;
+  border-radius: 4px;
+}
+
+.agreement-container::-webkit-scrollbar-thumb {
+  background: #3a3e4e;
+  border-radius: 4px;
+}
+
+.agreement-container::-webkit-scrollbar-thumb:hover {
+  background: #4a4e5e;
+}
+

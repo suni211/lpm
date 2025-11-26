@@ -7,13 +7,17 @@ import { createNotification } from './notifications';
 
 const router = express.Router();
 
-// 이체 신청 (간단한 버전 - account_id 사용)
+// 이체 신청 (간단한 버전 - account_id 사용, 자동 처리)
 router.post('/', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { from_account_id, to_account_number, amount, notes } = req.body;
 
     if (!from_account_id || !to_account_number || !amount) {
       return res.status(400).json({ error: '필수 필드가 누락되었습니다' });
+    }
+
+    if (amount <= 0) {
+      return res.status(400).json({ error: '이체 금액은 0보다 커야 합니다' });
     }
 
     // 송신 계좌 조회 및 소유자 확인
@@ -50,34 +54,105 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(400).json({ error: '잔액이 부족합니다' });
     }
 
-    // 이체 신청 생성
+    // 이체 즉시 처리 (승인 없이)
     const requestId = uuidv4();
+    const fee = 0; // 수수료 없음
+
+    // 송신 계좌 잔액 차감
     await query(
-      `INSERT INTO transfer_requests (id, from_account_id, to_account_id, amount, fee, status, notes)
-       VALUES (?, ?, ?, ?, 0, 'PENDING', ?)`,
-      [requestId, fromAccount.id, toAccount.id, amount, notes || null]
+      'UPDATE accounts SET balance = balance - ? WHERE id = ?',
+      [amount, fromAccount.id]
     );
 
-    const requests = await query(
-      `SELECT tr.*,
-              fu.minecraft_username as from_username, fa.account_number as from_account_number,
-              tu.minecraft_username as to_username, ta.account_number as to_account_number
-       FROM transfer_requests tr
-       JOIN accounts fa ON tr.from_account_id = fa.id
-       JOIN users fu ON fa.user_id = fu.id
-       JOIN accounts ta ON tr.to_account_id = ta.id
-       JOIN users tu ON ta.user_id = tu.id
-       WHERE tr.id = ?`,
-      [requestId]
+    // 수신 계좌 잔액 증가
+    await query(
+      'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+      [amount, toAccount.id]
     );
+
+    // 이체 기록 생성 (COMPLETED 상태로)
+    await query(
+      `INSERT INTO transfer_requests (id, from_account_id, to_account_id, amount, fee, status, notes, processed_at)
+       VALUES (?, ?, ?, ?, ?, 'COMPLETED', ?, NOW())`,
+      [requestId, fromAccount.id, toAccount.id, amount, fee, notes || null]
+    );
+
+    // 거래 기록 생성 (송신 계좌)
+    const fromTransactionId = uuidv4();
+    await query(
+      `INSERT INTO transactions
+       (id, transaction_type, account_id, related_account_id, amount, balance_before, balance_after, reference_id, reference_type, notes)
+       VALUES (?, 'TRANSFER_OUT', ?, ?, ?, ?, ?, ?, 'TRANSFER', ?)`,
+      [
+        fromTransactionId,
+        fromAccount.id,
+        toAccount.id,
+        amount,
+        fromAccount.balance,
+        fromAccount.balance - amount,
+        requestId,
+        notes || null,
+      ]
+    );
+
+    // 거래 기록 생성 (수신 계좌)
+    const toTransactionId = uuidv4();
+    await query(
+      `INSERT INTO transactions
+       (id, transaction_type, account_id, related_account_id, amount, balance_before, balance_after, reference_id, reference_type, notes)
+       VALUES (?, 'TRANSFER_IN', ?, ?, ?, ?, ?, ?, 'TRANSFER', ?)`,
+      [
+        toTransactionId,
+        toAccount.id,
+        fromAccount.id,
+        amount,
+        toAccount.balance,
+        toAccount.balance + amount,
+        requestId,
+        notes || null,
+      ]
+    );
+
+    // 송신자에게 알림 전송
+    const fromUser = await query('SELECT user_id FROM accounts WHERE id = ?', [fromAccount.id]);
+    if (fromUser[0]) {
+      await createNotification(
+        fromUser[0].user_id,
+        'TRANSACTION',
+        '이체 완료',
+        `${amount.toLocaleString()} G가 ${toAccount.account_number}로 이체되었습니다.`,
+        fromTransactionId,
+        'TRANSFER'
+      );
+    }
+
+    // 수신자에게 알림 전송
+    const toUser = await query('SELECT user_id FROM accounts WHERE id = ?', [toAccount.id]);
+    if (toUser[0]) {
+      await createNotification(
+        toUser[0].user_id,
+        'TRANSACTION',
+        '입금 완료',
+        `${amount.toLocaleString()} G가 ${fromAccount.account_number}에서 입금되었습니다.`,
+        toTransactionId,
+        'TRANSFER'
+      );
+    }
 
     res.json({
       success: true,
-      request: requests[0],
+      message: '이체가 완료되었습니다',
+      transfer: {
+        id: requestId,
+        from_account_number: fromAccount.account_number,
+        to_account_number: toAccount.account_number,
+        amount,
+        fee,
+      },
     });
   } catch (error) {
-    console.error('이체 신청 오류:', error);
-    res.status(500).json({ error: '이체 신청 실패' });
+    console.error('이체 처리 오류:', error);
+    res.status(500).json({ error: '이체 처리 실패' });
   }
 });
 

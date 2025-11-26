@@ -92,7 +92,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const bankUser = bankResponse.user;
 
-    // BANK 계좌 정보 조회
+    // BANK 계좌 정보 조회 (주식 계좌 우선)
     const accountData = await bankService.getAccountByUsername(bankUser.minecraft_username);
     
     if (!accountData.account) {
@@ -100,6 +100,10 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     const bankAccount = accountData.account;
+    
+    // 주식 계좌(02) 여부 확인
+    const isStockAccount = bankAccount.account_type === 'STOCK' || bankAccount.account_number?.startsWith('02-');
+    const requiresStockAccountAgreement = !isStockAccount;
 
     // 설문조사 완료 여부 확인
     const questionnaires = await query(
@@ -191,6 +195,7 @@ router.post('/login', async (req: Request, res: Response) => {
     res.json({
       success: true,
       requires_questionnaire: !isQuestionnaireApproved,
+      requires_stock_account_agreement: requiresStockAccountAgreement,
       show_wallet_info: showWalletInfo, // 재로그인 시 1회만 표시
       user: {
         id: bankUser.id,
@@ -275,6 +280,49 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
   } catch (error) {
     console.error('사용자 정보 조회 오류:', error);
     res.status(500).json({ error: '사용자 정보 조회 실패' });
+  }
+});
+
+// 주식 계좌 생성 (약관 동의 후)
+router.post('/create-stock-account', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { agreed } = req.body;
+    const session = (req as any).session;
+    const minecraft_username = session?.username;
+    const bankUserId = session?.bankUserId;
+
+    if (!minecraft_username) {
+      return res.status(401).json({ error: '로그인 정보가 없습니다' });
+    }
+
+    if (!bankUserId) {
+      return res.status(401).json({ error: 'BANK 사용자 정보가 없습니다. 다시 로그인해주세요.' });
+    }
+
+    if (!agreed) {
+      return res.status(400).json({ error: '약관에 동의해주세요' });
+    }
+
+    // 주식 계좌 생성
+    try {
+      const createResponse = await bankService.createStockAccount(
+        bankUserId,
+        minecraft_username
+      );
+
+      // 생성된 주식 계좌 정보 반환
+      res.json({
+        success: true,
+        account: createResponse.account,
+        message: '주식 계좌가 생성되었습니다',
+      });
+    } catch (createError: any) {
+      console.error('주식 계좌 생성 오류:', createError);
+      res.status(500).json({ error: '주식 계좌 생성 실패', message: createError.message });
+    }
+  } catch (error: any) {
+    console.error('주식 계좌 생성 처리 오류:', error);
+    res.status(500).json({ error: '주식 계좌 생성 처리 실패' });
   }
 });
 

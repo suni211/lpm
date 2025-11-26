@@ -10,6 +10,7 @@ import AdminTradesPage from './pages/AdminTradesPage';
 import LoginPage from './pages/LoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import QuestionnairePage from './pages/QuestionnairePage';
+import StockAccountAgreementPage from './pages/StockAccountAgreementPage';
 import WalletCreatedPage from './pages/WalletCreatedPage';
 import WalletRecoveryPage from './pages/WalletRecoveryPage';
 import WalletInfoPage from './pages/WalletInfoPage';
@@ -39,6 +40,14 @@ function App() {
               element={
                 <ProtectedRoute skipQuestionnaireCheck>
                   <QuestionnairePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/stock-account-agreement"
+              element={
+                <ProtectedRoute skipQuestionnaireCheck>
+                  <StockAccountAgreementPage />
                 </ProtectedRoute>
               }
             />

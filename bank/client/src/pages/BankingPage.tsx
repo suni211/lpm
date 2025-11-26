@@ -110,7 +110,7 @@ function BankingPage({ userData }: BankingPageProps) {
         notes: transferNotes
       });
 
-      setSuccess('이체 신청이 완료되었습니다. 관리자 승인 후 처리됩니다.');
+      setSuccess('이체가 완료되었습니다!');
       setTransferAmount('');
       setTransferFrom('');
       setTransferTo('');

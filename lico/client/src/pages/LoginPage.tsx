@@ -18,6 +18,12 @@ const LoginPage = () => {
       const response = await api.post('/auth/login', { auth_code: authCode });
       
       if (response.data.success) {
+        // 주식 계좌 약관 동의 필요 여부 확인
+        if (response.data.requires_stock_account_agreement) {
+          navigate('/stock-account-agreement');
+          return;
+        }
+        
         // 설문조사 필요 여부 확인
         if (response.data.requires_questionnaire) {
           // 설문조사 미완료 시 설문조사 페이지로 이동
