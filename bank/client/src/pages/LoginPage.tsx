@@ -46,12 +46,13 @@ function LoginPage({ setAuth }: LoginPageProps) {
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
-                if (target.nextElementSibling) {
-                  (target.nextElementSibling as HTMLElement).style.display = 'block';
+                const fallback = target.parentElement?.querySelector('.auth-logo-fallback') as HTMLElement;
+                if (fallback) {
+                  fallback.style.display = 'block';
                 }
               }}
             />
-            <h1 className="auth-title" style={{ display: 'none' }}>🏦 CRYPBANK</h1>
+            <h1 className="auth-title auth-logo-fallback" style={{ display: 'none' }}>🏦 CRYPBANK</h1>
           </div>
           <p className="auth-subtitle">크립뱅크에 오신 것을 환영합니다</p>
         </div>

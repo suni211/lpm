@@ -100,8 +100,13 @@ function RecoveryPage() {
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
+                const fallback = target.parentElement?.querySelector('.auth-logo-fallback') as HTMLElement;
+                if (fallback) {
+                  fallback.style.display = 'block';
+                }
               }}
             />
+            <h1 className="auth-title auth-logo-fallback" style={{ display: 'none' }}>🏦 CRYPBANK</h1>
           </div>
           <h1 className="auth-title">🔐 인증 코드 복구</h1>
           <p className="auth-subtitle">모든 정보를 정확히 입력해주세요</p>
