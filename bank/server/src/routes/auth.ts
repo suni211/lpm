@@ -77,23 +77,24 @@ router.post('/register', async (req: Request, res: Response) => {
     const hashedAnswer2 = await bcrypt.hash(security_answer_2.toLowerCase().trim(), 10);
     const hashedAnswer3 = await bcrypt.hash(security_answer_3.toLowerCase().trim(), 10);
 
+    // UUID 생성
+    const userId = crypto.randomUUID();
+
     // 사용자 생성
-    const result: any = await query(
+    await query(
       `INSERT INTO users (
-        auth_code, username, password, email, minecraft_username, minecraft_uuid,
+        id, auth_code, username, password, email, minecraft_username, minecraft_uuid,
         security_question_1, security_answer_1,
         security_question_2, security_answer_2,
         security_question_3, security_answer_3
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        hashedAuthCode, username, hashedPassword, email, minecraft_username, minecraft_uuid,
+        userId, hashedAuthCode, username, hashedPassword, email, minecraft_username, minecraft_uuid,
         '다니는 학교 또는 다녔던 학교는?', hashedAnswer1,
         '좋아하는 동물은?', hashedAnswer2,
         '좋아하는 선수는?', hashedAnswer3
       ]
     );
-
-    const userId = result.insertId;
 
     // 계좌번호 생성 (랜덤 16자리: 1234-5678-9012-3456)
     const accountNumber = Array.from({ length: 4 }, () =>
