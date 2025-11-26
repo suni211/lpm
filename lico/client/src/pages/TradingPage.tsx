@@ -7,6 +7,7 @@ import TradingChart from '../components/TradingChart';
 import Orderbook from '../components/Orderbook';
 import OrderForm from '../components/OrderForm';
 import CoinSidebar from '../components/CoinSidebar';
+import { TickerTape, MarketData, AdvancedChart } from '../components/TradingViewWidgets';
 import './TradingPage.css';
 
 const TradingPage = () => {
@@ -16,6 +17,7 @@ const TradingPage = () => {
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [goldBalance, setGoldBalance] = useState<number>(0);
   const [userLoading, setUserLoading] = useState(true);
+  const [activeChartTab, setActiveChartTab] = useState<'lightweight' | 'tradingview'>('lightweight');
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -103,6 +105,7 @@ const TradingPage = () => {
 
   return (
     <div className="trading-page">
+      <TickerTape />
       <div className="trading-container">
         <div className="main-content">
           <div className="coin-header">
@@ -146,7 +149,39 @@ const TradingPage = () => {
             </div>
           </div>
 
-          <TradingChart coinId={selectedCoin.id} coinSymbol={selectedCoin.symbol} />
+          <div className="charts-section">
+            <div className="chart-main">
+              <div className="chart-tabs">
+                <button
+                  className={`chart-tab ${activeChartTab === 'lightweight' ? 'active' : ''}`}
+                  onClick={() => setActiveChartTab('lightweight')}
+                >
+                  자체 차트 (lightweight-charts)
+                </button>
+                <button
+                  className={`chart-tab ${activeChartTab === 'tradingview' ? 'active' : ''}`}
+                  onClick={() => setActiveChartTab('tradingview')}
+                >
+                  TradingView
+                </button>
+              </div>
+              <div className="chart-content">
+                {activeChartTab === 'lightweight' && (
+                  <div className="chart-panel active">
+                    <TradingChart coinId={selectedCoin.id} coinSymbol={selectedCoin.symbol} />
+                  </div>
+                )}
+                {activeChartTab === 'tradingview' && (
+                  <div className="chart-panel active">
+                    <AdvancedChart coinSymbol={selectedCoin.symbol} interval="60" />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="chart-side">
+              <MarketData coinSymbol={selectedCoin.symbol} />
+            </div>
+          </div>
 
           <div className="trading-panel">
             <div className="orderbook-section">
