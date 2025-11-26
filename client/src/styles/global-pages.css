@@ -1,0 +1,115 @@
+/* Global Page Styles - Apply to all pages */
+
+/* Common page container */
+.page-container {
+  min-height: calc(100vh - 60px);
+  padding: var(--spacing-xl);
+  background: var(--color-bg-primary);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1280px) {
+  .page-container {
+    padding: var(--spacing-lg);
+  }
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: var(--spacing-md);
+  }
+}
+
+/* Remove old gradient backgrounds */
+[class*="-page"],
+[class*="-container"] {
+  background: var(--color-bg-primary) !important;
+}
+
+/* Update all cards/surfaces */
+[class*="card"],
+[class*="panel"],
+[class*="section"] {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--border-radius-md);
+}
+
+/* Loading states */
+.loading,
+.loading-spinner,
+[class*="loading"] {
+  color: var(--color-text-muted) !important;
+}
+
+/* Buttons override */
+button:not(.btn):not([class*="btn-"]) {
+  background: var(--color-primary);
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+button:not(.btn):not([class*="btn-"]):hover {
+  background: var(--color-primary-hover);
+}
+
+button:not(.btn):not([class*="btn-"]):disabled {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-text-primary);
+}
+
+/* Paragraphs */
+p {
+  color: var(--color-text-secondary);
+}
+
+/* Links */
+a {
+  color: var(--color-primary);
+  transition: color 0.15s;
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Inputs */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+select,
+textarea {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  color: var(--color-text-primary);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+select:focus,
+textarea:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+/* Ensure no content is cut off */
+* {
+  box-sizing: border-box;
+}
+
+/* Remove old purple/violet gradients */
+[style*="667eea"],
+[style*="764ba2"],
+[style*="8b5cf6"],
+[style*="6366f1"] {
+  background: var(--color-surface) !important;
+}

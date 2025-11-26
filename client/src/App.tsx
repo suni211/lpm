@@ -21,6 +21,7 @@ import Fusion from './pages/Fusion';
 import Training from './pages/Training';
 import Facility from './pages/Facility';
 import './styles/theme.css';
+import './styles/global-pages.css';
 import './App.css';
 
 function App() {
