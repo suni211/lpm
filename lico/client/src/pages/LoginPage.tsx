@@ -90,6 +90,18 @@ const LoginPage = () => {
             BANK에서 계정 생성하기
           </a>
         </div>
+
+        <div className="wallet-info-box">
+          <h3>🪙 LICO 지갑 생성 안내</h3>
+          <p>LICO 지갑은 <strong>설문조사 승인 후 자동으로 생성</strong>됩니다.</p>
+          <ol>
+            <li>BANK에서 인증 코드 발급</li>
+            <li>LICO 로그인 (인증 코드 입력)</li>
+            <li>설문조사 완료 (90점 이상)</li>
+            <li>지갑 자동 생성 → 복구 단어 표시</li>
+          </ol>
+          <p className="note">⚠️ 복구 단어를 안전하게 보관하세요. 지갑 주소는 한 번만 표시됩니다.</p>
+        </div>
       </div>
     </div>
   );
