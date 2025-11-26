@@ -52,7 +52,7 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await api.get('/api/admin/users');
+      const response = await api.get('/admin/users');
       setUsers(response.data.users || []);
     } catch (error) {
       console.error('사용자 목록 조회 실패:', error);
@@ -61,7 +61,7 @@ const AdminDashboard = () => {
 
   const fetchTrades = async () => {
     try {
-      const response = await api.get('/api/admin/trades');
+      const response = await api.get('/admin/trades');
       setTrades(response.data.trades || []);
     } catch (error) {
       console.error('거래 내역 조회 실패:', error);
@@ -71,7 +71,7 @@ const AdminDashboard = () => {
   const fetchPriceHistory = async () => {
     if (!selectedCoin) return;
     try {
-      const response = await api.get(`/api/admin/coins/${selectedCoin}/price-history?interval=1h&limit=100`);
+      const response = await api.get(`/admin/coins/${selectedCoin}/price-history?interval=1h&limit=100`);
       const candles = response.data.candles || [];
       const chartData = candles.map((candle: any) => ({
         time: new Date(candle.open_time).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit' }),
@@ -88,7 +88,7 @@ const AdminDashboard = () => {
     if (!confirm(`사용자 상태를 ${newStatus === 'SUSPENDED' ? '정지' : newStatus === 'CLOSED' ? '종료' : '활성화'}로 변경하시겠습니까?`)) return;
 
     try {
-      await api.patch(`/api/admin/users/${userId}/status`, { status: newStatus });
+      await api.patch(`/admin/users/${userId}/status`, { status: newStatus });
       alert('사용자 상태가 변경되었습니다.');
       fetchUsers();
     } catch (error: any) {
@@ -99,7 +99,7 @@ const AdminDashboard = () => {
   const handleCreateCoin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/api/coins', {
+      await api.post('/coins', {
         symbol: formData.symbol,
         name: formData.name,
         logo_url: formData.logo_url || null,
@@ -121,7 +121,7 @@ const AdminDashboard = () => {
     if (!editingCoin) return;
 
     try {
-      await api.patch(`/api/coins/${editingCoin.id}`, {
+      await api.patch(`/coins/${editingCoin.id}`, {
         name: formData.name,
         logo_url: formData.logo_url || null,
         description: formData.description || null,
@@ -141,7 +141,7 @@ const AdminDashboard = () => {
     if (!confirm('정말로 이 코인을 삭제하시겠습니까?')) return;
 
     try {
-      await api.patch(`/api/coins/${coinId}`, { status: 'DELISTED' });
+      await api.patch(`/coins/${coinId}`, { status: 'DELISTED' });
       alert('코인이 삭제되었습니다!');
       fetchCoins();
     } catch (error: any) {

@@ -25,7 +25,7 @@ function AdminUsersPage({ setAuth }: AdminUsersPageProps) {
       const params: any = { page, limit: 50 };
       if (filter !== 'all') params.status = filter;
 
-      const response = await api.get('/api/admin/users', { params });
+      const response = await api.get('/admin/users', { params });
       setUsers(response.data.users || []);
       setTotal(response.data.total || 0);
     } catch (error: any) {
@@ -45,7 +45,7 @@ function AdminUsersPage({ setAuth }: AdminUsersPageProps) {
 
     setProcessing(id);
     try {
-      await api.patch(`/api/admin/users/${id}/status`, { status: newStatus });
+      await api.patch(`/admin/users/${id}/status`, { status: newStatus });
       alert(`계정 상태가 ${statusText}로 변경되었습니다.`);
       fetchUsers();
     } catch (error: any) {

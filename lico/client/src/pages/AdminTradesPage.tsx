@@ -23,7 +23,7 @@ function AdminTradesPage({ setAuth }: AdminTradesPageProps) {
 
   const fetchCoins = async () => {
     try {
-      const response = await api.get('/api/coins');
+      const response = await api.get('/coins');
       setCoins(response.data.coins || []);
     } catch (error) {
       console.error('코인 목록 조회 실패:', error);
@@ -35,7 +35,7 @@ function AdminTradesPage({ setAuth }: AdminTradesPageProps) {
       const params: any = { page, limit: 50 };
       if (selectedCoin) params.coin_id = selectedCoin;
 
-      const response = await api.get('/api/admin/trades', { params });
+      const response = await api.get('/admin/trades', { params });
       setTrades(response.data.trades || []);
       setTotal(response.data.total || 0);
     } catch (error: any) {
