@@ -10,6 +10,8 @@ import AdminTradesPage from './pages/AdminTradesPage';
 import LoginPage from './pages/LoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import QuestionnairePage from './pages/QuestionnairePage';
+import WalletCreatedPage from './pages/WalletCreatedPage';
+import WalletRecoveryPage from './pages/WalletRecoveryPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -36,6 +38,22 @@ function App() {
               element={
                 <ProtectedRoute skipQuestionnaireCheck>
                   <QuestionnairePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wallet-created"
+              element={
+                <ProtectedRoute skipQuestionnaireCheck>
+                  <WalletCreatedPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wallet-recovery"
+              element={
+                <ProtectedRoute>
+                  <WalletRecoveryPage />
                 </ProtectedRoute>
               }
             />

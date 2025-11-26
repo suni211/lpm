@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import walletAddressService from '../services/walletAddressService';
+import recoveryWordsService from '../services/recoveryWords';
 import { isAuthenticated } from '../middleware/auth';
 
 const router = express.Router();
@@ -34,23 +35,31 @@ router.post('/create', async (req: Request, res: Response) => {
       return res.status(400).json({ error: '이미 지갑이 생성되었습니다' });
     }
 
-    // 지갑 주소 생성
+    // 지갑 주소 생성 (32자)
     const walletAddress = await walletAddressService.generateWalletAddress(minecraft_username);
+    
+    // 복구 단어 생성 (6개)
+    const recoveryWords = recoveryWordsService.generateRecoveryWords();
+    const recoveryWordsHash = recoveryWordsService.hashRecoveryWords(recoveryWords);
 
     // 지갑 생성
     const walletId = uuidv4();
     await query(
       `INSERT INTO user_wallets
-       (id, wallet_address, minecraft_username, minecraft_uuid, bank_account_number, questionnaire_completed)
-       VALUES (?, ?, ?, ?, ?, TRUE)`,
-      [walletId, walletAddress, minecraft_username, minecraft_uuid, bank_account_number]
+       (id, wallet_address, minecraft_username, minecraft_uuid, bank_account_number, questionnaire_completed, recovery_words_hash, address_shown)
+       VALUES (?, ?, ?, ?, ?, TRUE, ?, FALSE)`,
+      [walletId, walletAddress, minecraft_username, minecraft_uuid, bank_account_number, recoveryWordsHash]
     );
 
     const wallets = await query('SELECT * FROM user_wallets WHERE id = ?', [walletId]);
 
     res.json({
       success: true,
-      wallet: wallets[0],
+      wallet: {
+        ...wallets[0],
+        wallet_address: walletAddress, // 한 번만 표시
+        recovery_words: recoveryWords, // 한 번만 표시
+      },
     });
   } catch (error) {
     console.error('지갑 생성 오류:', error);
@@ -58,7 +67,7 @@ router.post('/create', async (req: Request, res: Response) => {
   }
 });
 
-// 지갑 조회 (지갑 주소로)
+// 지갑 조회 (지갑 주소로) - BANK 연동용 (주소만 확인)
 router.get('/address/:wallet_address', async (req: Request, res: Response) => {
   try {
     const { wallet_address } = req.params;
@@ -71,7 +80,17 @@ router.get('/address/:wallet_address', async (req: Request, res: Response) => {
       return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
     }
 
-    res.json({ wallet: wallets[0] });
+    const wallet = wallets[0];
+    
+    // 민감한 정보 제외하고 반환 (BANK 연동용)
+    res.json({ 
+      wallet: {
+        wallet_address: wallet.wallet_address,
+        minecraft_username: wallet.minecraft_username,
+        gold_balance: wallet.gold_balance,
+        status: wallet.status,
+      }
+    });
   } catch (error) {
     console.error('지갑 조회 오류:', error);
     res.status(500).json({ error: '지갑 조회 실패' });
@@ -222,6 +241,84 @@ router.post('/withdraw', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('출금 오류:', error);
     res.status(500).json({ error: '출금 실패' });
+  }
+});
+
+// 복구 단어로 지갑 주소 확인
+router.post('/recover-address', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { recovery_words } = req.body;
+
+    if (!recovery_words || !Array.isArray(recovery_words) || recovery_words.length !== 6) {
+      return res.status(400).json({ error: '복구 단어 6개를 모두 입력해주세요' });
+    }
+
+    // 현재 사용자의 지갑 조회
+    const wallets = await query(
+      'SELECT * FROM user_wallets WHERE minecraft_username = ?',
+      [req.session.username]
+    );
+
+    if (wallets.length === 0) {
+      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+    }
+
+    const wallet = wallets[0];
+
+    // 복구 단어 검증
+    if (!wallet.recovery_words_hash) {
+      return res.status(400).json({ error: '복구 단어가 설정되지 않은 지갑입니다' });
+    }
+
+    const isValid = recoveryWordsService.verifyRecoveryWords(recovery_words, wallet.recovery_words_hash);
+
+    if (!isValid) {
+      return res.status(401).json({ error: '복구 단어가 일치하지 않습니다' });
+    }
+
+    // 지갑 주소 반환
+    res.json({
+      success: true,
+      wallet_address: wallet.wallet_address,
+    });
+  } catch (error) {
+    console.error('지갑 주소 복구 오류:', error);
+    res.status(500).json({ error: '지갑 주소 복구 실패' });
+  }
+});
+
+// 복구 단어 목록 조회 (사용자가 선택할 수 있도록)
+router.get('/recovery-words-list', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const wordsList = recoveryWordsService.getRecoveryWordsList();
+    res.json({ words: wordsList });
+  } catch (error) {
+    console.error('복구 단어 목록 조회 오류:', error);
+    res.status(500).json({ error: '복구 단어 목록 조회 실패' });
+  }
+});
+
+// 지갑 주소 표시 플래그 업데이트 (한 번 표시 후 true로 설정)
+router.post('/mark-address-shown', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const wallets = await query(
+      'SELECT * FROM user_wallets WHERE minecraft_username = ?',
+      [req.session.username]
+    );
+
+    if (wallets.length === 0) {
+      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+    }
+
+    await query(
+      'UPDATE user_wallets SET address_shown = TRUE WHERE minecraft_username = ?',
+      [req.session.username]
+    );
+
+    res.json({ success: true, message: '지갑 주소 표시 완료' });
+  } catch (error) {
+    console.error('지갑 주소 표시 플래그 업데이트 오류:', error);
+    res.status(500).json({ error: '업데이트 실패' });
   }
 });
 

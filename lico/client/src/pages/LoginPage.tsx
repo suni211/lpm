@@ -25,6 +25,16 @@ const LoginPage = () => {
           return;
         }
         
+        // 지갑 생성 여부 확인
+        if (response.data.wallet_created && response.data.wallet_address && response.data.recovery_words) {
+          // 지갑이 방금 생성된 경우 복구 단어 표시 페이지로 이동
+          // 세션 스토리지에 임시 저장 (한 번만 표시)
+          sessionStorage.setItem('wallet_address', response.data.wallet_address);
+          sessionStorage.setItem('recovery_words', JSON.stringify(response.data.recovery_words));
+          navigate('/wallet-created');
+          return;
+        }
+        
         // 설문조사 완료 시 이전 페이지로 이동 또는 홈으로
         const from = new URLSearchParams(window.location.search).get('from') || '/';
         navigate(from);

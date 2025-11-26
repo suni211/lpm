@@ -52,21 +52,24 @@ CREATE TABLE lico_questionnaires (
 -- 사용자 계좌 (Bank 연동)
 CREATE TABLE user_wallets (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-    wallet_address VARCHAR(42) UNIQUE NOT NULL COMMENT '지갑 주소 (0x...)',
+    wallet_address VARCHAR(32) UNIQUE NOT NULL COMMENT '지갑 주소 (32자리)',
     minecraft_username VARCHAR(16) UNIQUE NOT NULL,
     minecraft_uuid VARCHAR(36) UNIQUE,
     bank_account_number VARCHAR(20) NULL COMMENT 'Bank 계좌번호 연동',
-    gold_balance BIGINT DEFAULT 0 COMMENT 'Gold 잔액 (Bank 동기화)',
+    gold_balance BIGINT DEFAULT 0 COMMENT 'Gold 잔액 (LICO 전용, Bank와 별도)',
     total_deposit BIGINT DEFAULT 0 COMMENT '총 입금액',
     total_withdrawal BIGINT DEFAULT 0 COMMENT '총 출금액',
     questionnaire_completed BOOLEAN DEFAULT FALSE COMMENT '설문조사 완료 여부',
+    recovery_words_hash VARCHAR(64) NULL COMMENT '복구 단어 해시 (SHA256)',
+    address_shown BOOLEAN DEFAULT FALSE COMMENT '지갑 주소 표시 여부 (한 번만 표시)',
     status ENUM('ACTIVE', 'SUSPENDED', 'CLOSED') DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_wallet_address (wallet_address),
     INDEX idx_username (minecraft_username),
     INDEX idx_uuid (minecraft_uuid),
-    INDEX idx_bank_account (bank_account_number)
+    INDEX idx_bank_account (bank_account_number),
+    INDEX idx_recovery_hash (recovery_words_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 사용자 코인 보유 현황

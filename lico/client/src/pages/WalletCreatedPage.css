@@ -1,0 +1,177 @@
+.wallet-created-page {
+  min-height: 100vh;
+  background: #0f1117;
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.wallet-created-container {
+  max-width: 800px;
+  width: 100%;
+  background: #1a1d29;
+  border-radius: 16px;
+  padding: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.warning-box {
+  background: #f59e0b20;
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.warning-box h2 {
+  color: #f59e0b;
+  margin: 0 0 12px 0;
+  font-size: 20px;
+}
+
+.warning-box p {
+  color: #fff;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.wallet-info-section,
+.recovery-words-section {
+  margin-bottom: 32px;
+}
+
+.wallet-info-section h3,
+.recovery-words-section h3 {
+  color: #fff;
+  font-size: 18px;
+  margin: 0 0 16px 0;
+}
+
+.address-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.wallet-address {
+  flex: 1;
+  background: #0f1117;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  color: #3b82f6;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+}
+
+.copy-button {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.copy-button:hover {
+  background: #2563eb;
+}
+
+.info-text {
+  color: #9ca3af;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.info-text a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.info-text a:hover {
+  text-decoration: underline;
+}
+
+.recovery-words-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.recovery-word-item {
+  background: #0f1117;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.word-number {
+  background: #3b82f6;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.word-text {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.confirmation-section {
+  margin-bottom: 24px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.confirm-button {
+  width: 100%;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.confirm-button:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.confirm-button:disabled {
+  background: #4b5563;
+  cursor: not-allowed;
+}
+

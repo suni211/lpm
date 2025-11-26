@@ -4,12 +4,12 @@ import crypto from 'crypto';
 /**
  * 지갑 주소 생성 서비스
  *
- * 형식: 0x + 40자리 16진수 (Ethereum 스타일)
- * 예: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb8
+ * 형식: 32자리 16진수 (고정 길이)
+ * 예: 742d35Cc6634C0532925a3b844Bc9e7
  */
 export class WalletAddressService {
   /**
-   * 새 지갑 주소 생성
+   * 새 지갑 주소 생성 (32자 고정)
    */
   async generateWalletAddress(minecraftUsername: string): Promise<string> {
     let walletAddress: string;
@@ -23,8 +23,8 @@ export class WalletAddressService {
         .update(minecraftUsername + Date.now() + Math.random())
         .digest('hex');
 
-      // 처음 40자리만 사용
-      walletAddress = '0x' + hash.substring(0, 40);
+      // 32자리만 사용 (0x 제거)
+      walletAddress = hash.substring(0, 32);
 
       // 중복 체크
       const exists = await this.checkDuplicate(walletAddress);
@@ -53,8 +53,8 @@ export class WalletAddressService {
    * 지갑 주소 유효성 검사
    */
   validateWalletAddress(walletAddress: string): boolean {
-    // 형식 체크 (0x + 40자리 16진수)
-    const regex = /^0x[a-fA-F0-9]{40}$/;
+    // 형식 체크 (32자리 16진수)
+    const regex = /^[a-fA-F0-9]{32}$/;
     return regex.test(walletAddress);
   }
 
@@ -71,14 +71,14 @@ export class WalletAddressService {
 
   /**
    * 지갑 주소 단축 표시
-   * 예: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb8 → 0x742d...bEb8
+   * 예: 742d35Cc6634C0532925a3b844Bc9e7 → 742d...Bc9e
    */
   shortenAddress(walletAddress: string): string {
     if (!this.validateWalletAddress(walletAddress)) {
       return walletAddress;
     }
 
-    return `${walletAddress.substring(0, 6)}...${walletAddress.substring(38)}`;
+    return `${walletAddress.substring(0, 6)}...${walletAddress.substring(26)}`;
   }
 
   /**

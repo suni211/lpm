@@ -137,18 +137,40 @@ router.post('/login', async (req: Request, res: Response) => {
       // 설문조사 승인되었으면 지갑 생성
       const { v4: uuidv4 } = require('uuid');
       const walletAddressService = require('../services/walletAddressService').default;
+      const recoveryWordsService = require('../services/recoveryWords').default;
+      
+      // 지갑 주소 생성 (32자)
       const walletAddress = await walletAddressService.generateWalletAddress(bankUser.minecraft_username);
+      
+      // 복구 단어 생성 (6개)
+      const recoveryWords = recoveryWordsService.generateRecoveryWords();
+      const recoveryWordsHash = recoveryWordsService.hashRecoveryWords(recoveryWords);
 
       const walletId = uuidv4();
       await query(
         `INSERT INTO user_wallets
-         (id, wallet_address, minecraft_username, minecraft_uuid, bank_account_number, questionnaire_completed)
-         VALUES (?, ?, ?, ?, ?, TRUE)`,
-        [walletId, walletAddress, bankUser.minecraft_username, bankUser.minecraft_uuid, bankAccount.account_number]
+         (id, wallet_address, minecraft_username, minecraft_uuid, bank_account_number, questionnaire_completed, recovery_words_hash, address_shown)
+         VALUES (?, ?, ?, ?, ?, TRUE, ?, FALSE)`,
+        [walletId, walletAddress, bankUser.minecraft_username, bankUser.minecraft_uuid, bankAccount.account_number, recoveryWordsHash]
       );
 
       wallets = await query('SELECT * FROM user_wallets WHERE id = ?', [walletId]);
       wallet = wallets[0];
+      
+      // 지갑 주소와 복구 단어를 응답에 포함 (한 번만 표시)
+      return res.json({
+        success: true,
+        requires_questionnaire: false,
+        wallet_created: true,
+        wallet_address: walletAddress,
+        recovery_words: recoveryWords, // 한 번만 표시
+        user: {
+          id: bankUser.id,
+          minecraft_username: bankUser.minecraft_username,
+          wallet_address: walletAddress,
+          bank_account_number: bankAccount.account_number,
+        },
+      });
     } else {
       wallet = wallets[0];
       
@@ -232,14 +254,16 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
       console.error('BANK 잔액 조회 실패:', error);
     }
 
+    // 지갑 주소는 address_shown이 false일 때만 반환 (한 번만 표시)
     res.json({
       user: {
         minecraft_username: wallet.minecraft_username,
-        wallet_address: wallet.wallet_address,
+        wallet_address: wallet.address_shown ? null : wallet.wallet_address, // 한 번만 표시
         bank_account_number: wallet.bank_account_number,
         gold_balance: wallet.gold_balance || 0,
         bank_balance: bankBalance,
         requires_questionnaire: false,
+        address_shown: wallet.address_shown || false,
       },
     });
   } catch (error) {

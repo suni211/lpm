@@ -53,6 +53,14 @@ const Navbar = () => {
           </li>
           <li>
             <Link 
+              to="/wallet-recovery" 
+              className={'navbar-link ' + (isActive('/wallet-recovery') ? 'active' : '')}
+            >
+              지갑 복구
+            </Link>
+          </li>
+          <li>
+            <Link 
               to="/admin" 
               className={'navbar-link ' + (isActive('/admin') ? 'active' : '')}
             >
