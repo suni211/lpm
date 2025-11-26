@@ -73,6 +73,7 @@ import transfersRoutes from './routes/transfers';
 import transactionsRoutes from './routes/transactions';
 
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes); // 클라이언트 호환성을 위해 /auth도 추가
 app.use('/api/accounts', accountsRoutes);
 app.use('/api/deposits', depositsRoutes);
 app.use('/api/withdrawals', withdrawalsRoutes);
