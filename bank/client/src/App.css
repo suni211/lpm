@@ -99,7 +99,7 @@
 }
 
 .form-input::placeholder {
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 .form-input:focus {
@@ -159,7 +159,7 @@
 .error-message {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid #ef4444;
-  color: #fca5a5;
+  color: #fff;
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 20px;
@@ -169,7 +169,7 @@
 .success-message {
   background: rgba(34, 197, 94, 0.1);
   border: 1px solid #22c55e;
-  color: #86efac;
+  color: #fff;
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 20px;
@@ -189,7 +189,7 @@
   font-family: 'Courier New', monospace;
   font-size: 20px;
   font-weight: bold;
-  color: #667eea;
+  color: #fff;
   word-break: break-all;
   user-select: all;
 }
@@ -200,7 +200,7 @@
 }
 
 .form-link {
-  color: #667eea;
+  color: #fff;
   text-decoration: none;
   font-weight: 600;
   margin: 0 10px;
@@ -208,7 +208,7 @@
 }
 
 .form-link:hover {
-  color: #818cf8;
+  color: #e5e7eb;
   text-decoration: underline;
 }
 
