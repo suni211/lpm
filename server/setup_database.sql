@@ -60,51 +60,52 @@ DROP TABLE IF EXISTS leagues;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- 0. 기본 스키마 (가장 먼저 실행!)
-SOURCE src/database/schema_mariadb.sql;
+-- 주의: server 디렉토리에서 실행해야 합니다: cd server && mysql -u root -p lpm < setup_database.sql
+SOURCE ./src/database/schema_mariadb.sql;
 
 -- 1. 리그 시스템
-SOURCE src/database/league_system.sql;
+SOURCE ./src/database/league_system.sql;
 
 -- 2. 특성 시스템
-SOURCE src/database/traits_system.sql;
-SOURCE src/database/initial_traits.sql;
+SOURCE ./src/database/traits_system.sql;
+SOURCE ./src/database/initial_traits.sql;
 
 -- 3. 스폰서 시스템
-SOURCE src/database/sponsor_system.sql;
-SOURCE src/database/initial_sponsors.sql;
+SOURCE ./src/database/sponsor_system.sql;
+SOURCE ./src/database/initial_sponsors.sql;
 
 -- 4. 컨디션/레벨/경험치 시스템
-SOURCE src/database/player_condition_level_system.sql;
+SOURCE ./src/database/player_condition_level_system.sql;
 
 -- 5. 시설 시스템
-SOURCE src/database/facility_system.sql;
+SOURCE ./src/database/facility_system.sql;
 
 -- 6. 랭크 리그 시스템
-SOURCE src/database/ranked_system.sql;
+SOURCE ./src/database/ranked_system.sql;
 
 -- 6-1. 리그 랭크 시스템 (새로운 4-tier 리그)
-SOURCE src/database/league_ranked_system.sql;
+SOURCE ./src/database/league_ranked_system.sql;
 
 -- 7. 솔랭 시스템
-SOURCE src/database/solo_rank_system.sql;
+SOURCE ./src/database/solo_rank_system.sql;
 
 -- 8. 경매장 시스템
-SOURCE src/database/posting_auction_system.sql;
+SOURCE ./src/database/posting_auction_system.sql;
 
 -- 9. 친선경기 시스템
-SOURCE src/database/friendly_match_system.sql;
+SOURCE ./src/database/friendly_match_system.sql;
 
 -- 10. 카드 합성 시스템
-SOURCE src/database/card_fusion_system.sql;
+SOURCE ./src/database/card_fusion_system.sql;
 
 -- 11. 선수 육성 시스템
-SOURCE src/database/player_training_system.sql;
+SOURCE ./src/database/player_training_system.sql;
 
 -- 12. 초기 데이터
-SOURCE src/database/initial_coaches.sql;
-SOURCE src/database/initial_tactics.sql;
-SOURCE src/database/initial_supports.sql;
-SOURCE src/database/initial_players_2026.sql;
+SOURCE ./src/database/initial_coaches.sql;
+SOURCE ./src/database/initial_tactics.sql;
+SOURCE ./src/database/initial_supports.sql;
+SOURCE ./src/database/initial_players_2026.sql;
 
 -- 완료 메시지
 SELECT '✅ 모든 데이터베이스 설정 완료!' AS Status;
