@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickData, Time, UTCTimestamp } from 'lightweight-charts';
+import { createChart, ColorType } from 'lightweight-charts';
+import type { IChartApi, ISeriesApi, CandlestickData, UTCTimestamp } from 'lightweight-charts';
 import type { Candle } from '../types';
 import api from '../services/api';
 import './TradingChart.css';
@@ -11,7 +12,7 @@ interface TradingChartProps {
 
 type Interval = '1m' | '1h' | '1d';
 
-const TradingChart = ({ coinId, coinSymbol }: TradingChartProps) => {
+const TradingChart = ({ coinId }: TradingChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -61,26 +62,42 @@ const TradingChart = ({ coinId, coinSymbol }: TradingChartProps) => {
 
       chartRef.current = chart;
 
-      // 캔들스틱 시리즈 추가 (올바른 방법)
+      // 캔들스틱 시리즈 추가 (lightweight-charts v5)
       try {
-        const candlestickSeries = chart.addCandlestickSeries({
+        // v5에서는 addCandlestickSeries 메서드 사용
+        const candlestickSeries = (chart as any).addCandlestickSeries({
           upColor: '#22c55e',
           downColor: '#ef4444',
           borderUpColor: '#22c55e',
           borderDownColor: '#ef4444',
           wickUpColor: '#22c55e',
           wickDownColor: '#ef4444',
-        });
+        }) as ISeriesApi<'Candlestick'>;
 
         candlestickSeriesRef.current = candlestickSeries;
       } catch (error) {
         console.error('Failed to add candlestick series:', error);
+        // 폴백: addSeries 사용
+        try {
+          const candlestickSeries = (chart as any).addSeries({
+            type: 'Candlestick',
+            upColor: '#22c55e',
+            downColor: '#ef4444',
+            borderUpColor: '#22c55e',
+            borderDownColor: '#ef4444',
+            wickUpColor: '#22c55e',
+            wickDownColor: '#ef4444',
+          }) as ISeriesApi<'Candlestick'>;
+          candlestickSeriesRef.current = candlestickSeries;
+        } catch (fallbackError) {
+          console.error('Failed to add series with fallback:', fallbackError);
+        }
       }
     }
 
     // 차트 데이터 업데이트
     if (candlestickSeriesRef.current && candles.length > 0) {
-      const formattedData: CandlestickData<Time>[] = candles
+      const formattedData: CandlestickData<UTCTimestamp>[] = candles
         .map((candle) => {
           const open = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
           const high = typeof candle.high_price === 'string' ? parseFloat(candle.high_price) : (candle.high_price || 0);
@@ -107,7 +124,7 @@ const TradingChart = ({ coinId, coinSymbol }: TradingChartProps) => {
             close,
           };
         })
-        .filter((candle): candle is CandlestickData<Time> => candle !== null);
+        .filter((candle): candle is CandlestickData<UTCTimestamp> => candle !== null);
 
       if (formattedData.length > 0) {
         try {
