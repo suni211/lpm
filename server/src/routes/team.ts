@@ -94,11 +94,11 @@ router.post('/create', upload.single('logo'), async (req: Request, res: Response
     // 팀 로고 URL 생성
     const logoUrl = logoFile ? `/uploads/logos/${logoFile.filename}` : null;
 
-    // 팀 생성 (logo_url에 파일 경로 저장)
+    // 팀 생성
     await query(
-      `INSERT INTO teams (user_id, team_name, team_logo, logo_url, slogan)
-       VALUES (?, ?, ?, ?, ?)`,
-      [userId, teamName.trim(), teamTag, logoUrl, `${color1}|${color2}|${color3}`]
+      `INSERT INTO teams (user_id, team_name, team_logo, slogan)
+       VALUES (?, ?, ?, ?)`,
+      [userId, teamName.trim(), teamTag, `${color1}|${color2}|${color3}`]
     );
 
     // 생성된 팀 조회
