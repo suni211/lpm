@@ -50,6 +50,24 @@ router.get('/symbol/:symbol', async (req: Request, res: Response) => {
   }
 });
 
+// 코인 상세 조회 (ID로)
+router.get('/:coin_id', async (req: Request, res: Response) => {
+  try {
+    const { coin_id } = req.params;
+
+    const coins = await query('SELECT * FROM coins WHERE id = ?', [coin_id]);
+
+    if (coins.length === 0) {
+      return res.status(404).json({ error: '코인을 찾을 수 없습니다' });
+    }
+
+    res.json({ coin: coins[0] });
+  } catch (error) {
+    console.error('코인 조회 오류:', error);
+    res.status(500).json({ error: '코인 조회 실패' });
+  }
+});
+
 // 코인 시세 정보 (차트용)
 router.get('/:coin_id/price', async (req: Request, res: Response) => {
   try {

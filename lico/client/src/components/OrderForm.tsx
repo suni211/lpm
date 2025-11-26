@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { tradingService } from '../services/coinService';
-import type { Coin } from '../types';
+import { useState, useEffect } from 'react';
+import { tradingService, walletService } from '../services/coinService';
+import type { Coin, CoinBalance } from '../types';
 import './OrderForm.css';
 
 interface OrderFormProps {
@@ -23,6 +23,24 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [coinBalance, setCoinBalance] = useState<CoinBalance | null>(null);
+
+  // 코인 잔액 조회
+  useEffect(() => {
+    const fetchCoinBalance = async () => {
+      try {
+        const balances = await walletService.getMyBalances(walletAddress);
+        const balance = balances.balances?.find((b: CoinBalance) => b.coin_id === coin.id);
+        setCoinBalance(balance || null);
+      } catch (error) {
+        console.error('Failed to fetch coin balance:', error);
+      }
+    };
+
+    if (walletAddress && coin.id) {
+      fetchCoinBalance();
+    }
+  }, [walletAddress, coin.id]);
 
   const calculateTotal = () => {
     const p = parseFloat(price) || 0;
@@ -157,14 +175,71 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
         // 금액 모드: 최대 금액 설정 (수수료 5% 제외)
         const maxAmount = Math.floor(goldBalance / 1.05);
         setAmount(maxAmount.toString());
+        handleAmountChange(maxAmount.toString());
       } else {
         // 수량 모드: 최대 수량 설정
         const p = parseFloat(price) || 0;
         if (p > 0) {
           const maxQty = parseFloat((goldBalance / (p * 1.05)).toFixed(8));
           setQuantity(maxQty.toString());
+          handleQuantityChange(maxQty.toString());
         }
       }
+    } else {
+      // 매도: 코인 잔액 사용
+      if (coinBalance && coinBalance.available_amount > 0) {
+        const availableQty = parseFloat(coinBalance.available_amount.toString());
+        if (inputMode === 'amount') {
+          const p = parseFloat(price) || 0;
+          if (p > 0) {
+            const maxAmount = parseFloat((availableQty * p).toFixed(8));
+            setAmount(maxAmount.toString());
+            handleAmountChange(maxAmount.toString());
+          }
+        } else {
+          setQuantity(availableQty.toString());
+          handleQuantityChange(availableQty.toString());
+        }
+      }
+    }
+  };
+
+  // 전량 매수/매도
+  const handleFullOrder = async () => {
+    setError('');
+    
+    if (orderType === 'BUY') {
+      // 전량 매수: 골드 잔액 전부 사용 (수수료 5% 제외)
+      const maxAmount = Math.floor(goldBalance / 1.05);
+      if (maxAmount <= 0) {
+        setError('매수할 수 있는 금액이 없습니다');
+        return;
+      }
+      setAmount(maxAmount.toString());
+      handleAmountChange(maxAmount.toString());
+      // 자동으로 주문 제출
+      setTimeout(() => {
+        const form = document.querySelector('.order-form form') as HTMLFormElement;
+        if (form) {
+          form.requestSubmit();
+        }
+      }, 100);
+    } else {
+      // 전량 매도: 코인 잔액 전부 사용
+      if (!coinBalance || coinBalance.available_amount <= 0) {
+        setError('매도할 수 있는 코인이 없습니다');
+        return;
+      }
+      const availableQty = parseFloat(coinBalance.available_amount.toString());
+      setQuantity(availableQty.toString());
+      handleQuantityChange(availableQty.toString());
+      // 자동으로 주문 제출
+      setTimeout(() => {
+        const form = document.querySelector('.order-form form') as HTMLFormElement;
+        if (form) {
+          form.requestSubmit();
+        }
+      }, 100);
     }
   };
 
@@ -288,15 +363,34 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
           <div className="form-group">
             <label>
               {orderType === 'BUY' ? '구매 수량' : '판매 수량'} ({coin.symbol})
-              {orderType === 'BUY' && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                {orderType === 'BUY' && (
+                  <button
+                    type="button"
+                    className="max-button"
+                    onClick={handleMaxQuantity}
+                  >
+                    최대
+                  </button>
+                )}
                 <button
                   type="button"
-                  className="max-button"
-                  onClick={handleMaxQuantity}
+                  className="full-button"
+                  onClick={handleFullOrder}
+                  style={{
+                    padding: '4px 12px',
+                    background: orderType === 'BUY' ? '#22c55e' : '#ef4444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
                 >
-                  최대
+                  전량 {orderType === 'BUY' ? '매수' : '매도'}
                 </button>
-              )}
+              </div>
             </label>
             <input
               type="number"
@@ -330,8 +424,16 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
         </div>
 
         <div className="balance-info">
-          <span>보유 잔액</span>
-          <span className="balance-amount">{formatNumber(goldBalance)} G</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span>보유 골드</span>
+            <span className="balance-amount">{formatNumber(goldBalance)} G</span>
+          </div>
+          {coinBalance && coinBalance.available_amount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>보유 {coin.symbol}</span>
+              <span className="balance-amount">{formatNumber(coinBalance.available_amount)} {coin.symbol}</span>
+            </div>
+          )}
         </div>
 
         {error && <div className="error-message">{error}</div>}
