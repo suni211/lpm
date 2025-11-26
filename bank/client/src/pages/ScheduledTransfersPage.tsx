@@ -8,7 +8,7 @@ interface ScheduledTransfersPageProps {
   setAuth: (auth: boolean) => void;
 }
 
-function ScheduledTransfersPage({ userData, setAuth }: ScheduledTransfersPageProps) {
+function ScheduledTransfersPage({ userData }: ScheduledTransfersPageProps) {
   const [transfers, setTransfers] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

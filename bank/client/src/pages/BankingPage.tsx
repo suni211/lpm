@@ -8,7 +8,7 @@ interface BankingPageProps {
   setAuth: (auth: boolean) => void;
 }
 
-function BankingPage({ userData, setAuth }: BankingPageProps) {
+function BankingPage({ userData }: BankingPageProps) {
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw' | 'transfer'>('deposit');
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);

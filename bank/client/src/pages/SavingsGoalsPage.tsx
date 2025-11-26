@@ -8,7 +8,7 @@ interface SavingsGoalsPageProps {
   setAuth: (auth: boolean) => void;
 }
 
-function SavingsGoalsPage({ userData, setAuth }: SavingsGoalsPageProps) {
+function SavingsGoalsPage({ userData }: SavingsGoalsPageProps) {
   const [goals, setGoals] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

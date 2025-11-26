@@ -9,7 +9,7 @@ interface CreateAccountPageProps {
   setAuth: (auth: boolean) => void;
 }
 
-function CreateAccountPage({ userData, setAuth }: CreateAccountPageProps) {
+function CreateAccountPage({ userData }: CreateAccountPageProps) {
   const [accountType, setAccountType] = useState<'BASIC' | 'STOCK'>('BASIC');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

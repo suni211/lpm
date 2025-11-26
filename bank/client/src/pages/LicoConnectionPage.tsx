@@ -8,7 +8,7 @@ interface LicoConnectionPageProps {
   setAuth: (auth: boolean) => void;
 }
 
-function LicoConnectionPage({ userData, setAuth }: LicoConnectionPageProps) {
+function LicoConnectionPage({ userData }: LicoConnectionPageProps) {
   const [connection, setConnection] = useState<any>(null);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

@@ -8,7 +8,7 @@ interface BudgetsPageProps {
   setAuth: (auth: boolean) => void;
 }
 
-function BudgetsPage({ userData, setAuth }: BudgetsPageProps) {
+function BudgetsPage({ userData }: BudgetsPageProps) {
   const [budgets, setBudgets] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

@@ -4,39 +4,25 @@ import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 
 interface DashboardPageProps {
+  userData: any;
   setAuth: (auth: boolean) => void;
 }
 
-interface UserData {
-  id: string;
-  username: string;
-  email: string;
-  minecraft_username: string;
-  minecraft_uuid: string;
-  account_number: string;
-  balance: number;
-}
-
-function DashboardPage({ setAuth }: DashboardPageProps) {
-  const [userData, setUserData] = useState<UserData | null>(null);
+function DashboardPage({ userData, setAuth }: DashboardPageProps) {
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchUserData();
+    fetchAccounts();
   }, []);
 
-  const fetchUserData = async () => {
+  const fetchAccounts = async () => {
     try {
-      const response = await api.get('/auth/me');
-      if (response.data.user) {
-        setUserData(response.data.user);
-      } else {
-        setAuth(false);
-        navigate('/login');
-      }
+      const response = await api.get('/api/accounts/me');
+      setAccounts(response.data.accounts || []);
     } catch (error) {
-      console.error('Failed to fetch user data:', error);
+      console.error('Failed to fetch accounts:', error);
     } finally {
       setLoading(false);
     }
@@ -53,14 +39,26 @@ function DashboardPage({ setAuth }: DashboardPageProps) {
   };
 
   if (loading) {
-    return <div className="loading">로딩 중...</div>;
+    return (
+      <div className="page-container">
+        <Sidebar userData={userData} />
+        <div className="page-content">
+          <div className="loading">로딩 중...</div>
+        </div>
+      </div>
+    );
   }
 
   if (!userData) {
-    return <div className="loading">사용자 정보를 불러올 수 없습니다</div>;
+    return (
+      <div className="page-container">
+        <Sidebar userData={userData} />
+        <div className="page-content">
+          <div className="loading">사용자 정보를 불러올 수 없습니다</div>
+        </div>
+      </div>
+    );
   }
-
-  const accounts = userData.accounts || [];
 
   return (
     <div className="page-container">

@@ -8,7 +8,7 @@ interface AutoTransfersPageProps {
   setAuth: (auth: boolean) => void;
 }
 
-function AutoTransfersPage({ userData, setAuth }: AutoTransfersPageProps) {
+function AutoTransfersPage({ userData }: AutoTransfersPageProps) {
   const [rules, setRules] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

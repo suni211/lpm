@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import './StatsPage.css';
@@ -11,7 +11,7 @@ interface StatsPageProps {
 
 const COLORS = ['#667eea', '#764ba2', '#22c55e', '#f59e0b', '#ef4444'];
 
-function StatsPage({ userData, setAuth }: StatsPageProps) {
+function StatsPage({ userData }: StatsPageProps) {
   const [stats, setStats] = useState<any>(null);
   const [budgetStats, setBudgetStats] = useState<any[]>([]);
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
@@ -133,7 +133,7 @@ function StatsPage({ userData, setAuth }: StatsPageProps) {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {typeData.map((entry: any, index: number) => (
+                    {typeData.map((_entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>

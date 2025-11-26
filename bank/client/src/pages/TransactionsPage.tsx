@@ -8,7 +8,7 @@ interface TransactionsPageProps {
   setAuth: (auth: boolean) => void;
 }
 
-function TransactionsPage({ userData, setAuth }: TransactionsPageProps) {
+function TransactionsPage({ userData }: TransactionsPageProps) {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'DEPOSIT' | 'WITHDRAWAL' | 'TRANSFER_OUT' | 'TRANSFER_IN'>('all');
