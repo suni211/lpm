@@ -248,6 +248,7 @@ export class TradingEngine {
       }
 
       // AI 봇과 직접 거래 체결 (executeTrade에서 잔액 차감 처리)
+      console.log(`💰 매수 체결: ${sellableQty}개, 가격: ${currentPrice}, 총액: ${totalRequired}`);
       await this.executeTrade(walletId, aiWallet.id, coinId, currentPrice, sellableQty, null, null);
       totalCost += totalRequired;
       remainingQty -= sellableQty;
@@ -449,11 +450,11 @@ export class TradingEngine {
     const buyFee = Math.floor(totalAmount * 0.05);
     const sellFee = Math.floor(totalAmount * 0.05);
 
-    // 거래 기록 생성
+    // 거래 기록 생성 (buy_order_id, sell_order_id는 NULL 허용)
     await query(
       `INSERT INTO trades (id, coin_id, buy_order_id, sell_order_id, buyer_wallet_id, seller_wallet_id, price, quantity, buy_fee, sell_fee)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [tradeId, coinId, buyOrderId, sellOrderId, buyerWalletId, sellerWalletId, price, quantity, buyFee, sellFee]
+      [tradeId, coinId, buyOrderId || null, sellOrderId || null, buyerWalletId, sellerWalletId, price, quantity, buyFee, sellFee]
     );
 
     // 매수자: Gold 차감 (수수료 포함), 코인 증가

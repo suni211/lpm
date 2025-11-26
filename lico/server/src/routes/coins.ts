@@ -329,7 +329,8 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
 router.patch('/:id', isAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, logo_url, description, circulating_supply, current_price, status } = req.body;
+    const { name, logo_url, description, current_price, status } = req.body;
+    // circulating_supply는 업데이트 불가 (고정값)
 
     // 코인 존재 확인
     const existingCoins = await query('SELECT * FROM coins WHERE id = ?', [id]);
@@ -352,12 +353,10 @@ router.patch('/:id', isAdmin, async (req: Request, res: Response) => {
       updates.push('description = ?');
       params.push(description || null);
     }
-    if (circulating_supply !== undefined) {
-      if (circulating_supply <= 0) {
-        return res.status(400).json({ error: '유통량은 0보다 커야 합니다' });
-      }
-      updates.push('circulating_supply = ?');
-      params.push(circulating_supply);
+    // circulating_supply는 업데이트 불가 (한번 설정되면 고정)
+    // 유통량 변경 시도 시 에러 반환
+    if (req.body.circulating_supply !== undefined) {
+      return res.status(400).json({ error: '유통량은 생성 후 변경할 수 없습니다' });
     }
     if (current_price !== undefined) {
       if (current_price <= 0) {

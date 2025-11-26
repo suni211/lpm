@@ -94,19 +94,6 @@ const TradingPage = () => {
       candlestickSeriesRef.current = null;
     }
 
-    // 컨테이너 크기 확인
-    const containerWidth = chartContainerRef.current.clientWidth;
-    if (containerWidth === 0) {
-      const timeoutId = setTimeout(() => {
-        if (chartContainerRef.current && chartContainerRef.current.clientWidth > 0) {
-          initializeChart();
-        }
-      }, 100);
-      return () => clearTimeout(timeoutId);
-    }
-
-    initializeChart();
-
     function initializeChart() {
       if (!chartContainerRef.current) return;
 
@@ -121,7 +108,7 @@ const TradingPage = () => {
             horzLines: { color: '#2a2e3e' },
           },
           width: chartContainerRef.current.clientWidth || 800,
-          height: 500,
+          height: chartContainerRef.current.clientHeight || 500,
           timeScale: {
             timeVisible: true,
             secondsVisible: false,
@@ -145,13 +132,28 @@ const TradingPage = () => {
       }
     }
 
+    // 컨테이너 크기 확인 후 차트 초기화
+    const containerWidth = chartContainerRef.current.clientWidth;
+    if (containerWidth === 0) {
+      const timeoutId = setTimeout(() => {
+        if (chartContainerRef.current && chartContainerRef.current.clientWidth > 0) {
+          initializeChart();
+        }
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    } else {
+      initializeChart();
+    }
+
     // 리사이즈 핸들러
     const handleResize = () => {
       if (chartRef.current && chartContainerRef.current) {
         const width = chartContainerRef.current.clientWidth;
-        if (width > 0) {
+        const height = chartContainerRef.current.clientHeight;
+        if (width > 0 && height > 0) {
           chartRef.current.applyOptions({
             width: width,
+            height: height,
           });
         }
       }
@@ -167,7 +169,7 @@ const TradingPage = () => {
         candlestickSeriesRef.current = null;
       }
     };
-  }, [selectedCoin, chartInterval]);
+  }, [selectedCoin]);
 
   // 차트 데이터 업데이트
   useEffect(() => {
@@ -210,7 +212,7 @@ const TradingPage = () => {
         console.error('Failed to set chart data:', error);
       }
     }
-  }, [candles]);
+  }, [candles, chartInterval]);
 
   const handleOrderSuccess = () => {
     console.log('Order placed successfully');
