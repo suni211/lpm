@@ -195,8 +195,26 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
       [req.session.username]
     );
 
+    // 지갑이 없으면 (설문조사 미완료 상태) 기본 정보만 반환
     if (wallets.length === 0) {
-      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+      // BANK 계좌 정보 조회
+      let bankAccount = null;
+      try {
+        const accountData = await bankService.getAccountByUsername(req.session.username || '');
+        bankAccount = accountData.account;
+      } catch (error) {
+        console.error('BANK 계좌 조회 실패:', error);
+      }
+
+      return res.json({
+        user: {
+          minecraft_username: req.session.username,
+          wallet_address: null,
+          bank_account_number: bankAccount?.account_number || null,
+          gold_balance: 0,
+          requires_questionnaire: true,
+        },
+      });
     }
 
     const wallet = wallets[0];
@@ -221,6 +239,7 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
         wallet_address: wallet.wallet_address,
         bank_account_number: wallet.bank_account_number,
         gold_balance: wallet.gold_balance,
+        requires_questionnaire: false,
       },
     });
   } catch (error) {
