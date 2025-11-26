@@ -14,10 +14,11 @@ export const CARD_PACK_PRICES = {
 };
 
 // 카드 타입별 확률 (총 100%)
+// 작전/서포트 카드는 스킬 연구소에서만 획득 가능
 const CARD_TYPE_PROBABILITY = {
-  PLAYER: 70,   // 70% 선수 카드
-  TACTIC: 20,   // 20% 작전 카드
-  SUPPORT: 7,   // 7% 서포트 카드
+  PLAYER: 97,   // 97% 선수 카드
+  TACTIC: 0,    // 0% 작전 카드 (스킬 연구소에서 획득)
+  SUPPORT: 0,   // 0% 서포트 카드 (스킬 연구소에서 획득)
   COACH: 3,     // 3% 감독 카드
 };
 

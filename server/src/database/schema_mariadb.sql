@@ -22,9 +22,12 @@ CREATE TABLE teams (
     team_logo TEXT,
     slogan TEXT,
     balance BIGINT DEFAULT 100000000, -- 초기 자금 1억
-    reputation_level INT DEFAULT 1, -- 구단주 명성
+    reputation INT DEFAULT 1, -- 구단주 명성 (구 reputation_level)
+    reputation_level INT DEFAULT 1, -- 구단주 명성 레벨
     reputation_points INT DEFAULT 0,
     fans INT DEFAULT 0, -- 팬덤 수치
+    fandom INT DEFAULT 0, -- 팬덤 레벨
+    fan_satisfaction INT DEFAULT 50, -- 팬 만족도
     current_tier VARCHAR(20) DEFAULT 'BRONZE',
     lp INT DEFAULT 0,
     wins INT DEFAULT 0,
@@ -58,6 +61,8 @@ CREATE TABLE player_cards (
     power INT GENERATED ALWAYS AS (mental + team_fight + cs_ability + vision + judgment + laning) STORED,
 
     rarity VARCHAR(20) DEFAULT 'NORMAL', -- NORMAL, RARE, EPIC, LEGEND
+    team VARCHAR(50), -- 선수 소속 팀
+    nationality VARCHAR(50), -- 국적
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -246,18 +251,22 @@ CREATE TABLE matches (
 CREATE TABLE postings (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     seller_id CHAR(36) NOT NULL,
+    seller_team_id CHAR(36),
     card_type VARCHAR(20) NOT NULL, -- PLAYER, COACH, TACTIC, SUPPORT
     card_id CHAR(36) NOT NULL, -- user_player_cards.id 등
+    user_card_id CHAR(36), -- user_player_cards.id
 
     starting_price BIGINT NOT NULL,
     current_price BIGINT NOT NULL,
     highest_bidder_id CHAR(36),
 
-    status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, SOLD, CANCELLED
+    status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, SOLD, CANCELLED, active
 
     ends_at TIMESTAMP NOT NULL, -- 24시간 후
+    end_time TIMESTAMP NOT NULL, -- 종료 시간
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (seller_team_id) REFERENCES teams(id),
     FOREIGN KEY (highest_bidder_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -269,6 +278,19 @@ CREATE TABLE bids (
     bid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (posting_id) REFERENCES postings(id) ON DELETE CASCADE,
     FOREIGN KEY (bidder_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 경매 입찰
+CREATE TABLE auction_bids (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    auction_id CHAR(36) NOT NULL,
+    bidder_id CHAR(36) NOT NULL,
+    bidder_team_id CHAR(36),
+    bid_amount BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (auction_id) REFERENCES postings(id) ON DELETE CASCADE,
+    FOREIGN KEY (bidder_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (bidder_team_id) REFERENCES teams(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
@@ -317,14 +339,20 @@ CREATE TABLE sponsors (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     sponsor_name VARCHAR(100) UNIQUE NOT NULL,
     sponsor_logo TEXT,
+    sponsor_type VARCHAR(50) DEFAULT 'MAIN', -- MAIN, SUB
 
     required_reputation INT, -- 필요 명성
     required_fans INT, -- 필요 팬덤
 
     weekly_payment BIGINT, -- 주간 지급액
+    monthly_payment BIGINT, -- 월간 지급액
 
     bonus_type VARCHAR(50), -- TRAINING_DISCOUNT, CARD_DISCOUNT 등
     bonus_value INT, -- % 또는 금액
+    bonus_condition VARCHAR(100), -- 보너스 조건
+    bonus_amount BIGINT, -- 보너스 금액
+
+    logo_url TEXT,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -334,6 +362,8 @@ CREATE TABLE team_sponsors (
     team_id CHAR(36) NOT NULL,
     sponsor_id CHAR(36) NOT NULL,
 
+    contract_start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    contract_end_date TIMESTAMP NULL,
     contract_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     contract_end TIMESTAMP NULL,
 
@@ -352,7 +382,20 @@ CREATE TABLE facilities (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     team_id CHAR(36) NOT NULL,
 
+    -- 작전 연구소 (작전 레벨당 3% 증가, 최대 5레벨 15%)
     tactic_lab_level INT DEFAULT 0 CHECK (tactic_lab_level >= 0 AND tactic_lab_level <= 5),
+    tactic_lab_next_cost BIGINT DEFAULT 500000000, -- 다음 업그레이드 비용 (5억)
+
+    -- 스킬 연구소 (스킬 카드 획득, 1주일마다 한 개, 레벨당 1일 단축)
+    skill_lab_level INT DEFAULT 0 CHECK (skill_lab_level >= 0 AND skill_lab_level <= 5),
+    skill_lab_next_cost BIGINT DEFAULT 1000000000, -- 다음 업그레이드 비용 (10억)
+    skill_lab_last_claim TIMESTAMP NULL, -- 마지막 스킬 카드 획득 시간
+
+    -- 집중 훈련소 (선수 특정 능력치 개선 및 특성 개방)
+    training_center_level INT DEFAULT 0 CHECK (training_center_level >= 0 AND training_center_level <= 1),
+    training_center_next_cost BIGINT DEFAULT 10000000000, -- 다음 업그레이드 비용 (100억)
+
+    -- 레거시 시설
     mentalist_room_level INT DEFAULT 0 CHECK (mentalist_room_level >= 0 AND mentalist_room_level <= 10),
     prediction_center_level INT DEFAULT 0 CHECK (prediction_center_level >= 0 AND prediction_center_level <= 5),
 
@@ -385,14 +428,18 @@ CREATE TABLE user_achievements (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     user_id CHAR(36) NOT NULL,
     achievement_id CHAR(36) NOT NULL,
+    team_id CHAR(36),
 
     progress INT DEFAULT 0,
     is_completed BOOLEAN DEFAULT false,
+    is_claimed BOOLEAN DEFAULT false,
     completed_at TIMESTAMP NULL,
+    claimed_at TIMESTAMP NULL,
 
     UNIQUE(user_id, achievement_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE
+    FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
@@ -456,6 +503,45 @@ CREATE TABLE solo_ranks (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE(user_player_card_id),
     FOREIGN KEY (user_player_card_id) REFERENCES user_player_cards(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 선수별 솔로랭크 데이터
+CREATE TABLE player_solo_rank (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    player_card_id CHAR(36) NOT NULL,
+    user_player_card_id CHAR(36),
+    season_id INT DEFAULT 1,
+
+    solo_rating INT DEFAULT 1000,
+    wins INT DEFAULT 0,
+    losses INT DEFAULT 0,
+    `rank` INT,
+
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE(player_card_id, season_id),
+    FOREIGN KEY (player_card_id) REFERENCES player_cards(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_player_card_id) REFERENCES user_player_cards(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- FANDOM SYSTEM
+-- ============================================
+
+-- 팬덤 이벤트
+CREATE TABLE fandom_events (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    event_name VARCHAR(100) NOT NULL,
+    event_description TEXT,
+    event_type VARCHAR(50), -- MEET_GREET, AUTOGRAPH, STREAM
+
+    cost BIGINT, -- 이벤트 비용
+    fan_gain INT, -- 획득 팬 수
+    satisfaction_gain INT, -- 만족도 증가
+
+    start_date TIMESTAMP,
+    end_date TIMESTAMP,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================

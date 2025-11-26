@@ -323,10 +323,10 @@ router.get('/:auctionId', isAuthenticated, async (req: Request, res: Response) =
         pc.vision,
         pc.judgment,
         pc.laning,
-        pc.team_name as player_team,
+        pc.team as player_team,
         pc.nationality,
         t.team_name as seller_team_name,
-        u.name as seller_name
+        u.display_name as seller_name
       FROM postings p
       JOIN user_player_cards upc ON p.user_card_id = upc.id
       JOIN player_cards pc ON upc.player_card_id = pc.id

@@ -36,6 +36,7 @@ const Navbar: React.FC = () => {
       children: [
         { label: '로스터 편성', path: '/roster', icon: '👥' },
         { label: '선수 육성', path: '/training', icon: '📈' },
+        { label: '시설 업그레이드', path: '/facilities', icon: '🏗️' },
         { label: '시설 관리', path: '/facility', icon: '🏢' },
       ],
     },

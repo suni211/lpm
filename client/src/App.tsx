@@ -22,6 +22,7 @@ import Cards from './pages/Cards';
 import Fusion from './pages/Fusion';
 import Training from './pages/Training';
 import Facility from './pages/Facility';
+import Facilities from './pages/Facilities';
 import './index.css';
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
               <Route path="/fusion" element={<Fusion />} />
               <Route path="/training" element={<Training />} />
               <Route path="/facility" element={<Facility />} />
+              <Route path="/facilities" element={<Facilities />} />
             </Routes>
           </div>
         </ToastProvider>
