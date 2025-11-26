@@ -243,7 +243,7 @@ function RecoveryPage() {
             <ReCAPTCHA
               ref={recaptchaRef}
               sitekey={RECAPTCHA_SITE_KEY}
-              onChange={(value) => setRecaptchaValue(value)}
+              onChange={(value: string | null) => setRecaptchaValue(value)}
               theme="dark"
             />
           </div>

@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './QuestionnairePage.css';
 
 const QuestionnairePage = () => {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     question1_answer: '',
     question2_answer: '',
