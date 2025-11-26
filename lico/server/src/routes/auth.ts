@@ -101,6 +101,18 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const bankAccount = accountData.account;
 
+    // 설문조사 완료 여부 확인
+    const questionnaires = await query(
+      'SELECT * FROM lico_questionnaires WHERE minecraft_username = ? AND is_approved = TRUE',
+      [bankUser.minecraft_username]
+    );
+
+    const isQuestionnaireApproved = questionnaires.length > 0;
+
+    // 세션 설정 (설문조사 완료 여부와 관계없이 로그인 성공)
+    req.session.userId = bankUser.id;
+    req.session.username = bankUser.minecraft_username;
+
     // LICO 지갑 조회 또는 생성
     let wallets = await query(
       'SELECT * FROM user_wallets WHERE minecraft_username = ?',
@@ -109,17 +121,20 @@ router.post('/login', async (req: Request, res: Response) => {
 
     let wallet;
     if (wallets.length === 0) {
-      // 지갑이 없으면 생성 (설문조사 완료 여부 확인 필요)
-      const questionnaires = await query(
-        'SELECT * FROM lico_questionnaires WHERE minecraft_username = ? AND is_approved = TRUE',
-        [bankUser.minecraft_username]
-      );
-
-      if (questionnaires.length === 0) {
-        return res.status(403).json({ error: 'LICO 가입 설문조사를 완료하고 승인받아야 합니다' });
+      // 지갑이 없고 설문조사가 승인되지 않았으면 지갑 생성하지 않음
+      if (!isQuestionnaireApproved) {
+        return res.json({
+          success: true,
+          requires_questionnaire: true,
+          user: {
+            id: bankUser.id,
+            minecraft_username: bankUser.minecraft_username,
+            bank_account_number: bankAccount.account_number,
+          },
+        });
       }
 
-      // 지갑 주소 생성
+      // 설문조사 승인되었으면 지갑 생성
       const { v4: uuidv4 } = require('uuid');
       const walletAddressService = require('../services/walletAddressService').default;
       const walletAddress = await walletAddressService.generateWalletAddress(bankUser.minecraft_username);
@@ -146,16 +161,13 @@ router.post('/login', async (req: Request, res: Response) => {
       }
     }
 
-    // 세션 설정
-    req.session.userId = bankUser.id;
-    req.session.username = bankUser.minecraft_username;
-
     res.json({
       success: true,
+      requires_questionnaire: !isQuestionnaireApproved,
       user: {
         id: bankUser.id,
         minecraft_username: bankUser.minecraft_username,
-        wallet_address: wallet.wallet_address,
+        wallet_address: wallet?.wallet_address || null,
         bank_account_number: bankAccount.account_number,
       },
     });

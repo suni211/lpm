@@ -18,22 +18,11 @@ const LoginPage = () => {
       const response = await api.post('/auth/login', { auth_code: authCode });
       
       if (response.data.success) {
-        // 설문조사 완료 여부 확인
-        try {
-          const questionnaireResponse = await api.get('/questionnaire/status');
-          const isApproved = questionnaireResponse.data.approved;
-          
-          if (!isApproved) {
-            // 설문조사 미완료 또는 미승인 시 설문조사 페이지로 이동
-            navigate('/questionnaire');
-            return;
-          }
-        } catch (questionnaireError: any) {
-          // 설문조사가 없거나 오류 발생 시 설문조사 페이지로 이동
-          if (questionnaireError.response?.status === 404) {
-            navigate('/questionnaire');
-            return;
-          }
+        // 설문조사 필요 여부 확인
+        if (response.data.requires_questionnaire) {
+          // 설문조사 미완료 시 설문조사 페이지로 이동
+          navigate('/questionnaire');
+          return;
         }
         
         // 설문조사 완료 시 이전 페이지로 이동 또는 홈으로
@@ -41,12 +30,7 @@ const LoginPage = () => {
         navigate(from);
       }
     } catch (err: any) {
-      // 403 에러는 설문조사 미완료를 의미
-      if (err.response?.status === 403) {
-        navigate('/questionnaire');
-      } else {
-        setError(err.response?.data?.error || '로그인 실패');
-      }
+      setError(err.response?.data?.error || '로그인 실패');
     } finally {
       setLoading(false);
     }
