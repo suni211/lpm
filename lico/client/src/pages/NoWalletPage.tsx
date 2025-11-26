@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
 import './NoWalletPage.css';
 
 const NoWalletPage = () => {
