@@ -2,13 +2,56 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import session from 'express-session';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import pool from './database/db';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: [
+      'http://localhost:5173',
+      'http://bank.berrple.com',
+      'https://bank.berrple.com',
+    ],
+    credentials: true,
+  },
+});
 const PORT = process.env.PORT || 5001;
+
+// WebSocket 연결 관리
+const userSockets = new Map<string, string>(); // userId -> socketId
+
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
+  socket.on('authenticate', (userId: string) => {
+    userSockets.set(userId, socket.id);
+    socket.join(`user:${userId}`);
+    console.log(`User ${userId} authenticated`);
+  });
+
+  socket.on('disconnect', () => {
+    for (const [userId, socketId] of userSockets.entries()) {
+      if (socketId === socket.id) {
+        userSockets.delete(userId);
+        break;
+      }
+    }
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
+// 알림 전송 함수 (다른 모듈에서 사용)
+export const sendNotification = (userId: string, notification: any) => {
+  io.to(`user:${userId}`).emit('notification', notification);
+};
+
+export { io };
 
 // Middleware
 app.use(cors({
@@ -89,16 +132,42 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
   });
 });
 
+// Routes
+import notificationsRoutes from './routes/notifications';
+import autoTransfersRoutes from './routes/autoTransfers';
+import scheduledTransfersRoutes from './routes/scheduledTransfers';
+import budgetsRoutes from './routes/budgets';
+import savingsGoalsRoutes from './routes/savingsGoals';
+import licoRoutes from './routes/lico';
+import adminRoutes from './routes/admin';
+import statsRoutes from './routes/stats';
+
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/auto-transfers', autoTransfersRoutes);
+app.use('/api/scheduled-transfers', scheduledTransfersRoutes);
+app.use('/api/budgets', budgetsRoutes);
+app.use('/api/savings-goals', savingsGoalsRoutes);
+app.use('/api/lico', licoRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/stats', statsRoutes);
+
+// Auto Transfer Scheduler
+import autoTransferScheduler from './services/autoTransferScheduler';
+
 // Start server
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════╗
 ║  🏦 Minecraft Bank Server Running    ║
 ║  📡 Port: ${PORT}                        ║
 ║  🌍 Environment: ${process.env.NODE_ENV || 'development'}      ║
 ║  🗄️  Database: MariaDB                ║
+║  🔌 WebSocket: Active                 ║
 ╚═══════════════════════════════════════╝
   `);
+
+  // 자동 이체 스케줄러 시작
+  autoTransferScheduler.start();
 });
 
 // Graceful shutdown

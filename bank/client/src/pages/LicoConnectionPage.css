@@ -1,0 +1,122 @@
+.lico-connection-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.lico-connection-container h1 {
+  margin-bottom: 32px;
+  color: #333;
+  font-size: 28px;
+}
+
+.connection-setup {
+  text-align: center;
+  padding: 40px;
+}
+
+.connection-setup h2 {
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.connection-setup p {
+  color: #666;
+  margin-bottom: 32px;
+}
+
+.connect-button {
+  padding: 16px 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.connect-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.connection-form {
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.connection-info {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.info-card {
+  padding: 24px;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+  border-radius: 12px;
+  border: 2px solid #667eea;
+}
+
+.info-card h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.wallet-address {
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.transfer-section {
+  padding: 24px;
+  background: #f9f9f9;
+  border-radius: 12px;
+}
+
+.transfer-section h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+}
+
+.transfer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lico-button {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.lico-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+

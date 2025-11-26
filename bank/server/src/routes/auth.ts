@@ -129,11 +129,8 @@ router.post('/register', async (req: Request, res: Response) => {
         ]
       );
 
-      // 계좌 생성
-      await connection.query(
-        'INSERT INTO accounts (id, user_id, account_number, balance) VALUES (?, ?, ?, 0)',
-        [accountId, userId, accountNumber]
-      );
+      // 기본 계좌 생성 (회원가입 시 자동 생성하지 않음 - 사용자가 직접 생성)
+      // 계좌는 /api/accounts/create 엔드포인트를 통해 생성
 
       await connection.commit();
     } catch (dbError: any) {
@@ -151,8 +148,7 @@ router.post('/register', async (req: Request, res: Response) => {
       user: {
         username,
         email,
-        minecraft_username,
-        account_number: accountNumber
+        minecraft_username
       }
     });
   } catch (error: any) {
@@ -326,7 +322,7 @@ router.post('/recover-auth-code', async (req: Request, res: Response) => {
 router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const users = await query(
-      'SELECT u.id, u.username, u.email, u.minecraft_username, u.minecraft_uuid, a.account_number, a.balance FROM users u LEFT JOIN accounts a ON u.id = a.user_id WHERE u.id = ?',
+      'SELECT u.id, u.username, u.email, u.minecraft_username, u.minecraft_uuid FROM users u WHERE u.id = ?',
       [req.session.userId]
     );
 
@@ -334,7 +330,20 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
 
-    res.json({ user: users[0] });
+    const user = users[0];
+
+    // 계좌 목록 조회
+    const accounts = await query(
+      'SELECT id, account_number, account_type, balance, status FROM accounts WHERE user_id = ? AND status = "ACTIVE" ORDER BY created_at DESC',
+      [req.session.userId]
+    );
+
+    res.json({ 
+      user: {
+        ...user,
+        accounts: accounts || []
+      }
+    });
   } catch (error) {
     console.error('사용자 정보 조회 오류:', error);
     res.status(500).json({ error: '사용자 정보 조회 실패' });

@@ -41,8 +41,9 @@ CREATE TABLE IF NOT EXISTS users (
 -- 고객 계좌 테이블 (사용자와 연결)
 CREATE TABLE IF NOT EXISTS accounts (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-    user_id CHAR(36) UNIQUE NOT NULL,
-    account_number VARCHAR(20) UNIQUE NOT NULL COMMENT '계좌번호 (예: 1234-5678-9012-3456)',
+    user_id CHAR(36) NOT NULL,
+    account_number VARCHAR(20) UNIQUE NOT NULL COMMENT '계좌번호 (01: 기본계좌, 02: 주식계좌)',
+    account_type ENUM('BASIC', 'STOCK') DEFAULT 'BASIC' COMMENT '계좌 유형',
     balance BIGINT DEFAULT 0,
     status ENUM('ACTIVE', 'SUSPENDED', 'CLOSED') DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -50,6 +51,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     FOREIGN KEY (user_id) REFERENCES users(id),
     INDEX idx_user_id (user_id),
     INDEX idx_account_number (account_number),
+    INDEX idx_account_type (account_type),
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -142,5 +144,114 @@ CREATE TABLE IF NOT EXISTS system_logs (
     INDEX idx_admin (admin_id),
     INDEX idx_action (action),
     INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 알림 테이블
+CREATE TABLE IF NOT EXISTS notifications (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL,
+    type ENUM('TRANSACTION', 'APPROVAL', 'SYSTEM', 'ALERT') NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    related_id CHAR(36) NULL COMMENT '관련 거래/요청 ID',
+    related_type VARCHAR(50) NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX idx_user (user_id),
+    INDEX idx_read (is_read),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 자동 이체 규칙
+CREATE TABLE IF NOT EXISTS auto_transfer_rules (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL,
+    from_account_id CHAR(36) NOT NULL,
+    to_account_number VARCHAR(20) NOT NULL,
+    amount BIGINT NOT NULL,
+    frequency ENUM('DAILY', 'WEEKLY', 'MONTHLY') NOT NULL,
+    day_of_week INT NULL COMMENT '요일 (0=일요일, 6=토요일)',
+    day_of_month INT NULL COMMENT '월의 일자 (1-31)',
+    is_active BOOLEAN DEFAULT TRUE,
+    next_execution_date DATE NOT NULL,
+    last_execution_date DATE NULL,
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (from_account_id) REFERENCES accounts(id),
+    INDEX idx_user (user_id),
+    INDEX idx_next_execution (next_execution_date),
+    INDEX idx_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 예약 이체
+CREATE TABLE IF NOT EXISTS scheduled_transfers (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL,
+    from_account_id CHAR(36) NOT NULL,
+    to_account_number VARCHAR(20) NOT NULL,
+    amount BIGINT NOT NULL,
+    scheduled_date DATETIME NOT NULL,
+    status ENUM('PENDING', 'COMPLETED', 'CANCELLED', 'FAILED') DEFAULT 'PENDING',
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    executed_at TIMESTAMP NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (from_account_id) REFERENCES accounts(id),
+    INDEX idx_user (user_id),
+    INDEX idx_scheduled (scheduled_date),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 예산 관리
+CREATE TABLE IF NOT EXISTS budgets (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL,
+    account_id CHAR(36) NOT NULL,
+    category VARCHAR(100) NOT NULL COMMENT '카테고리 (식비, 교통비, 기타 등)',
+    monthly_limit BIGINT NOT NULL,
+    current_spent BIGINT DEFAULT 0,
+    month_year VARCHAR(7) NOT NULL COMMENT 'YYYY-MM 형식',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    INDEX idx_user_month (user_id, month_year),
+    INDEX idx_account (account_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 목표 저축
+CREATE TABLE IF NOT EXISTS savings_goals (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL,
+    account_id CHAR(36) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    target_amount BIGINT NOT NULL,
+    current_amount BIGINT DEFAULT 0,
+    target_date DATE NULL,
+    is_completed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    INDEX idx_user (user_id),
+    INDEX idx_completed (is_completed)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Lico 거래소 연동 (주식 계좌)
+CREATE TABLE IF NOT EXISTS lico_connections (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL,
+    stock_account_id CHAR(36) NOT NULL COMMENT '주식 계좌 ID',
+    lico_wallet_address VARCHAR(42) NOT NULL COMMENT 'Lico 지갑 주소',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (stock_account_id) REFERENCES accounts(id),
+    UNIQUE KEY uk_user_stock (user_id, stock_account_id),
+    INDEX idx_wallet (lico_wallet_address)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

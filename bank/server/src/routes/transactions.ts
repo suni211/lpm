@@ -4,7 +4,59 @@ import { isAdmin } from '../middleware/auth';
 
 const router = express.Router();
 
-// 내 거래 내역
+// 내 거래 내역 (로그인 사용자)
+router.get('/', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { page = 1, limit = 50, type, account_id } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    // 사용자의 모든 계좌 ID 조회
+    const accounts = await query('SELECT id FROM accounts WHERE user_id = ?', [req.session.userId]);
+    const accountIds = accounts.map((a: any) => a.id);
+
+    if (accountIds.length === 0) {
+      return res.json({ transactions: [], total: 0, page: Number(page), limit: Number(limit) });
+    }
+
+    const placeholders = accountIds.map(() => '?').join(',');
+
+    let sql = `SELECT t.*, a.account_number
+               FROM transactions t
+               JOIN accounts a ON t.account_id = a.id
+               WHERE t.account_id IN (${placeholders})`;
+    const params: any[] = [...accountIds];
+
+    if (type) {
+      sql += ' AND t.transaction_type = ?';
+      params.push(type);
+    }
+    if (account_id) {
+      sql += ' AND t.account_id = ?';
+      params.push(account_id);
+    }
+
+    sql += ' ORDER BY t.created_at DESC LIMIT ? OFFSET ?';
+    params.push(Number(limit), offset);
+
+    const transactions = await query(sql, params);
+    const totalResult = await query(
+      `SELECT COUNT(*) as total FROM transactions WHERE account_id IN (${placeholders})`,
+      accountIds
+    );
+
+    res.json({
+      transactions,
+      total: totalResult[0]?.total || 0,
+      page: Number(page),
+      limit: Number(limit),
+    });
+  } catch (error) {
+    console.error('거래 내역 조회 오류:', error);
+    res.status(500).json({ error: '거래 내역 조회 실패' });
+  }
+});
+
+// 내 거래 내역 (계좌번호로 - 레거시)
 router.get('/my/:account_number', async (req: Request, res: Response) => {
   try {
     const { account_number } = req.params;

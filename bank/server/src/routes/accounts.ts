@@ -1,28 +1,92 @@
 import express, { Request, Response } from 'express';
+import crypto from 'crypto';
 import { query } from '../database/db';
 import { isAdmin, isAuthenticated } from '../middleware/auth';
 
 const router = express.Router();
 
-// 내 계좌 조회 (로그인 사용자)
+// 내 계좌 목록 조회 (로그인 사용자)
 router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const accounts = await query(
       `SELECT a.*, u.username, u.minecraft_username, u.email
        FROM accounts a
        JOIN users u ON a.user_id = u.id
-       WHERE a.user_id = ?`,
+       WHERE a.user_id = ? AND a.status = 'ACTIVE'
+       ORDER BY a.created_at DESC`,
       [req.session.userId]
     );
 
-    if (accounts.length === 0) {
-      return res.status(404).json({ error: '계좌를 찾을 수 없습니다' });
-    }
-
-    res.json({ account: accounts[0] });
+    res.json({ accounts });
   } catch (error) {
     console.error('계좌 조회 오류:', error);
     res.status(500).json({ error: '계좌 조회 실패' });
+  }
+});
+
+// 계좌 생성 (로그인 사용자)
+router.post('/create', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { account_type = 'BASIC' } = req.body;
+
+    if (!['BASIC', 'STOCK'].includes(account_type)) {
+      return res.status(400).json({ error: '유효하지 않은 계좌 유형입니다' });
+    }
+
+    // 이미 같은 유형의 계좌가 있는지 확인
+    const existing = await query(
+      'SELECT id FROM accounts WHERE user_id = ? AND account_type = ? AND status = "ACTIVE"',
+      [req.session.userId, account_type]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: `이미 ${account_type === 'BASIC' ? '기본' : '주식'} 계좌가 존재합니다` });
+    }
+
+    // 계좌번호 생성 (01: 기본계좌, 02: 주식계좌)
+    const prefix = account_type === 'BASIC' ? '01' : '02';
+    let accountNumber: string;
+    let attempts = 0;
+    const maxAttempts = 100;
+
+    do {
+      const randomPart = Array.from({ length: 3 }, () =>
+        Math.floor(1000 + Math.random() * 9000)
+      ).join('-');
+      accountNumber = `${prefix}-${randomPart}`;
+
+      const existingAccount = await query(
+        'SELECT id FROM accounts WHERE account_number = ?',
+        [accountNumber]
+      );
+
+      if (existingAccount.length === 0) {
+        break;
+      }
+
+      attempts++;
+      if (attempts >= maxAttempts) {
+        throw new Error('계좌번호 생성 실패: 최대 시도 횟수 초과');
+      }
+    } while (true);
+
+    const accountId = require('crypto').randomUUID();
+
+    await query(
+      'INSERT INTO accounts (id, user_id, account_number, account_type, balance) VALUES (?, ?, ?, ?, 0)',
+      [accountId, req.session.userId, accountNumber, account_type]
+    );
+
+    const accounts = await query('SELECT * FROM accounts WHERE id = ?', [accountId]);
+
+    res.status(201).json({
+      success: true,
+      account: accounts[0],
+      message: `${account_type === 'BASIC' ? '기본' : '주식'} 계좌가 생성되었습니다`,
+    });
+  } catch (error: any) {
+    console.error('계좌 생성 오류:', error);
+    res.status(500).json({ error: '계좌 생성 실패', message: error.message });
   }
 });
 

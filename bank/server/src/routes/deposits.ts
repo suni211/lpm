@@ -125,12 +125,13 @@ router.post('/:id/approve', isAdmin, async (req: Request, res: Response) => {
 
     // 거래 기록 생성
     const account = (await query('SELECT * FROM accounts WHERE id = ?', [request.account_id]))[0];
+    const transactionId = uuidv4();
     await query(
       `INSERT INTO transactions
        (id, transaction_type, account_id, amount, balance_before, balance_after, reference_id, reference_type, processed_by, notes)
        VALUES (?, 'DEPOSIT', ?, ?, ?, ?, ?, 'DEPOSIT', ?, ?)`,
       [
-        uuidv4(),
+        transactionId,
         request.account_id,
         request.amount,
         account.balance - request.amount,
@@ -140,6 +141,19 @@ router.post('/:id/approve', isAdmin, async (req: Request, res: Response) => {
         notes || null,
       ]
     );
+
+    // 사용자에게 알림 전송
+    const user = await query('SELECT user_id FROM accounts WHERE id = ?', [request.account_id]);
+    if (user[0]) {
+      await createNotification(
+        user[0].user_id,
+        'TRANSACTION',
+        '입금 완료',
+        `${request.amount.toLocaleString()} G가 입금되었습니다.`,
+        transactionId,
+        'DEPOSIT'
+      );
+    }
 
     res.json({ success: true });
   } catch (error) {

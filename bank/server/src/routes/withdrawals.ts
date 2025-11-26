@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express';
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
-import { isAdmin } from '../middleware/auth';
+import { isAdmin, isAuthenticated } from '../middleware/auth';
+import { createNotification } from './notifications';
 
 const router = express.Router();
 
@@ -136,12 +137,13 @@ router.post('/:id/approve', isAdmin, async (req: Request, res: Response) => {
     );
 
     // 거래 기록 생성
+    const transactionId = uuidv4();
     await query(
       `INSERT INTO transactions
        (id, transaction_type, account_id, amount, balance_before, balance_after, reference_id, reference_type, processed_by, notes)
        VALUES (?, 'WITHDRAWAL', ?, ?, ?, ?, ?, 'WITHDRAWAL', ?, ?)`,
       [
-        uuidv4(),
+        transactionId,
         request.account_id,
         request.amount,
         account.balance,
@@ -151,6 +153,19 @@ router.post('/:id/approve', isAdmin, async (req: Request, res: Response) => {
         notes || null,
       ]
     );
+
+    // 사용자에게 알림 전송
+    const user = await query('SELECT user_id FROM accounts WHERE id = ?', [request.account_id]);
+    if (user[0]) {
+      await createNotification(
+        user[0].user_id,
+        'TRANSACTION',
+        '출금 완료',
+        `${request.amount.toLocaleString()} G가 출금되었습니다.`,
+        transactionId,
+        'WITHDRAWAL'
+      );
+    }
 
     res.json({ success: true });
   } catch (error) {

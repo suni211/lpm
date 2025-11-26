@@ -4,12 +4,23 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RecoveryPage from './pages/RecoveryPage';
 import DashboardPage from './pages/DashboardPage';
+import CreateAccountPage from './pages/CreateAccountPage';
+import BankingPage from './pages/BankingPage';
+import AutoTransfersPage from './pages/AutoTransfersPage';
+import ScheduledTransfersPage from './pages/ScheduledTransfersPage';
+import BudgetsPage from './pages/BudgetsPage';
+import SavingsGoalsPage from './pages/SavingsGoalsPage';
+import LicoConnectionPage from './pages/LicoConnectionPage';
+import StatsPage from './pages/StatsPage';
+import TransactionsPage from './pages/TransactionsPage';
+import NotificationBell from './components/NotificationBell';
 import api from './services/api';
 import './App.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState<any>(null);
 
   useEffect(() => {
     checkAuth();
@@ -20,6 +31,7 @@ function App() {
       const response = await api.get('/auth/me');
       if (response.data.user) {
         setIsAuthenticated(true);
+        setUserData(response.data.user);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -35,6 +47,11 @@ function App() {
   return (
     <Router>
       <div className="app">
+        {isAuthenticated && userData && (
+          <div className="notification-bell-wrapper">
+            <NotificationBell />
+          </div>
+        )}
         <Routes>
           <Route path="/login" element={
             isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage setAuth={setIsAuthenticated} />
@@ -46,8 +63,39 @@ function App() {
             isAuthenticated ? <Navigate to="/dashboard" /> : <RecoveryPage />
           } />
           <Route path="/dashboard" element={
-            isAuthenticated ? <DashboardPage setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
+            isAuthenticated ? <DashboardPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
           } />
+          <Route path="/create-account" element={
+            isAuthenticated ? <CreateAccountPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
+          } />
+          <Route path="/banking" element={
+            isAuthenticated ? <BankingPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
+          } />
+          <Route path="/auto-transfers" element={
+            isAuthenticated ? <AutoTransfersPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
+          } />
+          <Route path="/scheduled-transfers" element={
+            isAuthenticated ? <ScheduledTransfersPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
+          } />
+          <Route path="/budgets" element={
+            isAuthenticated ? <BudgetsPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
+          } />
+          <Route path="/savings-goals" element={
+            isAuthenticated ? <SavingsGoalsPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
+          } />
+          <Route path="/lico-connection" element={
+            isAuthenticated ? <LicoConnectionPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
+          } />
+          <Route path="/stats" element={
+            isAuthenticated ? <StatsPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
+          } />
+          <Route path="/transactions" element={
+            isAuthenticated ? <TransactionsPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
+          } />
+          <Route path="/deposit" element={<Navigate to="/banking" />} />
+          <Route path="/withdraw" element={<Navigate to="/banking" />} />
+          <Route path="/transfer" element={<Navigate to="/banking" />} />
+          <Route path="/account" element={<Navigate to="/dashboard" />} />
           <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
         </Routes>
       </div>

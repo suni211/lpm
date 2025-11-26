@@ -3,11 +3,12 @@ import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import { isAdmin } from '../middleware/auth';
 import accountNumberService from '../services/accountNumberService';
+import { createNotification } from './notifications';
 
 const router = express.Router();
 
 // 이체 신청
-router.post('/request', async (req: Request, res: Response) => {
+router.post('/request', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { from_account_number, to_account_number, amount } = req.body;
 
@@ -184,12 +185,13 @@ router.post('/:id/approve', isAdmin, async (req: Request, res: Response) => {
     );
 
     // 거래 기록 생성 (수신)
+    const receiveTransactionId = uuidv4();
     await query(
       `INSERT INTO transactions
        (id, transaction_type, account_id, related_account_id, amount, balance_before, balance_after, reference_id, reference_type, processed_by, notes)
        VALUES (?, 'TRANSFER_IN', ?, ?, ?, ?, ?, ?, 'TRANSFER', ?, ?)`,
       [
-        uuidv4(),
+        receiveTransactionId,
         toAccount.id,
         fromAccount.id,
         request.amount,
@@ -200,6 +202,32 @@ router.post('/:id/approve', isAdmin, async (req: Request, res: Response) => {
         notes || null,
       ]
     );
+
+    // 송신자에게 알림
+    const fromUser = await query('SELECT user_id FROM accounts WHERE id = ?', [fromAccount.id]);
+    if (fromUser[0]) {
+      await createNotification(
+        fromUser[0].user_id,
+        'TRANSACTION',
+        '이체 완료',
+        `${request.amount.toLocaleString()} G를 ${toAccount.account_number}로 이체했습니다.`,
+        uuidv4(),
+        'TRANSFER'
+      );
+    }
+
+    // 수신자에게 알림
+    const toUser = await query('SELECT user_id FROM accounts WHERE id = ?', [toAccount.id]);
+    if (toUser[0]) {
+      await createNotification(
+        toUser[0].user_id,
+        'TRANSACTION',
+        '이체 수신',
+        `${request.amount.toLocaleString()} G가 ${fromAccount.account_number}에서 입금되었습니다.`,
+        receiveTransactionId,
+        'TRANSFER'
+      );
+    }
 
     res.json({ success: true });
   } catch (error) {
