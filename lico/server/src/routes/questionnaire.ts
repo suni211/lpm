@@ -25,10 +25,10 @@ router.post('/submit', isAuthenticated, async (req: Request, res: Response) => {
   try {
     // 세션에서 사용자 정보 가져오기
     const session = (req as any).session;
-    const minecraft_username = session?.username || req.body.minecraft_username;
+    const minecraft_username = session?.username;
     
     if (!minecraft_username) {
-      return res.status(400).json({ error: '사용자 정보를 찾을 수 없습니다' });
+      return res.status(400).json({ error: '로그인이 필요합니다' });
     }
 
     const { question1_answer, question2_answer, question3_answer } = req.body;

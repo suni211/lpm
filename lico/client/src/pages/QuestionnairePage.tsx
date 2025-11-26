@@ -28,8 +28,8 @@ const QuestionnairePage = () => {
         return;
       }
 
+      // 세션에서 사용자 정보를 가져오므로 minecraft_username은 서버에서 처리
       const response = await api.post('/questionnaire/submit', {
-        minecraft_username,
         ...formData,
       });
 

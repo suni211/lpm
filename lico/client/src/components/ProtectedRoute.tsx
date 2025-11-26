@@ -6,9 +6,10 @@ import api from '../services/api';
 interface ProtectedRouteProps {
   children: ReactNode;
   requireAdmin?: boolean;
+  skipQuestionnaireCheck?: boolean;
 }
 
-const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requireAdmin = false, skipQuestionnaireCheck = false }: ProtectedRouteProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -25,17 +26,19 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
           await api.get('/auth/me');
           setIsAuthenticated(true);
           
-          // 설문조사 완료 여부 확인
-          try {
-            const questionnaireResponse = await api.get('/questionnaire/status');
-            const isApproved = questionnaireResponse.data.approved;
-            if (!isApproved) {
-              setNeedsQuestionnaire(true);
-            }
-          } catch (questionnaireError: any) {
-            // 설문조사가 없으면 설문조사 필요
-            if (questionnaireError.response?.status === 404) {
-              setNeedsQuestionnaire(true);
+          // 설문조사 완료 여부 확인 (skipQuestionnaireCheck가 false일 때만)
+          if (!skipQuestionnaireCheck) {
+            try {
+              const questionnaireResponse = await api.get('/questionnaire/status');
+              const isApproved = questionnaireResponse.data.approved;
+              if (!isApproved) {
+                setNeedsQuestionnaire(true);
+              }
+            } catch (questionnaireError: any) {
+              // 설문조사가 없으면 설문조사 필요
+              if (questionnaireError.response?.status === 404) {
+                setNeedsQuestionnaire(true);
+              }
             }
           }
         }
@@ -48,7 +51,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
     };
 
     checkAuth();
-  }, [requireAdmin]);
+  }, [requireAdmin, skipQuestionnaireCheck]);
 
   if (loading) {
     return (
@@ -66,8 +69,8 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
     return <Navigate to="/admin/login" replace />;
   }
 
-  // 설문조사가 필요하면 설문조사 페이지로 리다이렉트
-  if (!requireAdmin && needsQuestionnaire) {
+  // 설문조사가 필요하면 설문조사 페이지로 리다이렉트 (skipQuestionnaireCheck가 false일 때만)
+  if (!requireAdmin && !skipQuestionnaireCheck && needsQuestionnaire) {
     return <Navigate to="/questionnaire" replace />;
   }
 

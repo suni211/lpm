@@ -31,7 +31,14 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
-            <Route path="/questionnaire" element={<QuestionnairePage />} />
+            <Route
+              path="/questionnaire"
+              element={
+                <ProtectedRoute skipQuestionnaireCheck>
+                  <QuestionnairePage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/"
               element={
