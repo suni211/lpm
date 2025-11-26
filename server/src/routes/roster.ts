@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { isAuthenticated } from '../middleware/auth';
-import pool, { IQuery, query } from '../database/db';
+import pool, { query, getConnection } from '../database/db'; // Removed IQuery
 
 const router = express.Router();
 
@@ -13,13 +13,13 @@ router.get('/', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const teamResult: IQuery[] = await query('SELECT id FROM teams WHERE user_id = ?', [req.user.id]);
+    const teamResult: any[] = await query('SELECT id FROM teams WHERE user_id = ?', [req.user.id]);
     if (teamResult.length === 0) {
       return res.status(404).json({ error: '팀을 찾을 수 없습니다' });
     }
     const teamId = teamResult[0].id;
 
-    const rosterResult: IQuery[] = await query('SELECT * FROM rosters WHERE team_id = ?', [teamId]);
+    const rosterResult: any[] = await query('SELECT * FROM rosters WHERE team_id = ?', [teamId]);
     if (rosterResult.length === 0) {
       return res.status(200).json({ roster: null, players: {} });
     }
@@ -89,7 +89,7 @@ router.post('/save', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(400).json({ error: '한 선수를 여러 포지션에 배치할 수 없습니다.' });
     }
 
-    const teamResult: IQuery[] = await query('SELECT id FROM teams WHERE user_id = ?', [req.user.id]);
+    const teamResult: any[] = await query('SELECT id FROM teams WHERE user_id = ?', [req.user.id]);
     if (teamResult.length === 0) {
       return res.status(404).json({ error: '팀을 찾을 수 없습니다.' });
     }
