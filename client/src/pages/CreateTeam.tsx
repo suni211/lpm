@@ -9,14 +9,40 @@ const CreateTeam: React.FC = () => {
   const { refreshAuth } = useAuth();
   const [teamName, setTeamName] = useState('');
   const [teamTag, setTeamTag] = useState('');
-  const [teamLogo, setTeamLogo] = useState('🎮');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>('');
   const [color1, setColor1] = useState('#8b5cf6');
   const [color2, setColor2] = useState('#6366f1');
   const [color3, setColor3] = useState('#3b82f6');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const logoOptions = ['🎮', '⚔️', '🔥', '⚡', '🏆', '👑', '🦁', '🐉', '🐺', '🦅', '⭐', '💎', '🎯', '🛡️', '🚀'];
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // 파일 타입 검증
+      if (!file.type.startsWith('image/')) {
+        setError('이미지 파일만 업로드 가능합니다');
+        return;
+      }
+
+      // 파일 크기 검증 (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('파일 크기는 5MB 이하여야 합니다');
+        return;
+      }
+
+      setLogoFile(file);
+
+      // 미리보기 생성
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      setError('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,14 +82,25 @@ const CreateTeam: React.FC = () => {
 
     try {
       setLoading(true);
-      await api.post('/team/create', {
-        teamName: teamName.trim(),
-        teamTag: teamTag.trim().toUpperCase(),
-        teamLogo,
-        color1,
-        color2,
-        color3,
+
+      // FormData로 파일과 데이터 전송
+      const formData = new FormData();
+      formData.append('teamName', teamName.trim());
+      formData.append('teamTag', teamTag.trim().toUpperCase());
+      formData.append('color1', color1);
+      formData.append('color2', color2);
+      formData.append('color3', color3);
+
+      if (logoFile) {
+        formData.append('logo', logoFile);
+      }
+
+      await api.post('/team/create', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
+
       await refreshAuth(); // 팀 정보 새로고침
       navigate('/dashboard');
     } catch (err: any) {
@@ -127,19 +164,40 @@ const CreateTeam: React.FC = () => {
 
           {/* 팀 로고 */}
           <div className="form-group">
-            <label className="form-label">팀 로고</label>
-            <div className="logo-picker">
-              {logoOptions.map((logo) => (
+            <label htmlFor="logoUpload" className="form-label">팀 로고</label>
+            <div className="logo-upload-container">
+              <input
+                type="file"
+                id="logoUpload"
+                accept="image/*"
+                onChange={handleLogoChange}
+                className="logo-input"
+                disabled={loading}
+              />
+              <label htmlFor="logoUpload" className="logo-upload-label">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo preview" className="logo-preview-img" />
+                ) : (
+                  <div className="logo-placeholder">
+                    <span className="upload-icon">📁</span>
+                    <span className="upload-text">로고 이미지 선택</span>
+                    <span className="upload-hint">PNG, JPG (최대 5MB)</span>
+                  </div>
+                )}
+              </label>
+              {logoFile && (
                 <button
-                  key={logo}
                   type="button"
-                  className={`logo-option ${teamLogo === logo ? 'selected' : ''}`}
-                  onClick={() => setTeamLogo(logo)}
+                  className="btn-remove-logo"
+                  onClick={() => {
+                    setLogoFile(null);
+                    setLogoPreview('');
+                  }}
                   disabled={loading}
                 >
-                  {logo}
+                  ✕ 제거
                 </button>
-              ))}
+              )}
             </div>
           </div>
 
@@ -195,7 +253,13 @@ const CreateTeam: React.FC = () => {
                 background: `linear-gradient(135deg, ${color1} 0%, ${color2} 50%, ${color3} 100%)`
               }}
             >
-              <div className="preview-logo">{teamLogo}</div>
+              <div className="preview-logo">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Team logo" className="preview-logo-img" />
+                ) : (
+                  <span className="preview-logo-placeholder">🎮</span>
+                )}
+              </div>
               <div className="preview-name">{teamName || 'Team Name'}</div>
               <div className="preview-tag">{teamTag || 'TAG'}</div>
             </div>

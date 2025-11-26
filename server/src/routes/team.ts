@@ -2,16 +2,55 @@ import express, { Request, Response } from 'express';
 import { query } from '../database/db';
 import pool from '../database/db';
 import { ResultSetHeader } from 'mysql2';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
 
+// 업로드 폴더 확인 및 생성
+const uploadDir = path.join(__dirname, '../../uploads/logos');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Multer 설정
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'logo-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error('이미지 파일만 업로드 가능합니다'));
+    }
+  }
+});
+
 // 팀 생성
-router.post('/create', async (req: Request, res: Response) => {
+router.post('/create', upload.single('logo'), async (req: Request, res: Response) => {
   if (!req.isAuthenticated() || !req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const { teamName, teamTag, teamLogo, color1, color2, color3 } = req.body;
+  const { teamName, teamTag, color1, color2, color3 } = req.body;
+  const logoFile = req.file;
 
   // 팀 이름 검증
   if (!teamName || teamName.trim().length === 0) {
@@ -52,11 +91,14 @@ router.post('/create', async (req: Request, res: Response) => {
       return res.status(400).json({ error: '이미 팀이 존재합니다' });
     }
 
-    // 팀 생성 (team_logo는 이모지, color1/2/3 저장)
+    // 팀 로고 URL 생성
+    const logoUrl = logoFile ? `/uploads/logos/${logoFile.filename}` : null;
+
+    // 팀 생성 (logo_url에 파일 경로 저장)
     await query(
-      `INSERT INTO teams (user_id, team_name, team_logo, slogan)
-       VALUES (?, ?, ?, ?)`,
-      [userId, teamName.trim(), teamLogo || '🎮', `${teamTag}|${color1}|${color2}|${color3}`]
+      `INSERT INTO teams (user_id, team_name, team_logo, logo_url, slogan)
+       VALUES (?, ?, ?, ?, ?)`,
+      [userId, teamName.trim(), teamTag, logoUrl, `${color1}|${color2}|${color3}`]
     );
 
     // 생성된 팀 조회

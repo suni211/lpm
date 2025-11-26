@@ -77,13 +77,12 @@ const Navbar: React.FC = () => {
   }
 
   const toggleMenu = (label: string) => {
-    const newOpenMenus = new Set(openMenus);
-    if (newOpenMenus.has(label)) {
-      newOpenMenus.delete(label);
+    // 다른 드롭다운은 모두 닫고 선택한 것만 토글
+    if (openMenus.has(label)) {
+      setOpenMenus(new Set());
     } else {
-      newOpenMenus.add(label);
+      setOpenMenus(new Set([label]));
     }
-    setOpenMenus(newOpenMenus);
   };
 
   const isActive = (path: string) => {
