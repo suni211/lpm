@@ -7,7 +7,81 @@ import { createNotification } from './notifications';
 
 const router = express.Router();
 
-// 이체 신청
+// 이체 신청 (간단한 버전 - account_id 사용)
+router.post('/', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { from_account_id, to_account_number, amount, notes } = req.body;
+
+    if (!from_account_id || !to_account_number || !amount) {
+      return res.status(400).json({ error: '필수 필드가 누락되었습니다' });
+    }
+
+    // 송신 계좌 조회 및 소유자 확인
+    const fromAccounts = await query(
+      'SELECT * FROM accounts WHERE id = ? AND user_id = ? AND status = "ACTIVE"',
+      [from_account_id, req.session.userId]
+    );
+
+    if (fromAccounts.length === 0) {
+      return res.status(404).json({ error: '송신 계좌를 찾을 수 없습니다' });
+    }
+
+    const fromAccount = fromAccounts[0];
+
+    // 수신 계좌 조회
+    const toAccounts = await query(
+      'SELECT * FROM accounts WHERE account_number = ? AND status = "ACTIVE"',
+      [to_account_number]
+    );
+
+    if (toAccounts.length === 0) {
+      return res.status(404).json({ error: '수신 계좌를 찾을 수 없습니다' });
+    }
+
+    const toAccount = toAccounts[0];
+
+    // 같은 계좌 확인
+    if (fromAccount.id === toAccount.id) {
+      return res.status(400).json({ error: '같은 계좌로 이체할 수 없습니다' });
+    }
+
+    // 잔액 확인
+    if (fromAccount.balance < amount) {
+      return res.status(400).json({ error: '잔액이 부족합니다' });
+    }
+
+    // 이체 신청 생성
+    const requestId = uuidv4();
+    await query(
+      `INSERT INTO transfer_requests (id, from_account_id, to_account_id, amount, fee, status, notes)
+       VALUES (?, ?, ?, ?, 0, 'PENDING', ?)`,
+      [requestId, fromAccount.id, toAccount.id, amount, notes || null]
+    );
+
+    const requests = await query(
+      `SELECT tr.*,
+              fu.minecraft_username as from_username, fa.account_number as from_account_number,
+              tu.minecraft_username as to_username, ta.account_number as to_account_number
+       FROM transfer_requests tr
+       JOIN accounts fa ON tr.from_account_id = fa.id
+       JOIN users fu ON fa.user_id = fu.id
+       JOIN accounts ta ON tr.to_account_id = ta.id
+       JOIN users tu ON ta.user_id = tu.id
+       WHERE tr.id = ?`,
+      [requestId]
+    );
+
+    res.json({
+      success: true,
+      request: requests[0],
+    });
+  } catch (error) {
+    console.error('이체 신청 오류:', error);
+    res.status(500).json({ error: '이체 신청 실패' });
+  }
+});
+
+// 이체 신청 (상세 버전 - account_number 사용)
 router.post('/request', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { from_account_number, to_account_number, amount } = req.body;
