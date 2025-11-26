@@ -452,6 +452,9 @@ npm run build
 
 # Bank Client 재빌드
 cd ~/lpm/bank/client
+
+
+
 npm install
 npm run build
 sudo mkdir -p /var/www/bank  # 디렉토리가 없으면 생성
@@ -508,5 +511,29 @@ pm2 status
 2. **OAuth 클라이언트 ID와 시크릿을 실제 값으로 교체하세요**
 3. **도메인 DNS 설정이 완료되어야 SSL 인증서 발급이 가능합니다**
 4. **GCP 방화벽 규칙에서 80, 443 포트가 열려 있어야 합니다**
+
+## SSL 인증서 설치 (HTTPS 설정)
+
+HTTPS를 활성화하려면 Let's Encrypt SSL 인증서를 설치하세요:
+
+```bash
+# Certbot 설치
+sudo apt-get update
+sudo apt-get install -y certbot python3-certbot-nginx
+
+# SSL 인증서 발급 (bank.berrple.com)
+sudo certbot --nginx -d bank.berrple.com --non-interactive --agree-tos --email ine158lovely@gmail.com --redirect
+
+# SSL 인증서 발급 (lico.berrple.com)
+sudo certbot --nginx -d lico.berrple.com --non-interactive --agree-tos --email your-email@example.com --redirect
+
+# 자동 갱신 테스트
+sudo certbot renew --dry-run
+```
+
+**주의사항:**
+- `your-email@example.com`을 실제 이메일 주소로 변경하세요
+- 도메인 DNS 설정이 완료되어야 SSL 인증서 발급이 가능합니다
+- 인증서는 90일마다 자동으로 갱신됩니다
 
 배포 완료!

@@ -1,4 +1,5 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import api from '../services/api';
 
@@ -16,11 +17,11 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
     const checkAuth = async () => {
       try {
         if (requireAdmin) {
-          const response = await api.get('/auth/admin/me');
+          await api.get('/auth/admin/me');
           setIsAuthenticated(true);
           setIsAdmin(true);
         } else {
-          const response = await api.get('/auth/me');
+          await api.get('/auth/me');
           setIsAuthenticated(true);
         }
       } catch (error) {
