@@ -454,6 +454,7 @@ npm run build
 cd ~/lpm/bank/client
 npm install
 npm run build
+sudo mkdir -p /var/www/bank  # 디렉토리가 없으면 생성
 sudo rm -rf /var/www/bank/*
 sudo cp -r dist/* /var/www/bank/
 sudo chown -R www-data:www-data /var/www/bank
