@@ -28,16 +28,6 @@ function DashboardPage({ userData, setAuth }: DashboardPageProps) {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await api.post('/auth/logout');
-      setAuth(false);
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
-
   if (loading) {
     return (
       <div className="page-container">
