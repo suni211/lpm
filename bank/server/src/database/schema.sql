@@ -41,8 +41,9 @@ CREATE TABLE users (
 -- 고객 계좌 테이블 (사용자와 연결)
 CREATE TABLE accounts (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-    user_id CHAR(36) UNIQUE NOT NULL,
+    user_id CHAR(36) NOT NULL,
     account_number VARCHAR(20) UNIQUE NOT NULL COMMENT '계좌번호 (예: 1234-5678-9012-3456)',
+    account_type ENUM('BASIC', 'STOCK') DEFAULT 'BASIC' COMMENT '계좌 유형',
     balance BIGINT DEFAULT 0,
     status ENUM('ACTIVE', 'SUSPENDED', 'CLOSED') DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -50,7 +51,8 @@ CREATE TABLE accounts (
     FOREIGN KEY (user_id) REFERENCES users(id),
     INDEX idx_user_id (user_id),
     INDEX idx_account_number (account_number),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_account_type (account_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 입금 신청 테이블

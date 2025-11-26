@@ -2,18 +2,21 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 40px;
-  background: white;
+  background: #1a1d29;
   border-radius: 16px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   animation: fadeIn 0.5s ease-out;
+  color: #fff;
 }
 
 .goal-form {
-  background: #f9f9f9;
+  background: #2a2e3e;
   padding: 24px;
   border-radius: 12px;
   margin-bottom: 32px;
   animation: slideUp 0.4s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .goals-list {
@@ -24,13 +27,14 @@
 
 .goal-card {
   padding: 24px;
-  background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
   border-radius: 12px;
   border: 2px solid #667eea;
   position: relative;
   transition: all 0.3s ease;
   animation: scaleIn 0.4s ease-out;
   cursor: pointer;
+  color: #fff;
 }
 
 .goal-card:hover {
@@ -39,7 +43,7 @@
 }
 
 .goal-card.completed {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.2) 100%);
   border-color: #22c55e;
 }
 
@@ -52,14 +56,14 @@
 
 .goal-header h3 {
   margin: 0 0 4px 0;
-  color: #333;
+  color: #fff;
   font-size: 20px;
 }
 
 .account-number {
   display: block;
   font-size: 12px;
-  color: #666;
+  color: #9ca3af;
   font-family: monospace;
 }
 
@@ -79,7 +83,7 @@
 .progress-bar {
   width: 100%;
   height: 28px;
-  background: #e0e0e0;
+  background: #1a1d29;
   border-radius: 14px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -109,7 +113,7 @@
   justify-content: space-between;
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: #fff;
 }
 
 .percentage {
@@ -121,7 +125,7 @@
   flex-direction: column;
   gap: 8px;
   font-size: 14px;
-  color: #666;
+  color: #9ca3af;
   margin-bottom: 12px;
 }
 

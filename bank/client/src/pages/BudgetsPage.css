@@ -2,18 +2,21 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 40px;
-  background: white;
+  background: #1a1d29;
   border-radius: 16px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   animation: fadeIn 0.5s ease-out;
+  color: #fff;
 }
 
 .budget-form {
-  background: #f9f9f9;
+  background: #2a2e3e;
   padding: 24px;
   border-radius: 12px;
   margin-bottom: 32px;
   animation: slideUp 0.4s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .budgets-list {
@@ -24,18 +27,19 @@
 
 .budget-card {
   padding: 20px;
-  background: #f9f9f9;
+  background: #2a2e3e;
   border-radius: 12px;
   border-left: 4px solid #667eea;
   transition: all 0.3s ease;
   animation: slideIn 0.4s ease-out;
   cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .budget-card:hover {
   transform: translateX(8px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  background: #fff;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  background: #3a3e4e;
 }
 
 .budget-header {
@@ -48,7 +52,7 @@
 .account-number {
   display: block;
   font-size: 12px;
-  color: #666;
+  color: #9ca3af;
   margin-top: 4px;
   font-family: monospace;
 }
@@ -60,7 +64,7 @@
 .progress-bar {
   width: 100%;
   height: 24px;
-  background: #e0e0e0;
+  background: #1a1d29;
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -103,7 +107,7 @@
   justify-content: space-between;
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: #fff;
 }
 
 .percentage {
@@ -118,6 +122,6 @@
   display: flex;
   gap: 16px;
   font-size: 14px;
-  color: #666;
+  color: #9ca3af;
 }
 

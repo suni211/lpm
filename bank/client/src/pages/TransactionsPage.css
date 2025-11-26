@@ -2,15 +2,17 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 40px;
-  background: white;
+  background: #1a1d29;
   border-radius: 16px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   animation: fadeIn 0.5s ease-out;
+  color: #fff;
 }
 
 .transactions-container h1 {
   margin-bottom: 32px;
-  color: #333;
+  color: #fff;
   font-size: 28px;
 }
 
@@ -18,7 +20,7 @@
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 .filter-tab {
@@ -29,7 +31,7 @@
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  color: #666;
+  color: #9ca3af;
   transition: all 0.3s;
 }
 
@@ -47,7 +49,7 @@
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #999;
+  color: #9ca3af;
 }
 
 .transactions-list {
@@ -61,18 +63,19 @@
   align-items: flex-start;
   gap: 16px;
   padding: 20px;
-  background: #f9f9f9;
+  background: #2a2e3e;
   border-radius: 12px;
   border-left: 4px solid #667eea;
   transition: all 0.3s ease;
   animation: slideIn 0.4s ease-out;
   cursor: pointer;
+  color: #fff;
 }
 
 .transaction-item:hover {
-  background: #f0f0f0;
+  background: #3a3e4e;
   transform: translateX(8px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
 }
 
 .transaction-item:active {
@@ -86,7 +89,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
+  background: #1a1d29;
   border-radius: 12px;
   flex-shrink: 0;
   transition: all 0.3s ease;
@@ -112,7 +115,7 @@
 
 .transaction-type {
   font-weight: 600;
-  color: #333;
+  color: #fff;
   font-size: 16px;
 }
 
@@ -133,12 +136,12 @@
   display: flex;
   justify-content: space-between;
   font-size: 14px;
-  color: #666;
+  color: #9ca3af;
 }
 
 .transaction-notes {
   font-size: 13px;
-  color: #999;
+  color: #9ca3af;
   font-style: italic;
   margin-top: 4px;
 }

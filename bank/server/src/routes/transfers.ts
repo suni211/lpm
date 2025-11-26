@@ -44,11 +44,13 @@ router.post('/request', isAuthenticated, async (req: Request, res: Response) => 
 
     const requests = await query(
       `SELECT tr.*,
-              fa.minecraft_username as from_username, fa.account_number as from_account_number,
-              ta.minecraft_username as to_username, ta.account_number as to_account_number
+              fu.minecraft_username as from_username, fa.account_number as from_account_number,
+              tu.minecraft_username as to_username, ta.account_number as to_account_number
        FROM transfer_requests tr
        JOIN accounts fa ON tr.from_account_id = fa.id
+       JOIN users fu ON fa.user_id = fu.id
        JOIN accounts ta ON tr.to_account_id = ta.id
+       JOIN users tu ON ta.user_id = tu.id
        WHERE tr.id = ?`,
       [requestId]
     );
@@ -79,11 +81,13 @@ router.get('/my/:account_number', async (req: Request, res: Response) => {
 
     const requests = await query(
       `SELECT tr.*,
-              fa.minecraft_username as from_username, fa.account_number as from_account_number,
-              ta.minecraft_username as to_username, ta.account_number as to_account_number
+              fu.minecraft_username as from_username, fa.account_number as from_account_number,
+              tu.minecraft_username as to_username, ta.account_number as to_account_number
        FROM transfer_requests tr
        JOIN accounts fa ON tr.from_account_id = fa.id
+       JOIN users fu ON fa.user_id = fu.id
        JOIN accounts ta ON tr.to_account_id = ta.id
+       JOIN users tu ON ta.user_id = tu.id
        WHERE tr.from_account_id = ? OR tr.to_account_id = ?
        ORDER BY tr.requested_at DESC`,
       [accounts[0].id, accounts[0].id]
@@ -101,11 +105,13 @@ router.get('/pending', isAdmin, async (req: Request, res: Response) => {
   try {
     const requests = await query(
       `SELECT tr.*,
-              fa.minecraft_username as from_username, fa.account_number as from_account_number, fa.balance as from_balance,
-              ta.minecraft_username as to_username, ta.account_number as to_account_number
+              fu.minecraft_username as from_username, fa.account_number as from_account_number, fa.balance as from_balance,
+              tu.minecraft_username as to_username, ta.account_number as to_account_number
        FROM transfer_requests tr
        JOIN accounts fa ON tr.from_account_id = fa.id
+       JOIN users fu ON fa.user_id = fu.id
        JOIN accounts ta ON tr.to_account_id = ta.id
+       JOIN users tu ON ta.user_id = tu.id
        WHERE tr.status = 'PENDING'
        ORDER BY tr.requested_at ASC`
     );

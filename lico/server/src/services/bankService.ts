@@ -24,20 +24,28 @@ export const bankService = {
     }
   },
 
-  // BANK 계좌 조회
+  // BANK 계좌 조회 (마인크래프트 닉네임)
   async getAccountByUsername(username: string) {
     try {
-      const response = await bankApi.get(`/accounts/${username}`);
+      const response = await bankApi.get(`/accounts/minecraft/${username}`);
       return response.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.error || '계좌 조회 실패');
     }
   },
 
-  // BANK 계좌 잔액 조회
+  // BANK 계좌 잔액 조회 (마인크래프트 닉네임)
   async getAccountBalance(username: string) {
     try {
-      const response = await bankApi.get(`/accounts/${username}/balance`);
+      // 먼저 계좌를 조회해서 계좌번호를 가져옴
+      const accountResponse = await bankApi.get(`/accounts/minecraft/${username}`);
+      const accountNumber = accountResponse.data.account?.account_number;
+      
+      if (!accountNumber) {
+        throw new Error('계좌를 찾을 수 없습니다');
+      }
+      
+      const response = await bankApi.get(`/accounts/${accountNumber}/balance`);
       return response.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.error || '잔액 조회 실패');

@@ -252,7 +252,9 @@
   flex: 1;
   margin-left: 260px;
   padding: 40px;
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
+  color: #fff;
+  min-height: 100vh;
 }
 
 .dashboard-container {
@@ -262,16 +264,17 @@
 }
 
 .dashboard-header {
-  background: white;
+  background: #1a1d29;
   padding: 24px;
   border-radius: 16px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .dashboard-title {
   font-size: 28px;
-  color: #333;
+  color: #fff;
   margin-bottom: 16px;
 }
 

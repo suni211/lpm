@@ -2,10 +2,12 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 40px;
-  background: white;
+  background: #1a1d29;
   border-radius: 16px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   animation: fadeIn 0.5s ease-out;
+  color: #fff;
 }
 
 .page-header {
@@ -17,7 +19,7 @@
 
 .page-header h1 {
   margin: 0;
-  color: #333;
+  color: #fff;
   font-size: 28px;
 }
 
@@ -63,11 +65,12 @@
 }
 
 .auto-transfer-form {
-  background: #f9f9f9;
+  background: #2a2e3e;
   padding: 24px;
   border-radius: 12px;
   margin-bottom: 32px;
   animation: slideUp 0.4s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .form-row {
@@ -85,16 +88,18 @@
 
 .form-group label {
   font-weight: 600;
-  color: #333;
+  color: #fff;
   font-size: 14px;
 }
 
 .form-group input,
 .form-group select {
   padding: 12px;
-  border: 2px solid #e0e0e0;
+  background: #1a1d29;
+  border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   font-size: 16px;
+  color: #fff;
   transition: all 0.3s;
 }
 
@@ -126,9 +131,9 @@
 .cancel-button {
   flex: 1;
   padding: 12px;
-  background: #e0e0e0;
-  color: #333;
-  border: none;
+  background: #3a3e4e;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   font-size: 16px;
   font-weight: 600;
@@ -143,18 +148,19 @@
 
 .rule-card {
   padding: 20px;
-  background: #f9f9f9;
+  background: #2a2e3e;
   border-radius: 12px;
   border-left: 4px solid #667eea;
   transition: all 0.3s ease;
   animation: slideIn 0.4s ease-out;
   cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .rule-card:hover {
   transform: translateX(8px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  background: #fff;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  background: #3a3e4e;
 }
 
 .rule-header {
@@ -190,12 +196,12 @@
 }
 
 .toggle-button.inactive {
-  background: #e0e0e0;
-  color: #666;
+  background: #3a3e4e;
+  color: #9ca3af;
 }
 
 .toggle-button.inactive:hover {
-  background: #d0d0d0;
+  background: #4a4e5e;
 }
 
 .delete-button {
@@ -225,12 +231,12 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 8px;
   font-size: 14px;
-  color: #666;
+  color: #9ca3af;
 }
 
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #999;
+  color: #9ca3af;
 }
 

@@ -36,9 +36,9 @@ function DashboardPage({ userData }: DashboardPageProps) {
       <div className="page-container">
         <Sidebar userData={userData} />
         <div className="page-content">
-          <div style={{ padding: '40px', background: 'white', borderRadius: '16px' }}>
-            <h2>사용자 정보를 불러올 수 없습니다</h2>
-            <p>로그인 페이지로 이동합니다...</p>
+          <div style={{ padding: '40px', background: '#1a1d29', borderRadius: '16px', color: '#fff', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <h2 style={{ color: '#fff' }}>사용자 정보를 불러올 수 없습니다</h2>
+            <p style={{ color: '#fff' }}>로그인 페이지로 이동합니다...</p>
           </div>
         </div>
       </div>
@@ -49,7 +49,7 @@ function DashboardPage({ userData }: DashboardPageProps) {
     <div className="page-container">
       <Sidebar userData={userData} />
       <div className="page-content">
-        <div className="dashboard-container" style={{ padding: '40px', background: 'white', borderRadius: '16px', minHeight: '400px' }}>
+        <div className="dashboard-container" style={{ padding: '40px', background: '#1a1d29', borderRadius: '16px', minHeight: '400px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
           <div className="dashboard-header" style={{ marginBottom: '32px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
               <img 
@@ -62,25 +62,25 @@ function DashboardPage({ userData }: DashboardPageProps) {
                 }}
               />
               <div>
-                <h1 className="dashboard-title" style={{ fontSize: '32px', margin: '0 0 8px 0', color: '#333' }}>대시보드</h1>
-                <p style={{ color: '#666', fontSize: '16px', margin: 0 }}>
-                  환영합니다, <strong>{userData.minecraft_username || userData.username || '사용자'}</strong>님
+                <h1 className="dashboard-title" style={{ fontSize: '32px', margin: '0 0 8px 0', color: '#fff' }}>대시보드</h1>
+                <p style={{ color: '#fff', fontSize: '16px', margin: 0 }}>
+                  환영합니다, <strong style={{ color: '#fff' }}>{userData.minecraft_username || userData.username || '사용자'}</strong>님
                 </p>
               </div>
             </div>
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px' }}>
+            <div style={{ textAlign: 'center', padding: '40px', color: '#fff' }}>
               <p>계좌 정보를 불러오는 중...</p>
             </div>
           ) : (
 
             <>
               {accounts.length === 0 ? (
-                <div style={{ background: '#f9f9f9', padding: '40px', borderRadius: '16px', textAlign: 'center', marginBottom: '24px' }}>
-                  <h2 style={{ marginBottom: '16px', color: '#333' }}>계좌가 없습니다</h2>
-                  <p style={{ color: '#666', marginBottom: '24px' }}>서비스를 이용하려면 계좌를 개설해주세요</p>
+                <div style={{ background: '#2a2e3e', padding: '40px', borderRadius: '16px', textAlign: 'center', marginBottom: '24px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <h2 style={{ marginBottom: '16px', color: '#fff' }}>계좌가 없습니다</h2>
+                  <p style={{ color: '#fff', marginBottom: '24px' }}>서비스를 이용하려면 계좌를 개설해주세요</p>
                   <button 
                     onClick={() => navigate('/create-account')}
                     style={{
@@ -102,10 +102,11 @@ function DashboardPage({ userData }: DashboardPageProps) {
                   {accounts.map((account: any, index: number) => (
                     <div key={account.id} className="account-card stagger-item" style={{
                       animationDelay: `${index * 0.1}s`, 
-                      background: 'linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%)',
+                      background: 'linear-gradient(135deg, #2a2e3e 0%, #1a1d29 100%)',
                       padding: '24px',
                       borderRadius: '12px',
-                      border: '2px solid #667eea'
+                      border: '2px solid rgba(102, 126, 234, 0.5)',
+                      color: '#fff'
                     }}>
                       <div className="account-header" style={{ marginBottom: '12px' }}>
                         <span className="account-type-badge" style={{
@@ -124,7 +125,7 @@ function DashboardPage({ userData }: DashboardPageProps) {
                         fontFamily: 'monospace',
                         fontSize: '18px',
                         fontWeight: '600',
-                        color: '#333',
+                        color: '#fff',
                         marginBottom: '8px'
                       }}>
                         {account.account_number}
@@ -132,7 +133,7 @@ function DashboardPage({ userData }: DashboardPageProps) {
                       <div className="account-balance" style={{ 
                         fontSize: '24px',
                         fontWeight: 'bold',
-                        color: '#667eea'
+                        color: '#86efac'
                       }}>
                         {Number(account.balance || 0).toLocaleString()} G
                       </div>
@@ -142,23 +143,24 @@ function DashboardPage({ userData }: DashboardPageProps) {
               )}
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-                <div style={{ background: '#f9f9f9', padding: '24px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
-                  <h3 style={{ marginBottom: '16px', fontSize: '20px', color: '#333' }}>빠른 메뉴</h3>
+                <div style={{ background: '#2a2e3e', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <h3 style={{ marginBottom: '16px', fontSize: '20px', color: '#fff' }}>빠른 메뉴</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <button 
                       onClick={() => navigate('/banking')}
                       style={{
                         padding: '12px',
-                        background: '#f0f0f0',
+                        background: '#3a3e4e',
                         border: 'none',
                         borderRadius: '8px',
                         cursor: 'pointer',
                         textAlign: 'left',
                         fontSize: '14px',
+                        color: '#fff',
                         transition: 'background 0.2s'
                       }}
-                      onMouseOver={(e) => e.currentTarget.style.background = '#e0e0e0'}
-                      onMouseOut={(e) => e.currentTarget.style.background = '#f0f0f0'}
+                      onMouseOver={(e) => e.currentTarget.style.background = '#4a4e5e'}
+                      onMouseOut={(e) => e.currentTarget.style.background = '#3a3e4e'}
                     >
                       💰 입출금 및 이체
                     </button>
@@ -166,16 +168,17 @@ function DashboardPage({ userData }: DashboardPageProps) {
                       onClick={() => navigate('/transactions')}
                       style={{
                         padding: '12px',
-                        background: '#f0f0f0',
+                        background: '#3a3e4e',
                         border: 'none',
                         borderRadius: '8px',
                         cursor: 'pointer',
                         textAlign: 'left',
                         fontSize: '14px',
+                        color: '#fff',
                         transition: 'background 0.2s'
                       }}
-                      onMouseOver={(e) => e.currentTarget.style.background = '#e0e0e0'}
-                      onMouseOut={(e) => e.currentTarget.style.background = '#f0f0f0'}
+                      onMouseOver={(e) => e.currentTarget.style.background = '#4a4e5e'}
+                      onMouseOut={(e) => e.currentTarget.style.background = '#3a3e4e'}
                     >
                       📋 거래 내역
                     </button>
@@ -198,17 +201,17 @@ function DashboardPage({ userData }: DashboardPageProps) {
                   </div>
                 </div>
 
-                <div style={{ background: '#f9f9f9', padding: '24px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
-                  <h3 style={{ marginBottom: '16px', fontSize: '20px', color: '#333' }}>계좌 정보</h3>
-                  <div style={{ display: 'grid', gap: '12px', fontSize: '14px', color: '#666' }}>
+                <div style={{ background: '#2a2e3e', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <h3 style={{ marginBottom: '16px', fontSize: '20px', color: '#fff' }}>계좌 정보</h3>
+                  <div style={{ display: 'grid', gap: '12px', fontSize: '14px', color: '#fff' }}>
                     <div>
-                      <strong style={{ color: '#333' }}>아이디:</strong> {userData.username || 'N/A'}
+                      <strong style={{ color: '#fff' }}>아이디:</strong> {userData.username || 'N/A'}
                     </div>
                     <div>
-                      <strong style={{ color: '#333' }}>이메일:</strong> {userData.email || 'N/A'}
+                      <strong style={{ color: '#fff' }}>이메일:</strong> {userData.email || 'N/A'}
                     </div>
                     <div>
-                      <strong style={{ color: '#333' }}>마인크래프트:</strong> {userData.minecraft_username || 'N/A'}
+                      <strong style={{ color: '#fff' }}>마인크래프트:</strong> {userData.minecraft_username || 'N/A'}
                     </div>
                   </div>
                 </div>
