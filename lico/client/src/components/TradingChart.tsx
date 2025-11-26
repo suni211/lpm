@@ -19,7 +19,7 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
   const [interval, setInterval] = useState<Interval>('1h');
   const [candles, setCandles] = useState<Candle[]>([]);
 
-  // �� pt0 \�
+  // 캔들 데이터 가져오기
   useEffect(() => {
     const fetchCandles = async () => {
       try {
@@ -37,11 +37,11 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
     }
   }, [coinId, interval]);
 
-  // (� 0T  �pt�
+  // 차트 초기화 및 업데이트
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // (� �1
+    // 차트 생성
     if (!chartRef.current) {
       const chart = createChart(chartContainerRef.current, {
         layout: {
@@ -93,7 +93,7 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
       }
     }
 
-    // �� pt0 �pt�
+    // 차트 데이터 업데이트
     if (candlestickSeriesRef.current && candles.length > 0) {
       const formattedData = candles.map((candle) => {
         const open = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
@@ -108,14 +108,18 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
           low: isNaN(low) ? 0 : low,
           close: isNaN(close) ? 0 : close,
         };
-      }).filter(candle => candle.time > 0); // 유효한 시간만 필터링
+      }).filter(candle => candle.time > 0 && candle.open > 0 && candle.high > 0 && candle.low > 0 && candle.close > 0); // 유효한 데이터만 필터링
 
       if (formattedData.length > 0) {
-        candlestickSeriesRef.current.setData(formattedData);
+        try {
+          candlestickSeriesRef.current.setData(formattedData);
+        } catch (error) {
+          console.error('Failed to set chart data:', error);
+        }
       }
     }
 
-    // ��t� x��
+    // 리사이즈 핸들러
     const handleResize = () => {
       if (chartRef.current && chartContainerRef.current) {
         chartRef.current.applyOptions({
@@ -131,7 +135,7 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
     };
   }, [candles]);
 
-  // ��� �ȴ� � (� p
+  // 컴포넌트 언마운트 시 차트 정리
   useEffect(() => {
     return () => {
       if (chartRef.current) {
@@ -149,19 +153,19 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
             className={interval === '1m' ? 'active' : ''}
             onClick={() => setInterval('1m')}
           >
-            1�
+            1분
           </button>
           <button
             className={interval === '1h' ? 'active' : ''}
             onClick={() => setInterval('1h')}
           >
-            1�
+            1시간
           </button>
           <button
             className={interval === '1d' ? 'active' : ''}
             onClick={() => setInterval('1d')}
           >
-            1|
+            1일
           </button>
         </div>
       </div>
