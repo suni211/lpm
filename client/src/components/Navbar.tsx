@@ -1,10 +1,94 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './Navbar.css';
 
+interface MenuItem {
+  label: string;
+  path?: string;
+  icon: string;
+  children?: MenuItem[];
+}
+
 const Navbar: React.FC = () => {
   const { user, team, login, logout } = useAuth();
+  const location = useLocation();
+  const [openMenus, setOpenMenus] = useState<Set<string>>(new Set());
+
+  const menuItems: MenuItem[] = [
+    {
+      label: '홈',
+      path: '/dashboard',
+      icon: '🏠',
+    },
+    {
+      label: '카드',
+      icon: '🎴',
+      children: [
+        { label: '카드 뽑기', path: '/gacha', icon: '🎰' },
+        { label: '카드 컬렉션', path: '/cards', icon: '📚' },
+        { label: '카드 합성', path: '/fusion', icon: '⚗️' },
+      ],
+    },
+    {
+      label: '팀 관리',
+      icon: '⚙️',
+      children: [
+        { label: '로스터 편성', path: '/roster', icon: '👥' },
+        { label: '선수 육성', path: '/training', icon: '📈' },
+        { label: '시설 관리', path: '/facility', icon: '🏢' },
+      ],
+    },
+    {
+      label: '경기',
+      icon: '⚔️',
+      children: [
+        { label: '랭크 경기', path: '/match', icon: '🎯' },
+        { label: '랭크 리그', path: '/ranked', icon: '🏆' },
+        { label: '솔로 랭크', path: '/solo-rank', icon: '⭐' },
+      ],
+    },
+    {
+      label: '거래',
+      icon: '💰',
+      children: [
+        { label: '경매장', path: '/auction', icon: '🔨' },
+        { label: '이적 시장', path: '/posting', icon: '💸' },
+      ],
+    },
+    {
+      label: '구단 경영',
+      icon: '💼',
+      children: [
+        { label: '스폰서', path: '/sponsors', icon: '🤝' },
+        { label: '팬덤', path: '/fandom', icon: '❤️' },
+        { label: '업적', path: '/achievements', icon: '🏅' },
+      ],
+    },
+  ];
+
+  // Admin 메뉴는 admin 유저만 표시
+  if (user?.email === 'hisamking@gmail.com') {
+    menuItems.push({
+      label: '관리자',
+      path: '/admin',
+      icon: '🔧',
+    });
+  }
+
+  const toggleMenu = (label: string) => {
+    const newOpenMenus = new Set(openMenus);
+    if (newOpenMenus.has(label)) {
+      newOpenMenus.delete(label);
+    } else {
+      newOpenMenus.add(label);
+    }
+    setOpenMenus(newOpenMenus);
+  };
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
 
   return (
     <nav className="navbar">
@@ -17,15 +101,44 @@ const Navbar: React.FC = () => {
         {/* Navigation Links */}
         {user && team && (
           <div className="navbar-menu">
-            <Link to="/dashboard" className="navbar-link">대시보드</Link>
-            <Link to="/cards" className="navbar-link">카드 컬렉션</Link>
-            <Link to="/gacha" className="navbar-link">카드 뽑기</Link>
-            <Link to="/roster" className="navbar-link">로스터</Link>
-            <Link to="/match" className="navbar-link">경기</Link>
-            <Link to="/ranked" className="navbar-link">랭크 리그</Link>
-            <Link to="/solo-rank" className="navbar-link">솔랭</Link>
-            <Link to="/auction" className="navbar-link">경매장</Link>
-            <Link to="/guild" className="navbar-link">길드</Link>
+            {menuItems.map((item) => (
+              <div key={item.label} className="navbar-menu-item">
+                {item.children ? (
+                  <>
+                    <button
+                      className={`navbar-dropdown-toggle ${openMenus.has(item.label) ? 'open' : ''}`}
+                      onClick={() => toggleMenu(item.label)}
+                    >
+                      <span className="menu-icon">{item.icon}</span>
+                      <span className="menu-label">{item.label}</span>
+                      <span className="dropdown-arrow">{openMenus.has(item.label) ? '▼' : '▶'}</span>
+                    </button>
+                    {openMenus.has(item.label) && (
+                      <div className="navbar-dropdown">
+                        {item.children.map((child) => (
+                          <Link
+                            key={child.path}
+                            to={child.path!}
+                            className={`navbar-dropdown-link ${isActive(child.path!) ? 'active' : ''}`}
+                          >
+                            <span className="menu-icon">{child.icon}</span>
+                            <span className="menu-label">{child.label}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <Link
+                    to={item.path!}
+                    className={`navbar-link ${isActive(item.path!) ? 'active' : ''}`}
+                  >
+                    <span className="menu-icon">{item.icon}</span>
+                    <span className="menu-label">{item.label}</span>
+                  </Link>
+                )}
+              </div>
+            ))}
           </div>
         )}
 

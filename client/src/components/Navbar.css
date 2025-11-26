@@ -10,7 +10,7 @@
 }
 
 .navbar-container {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 1rem 2rem;
   display: flex;
@@ -29,6 +29,7 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   transition: transform 0.3s ease;
+  white-space: nowrap;
 }
 
 .navbar-logo:hover {
@@ -40,10 +41,48 @@
   gap: 0.5rem;
   flex: 1;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
+/* Menu Item Container */
+.navbar-menu-item {
+  position: relative;
+}
+
+/* Dropdown Toggle Button */
+.navbar-dropdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  color: #e0e0e0;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.navbar-dropdown-toggle:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  transform: translateY(-2px);
+}
+
+.navbar-dropdown-toggle.open {
+  background: rgba(102, 126, 234, 0.15);
+  color: #667eea;
+}
+
+/* Regular Link (No Dropdown) */
 .navbar-link {
-  padding: 0.6rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
   color: #e0e0e0;
   text-decoration: none;
   font-weight: 600;
@@ -58,6 +97,88 @@
   transform: translateY(-2px);
 }
 
+.navbar-link.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+/* Icon and Label */
+.menu-icon {
+  font-size: 1.1rem;
+}
+
+.menu-label {
+  white-space: nowrap;
+}
+
+/* Dropdown Arrow */
+.dropdown-arrow {
+  font-size: 0.7rem;
+  margin-left: 0.2rem;
+  transition: transform 0.3s ease;
+}
+
+.navbar-dropdown-toggle.open .dropdown-arrow {
+  transform: rotate(0deg);
+}
+
+/* Dropdown Menu */
+.navbar-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  min-width: 200px;
+  z-index: 1001;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.navbar-dropdown-link {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1.2rem;
+  color: #e0e0e0;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.navbar-dropdown-link:last-child {
+  border-bottom: none;
+}
+
+.navbar-dropdown-link:hover {
+  background: rgba(102, 126, 234, 0.15);
+  color: #667eea;
+  padding-left: 1.5rem;
+}
+
+.navbar-dropdown-link.active {
+  background: rgba(102, 126, 234, 0.2);
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* Right Side */
 .navbar-right {
   display: flex;
   align-items: center;
@@ -79,18 +200,21 @@
   color: #fff;
   font-weight: 700;
   font-size: 0.95rem;
+  white-space: nowrap;
 }
 
 .team-balance {
   color: #ffd700;
   font-weight: 600;
   font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .team-tier {
   color: #667eea;
   font-weight: 600;
   font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 .navbar-user {
@@ -110,6 +234,7 @@
 .user-name {
   color: #fff;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .btn-login {
@@ -155,20 +280,36 @@
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
+@media (max-width: 1280px) {
   .navbar-menu {
     gap: 0.3rem;
   }
 
+  .navbar-dropdown-toggle,
   .navbar-link {
     padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .menu-label {
     font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .navbar-team-info {
+    display: none;
+  }
+
+  .user-name {
+    display: none;
   }
 }
 
 @media (max-width: 768px) {
   .navbar-container {
     flex-wrap: wrap;
+    padding: 0.8rem 1rem;
   }
 
   .navbar-menu {
@@ -177,9 +318,21 @@
     justify-content: flex-start;
     overflow-x: auto;
     padding-top: 0.5rem;
+    gap: 0.3rem;
   }
 
-  .navbar-team-info {
-    display: none;
+  .navbar-dropdown {
+    position: relative;
+    margin-top: 0.3rem;
+    box-shadow: none;
+    border-left: 3px solid #667eea;
+  }
+
+  .navbar-dropdown-link {
+    padding-left: 2rem;
+  }
+
+  .menu-label {
+    font-size: 0.8rem;
   }
 }
