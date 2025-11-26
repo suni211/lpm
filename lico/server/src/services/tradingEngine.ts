@@ -92,10 +92,21 @@ export class TradingEngine {
     }
     const wallet = wallets[0];
 
-    // 최저가 매도 주문들 조회
+    // 코인 정보 조회 (현재가 확인)
+    const coins = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
+    if (coins.length === 0) {
+      throw new Error('코인을 찾을 수 없습니다');
+    }
+    const coin = coins[0];
+    const currentPrice = typeof coin.current_price === 'string' 
+      ? parseFloat(coin.current_price) 
+      : (coin.current_price || 0);
+
+    // 최저가 매도 주문들 조회 (유저 매도 주문)
     const sellOrders = await query(
       `SELECT * FROM orders
        WHERE coin_id = ? AND order_type = 'SELL' AND status IN ('PENDING', 'PARTIAL')
+       AND is_admin_order = FALSE
        ORDER BY price ASC, created_at ASC`,
       [coinId]
     );
@@ -103,6 +114,7 @@ export class TradingEngine {
     let remainingQty = quantity;
     let totalCost = 0;
 
+    // 1. 유저 매도 주문과 매칭
     for (const sellOrder of sellOrders) {
       if (remainingQty <= 0) break;
 
@@ -119,6 +131,66 @@ export class TradingEngine {
       await this.executeTrade(walletId, sellOrder.wallet_id, coinId, sellOrder.price, matchQty, null, sellOrder.id);
       totalCost += totalRequired;
       remainingQty -= matchQty;
+    }
+
+    // 2. 남은 수량이 있으면 AI 봇 재고에서 직접 판매 (발행량에서 공급)
+    if (remainingQty > 0) {
+      // AI 봇 지갑 조회
+      const aiWallets = await query('SELECT * FROM user_wallets WHERE minecraft_username = "AI_BOT"');
+      if (aiWallets.length === 0) {
+        throw new Error('AI 봇 지갑을 찾을 수 없습니다');
+      }
+      const aiWallet = aiWallets[0];
+
+      // AI 봇의 코인 잔액 확인
+      const aiBalances = await query(
+        'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+        [aiWallet.id, coinId]
+      );
+
+      if (aiBalances.length === 0 || aiBalances[0].available_amount < remainingQty) {
+        // 발행량 부족 - 예약 주문 생성
+        const orderId = uuidv4();
+        const totalAmount = currentPrice * remainingQty;
+        const fee = Math.floor(totalAmount * 0.05);
+        const totalRequired = totalAmount + fee;
+
+        // 잔액 확인
+        if (wallet.gold_balance < totalCost + totalRequired) {
+          throw new Error('잔액이 부족합니다');
+        }
+
+        // 예약 주문 생성 (발행량이 부족한 경우)
+        await query(
+          `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, status, is_admin_order)
+           VALUES (?, ?, ?, 'BUY', 'LIMIT', ?, ?, 'PENDING', FALSE)`,
+          [orderId, walletId, coinId, currentPrice, remainingQty]
+        );
+
+        // 잔액 잠금
+        await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
+          totalRequired,
+          walletId,
+        ]);
+
+        return { matched: quantity - remainingQty, remaining: remainingQty };
+      }
+
+      // AI 봇 재고에서 직접 판매
+      const availableQty = Math.min(remainingQty, parseFloat(aiBalances[0].available_amount));
+      const matchCost = currentPrice * availableQty;
+      const fee = Math.floor(matchCost * 0.05);
+      const totalRequired = matchCost + fee;
+
+      // 잔액 확인
+      if (wallet.gold_balance < totalCost + totalRequired) {
+        throw new Error('잔액이 부족합니다');
+      }
+
+      // AI 봇과 직접 거래 체결
+      await this.executeTrade(walletId, aiWallet.id, coinId, currentPrice, availableQty, null, null);
+      totalCost += totalRequired;
+      remainingQty -= availableQty;
     }
 
     // 잔액 차감 (이미 executeTrade에서 처리되지만, 수수료를 위해 추가 차감)
@@ -182,17 +254,22 @@ export class TradingEngine {
 
   // 지정가 매수 매칭
   private async matchLimitBuyOrder(buyOrderId: string, coinId: string, buyPrice: number) {
-    // 지정가 이하의 매도 주문 찾기
+    // 주문 정보 조회
+    const buyOrders = await query('SELECT * FROM orders WHERE id = ?', [buyOrderId]);
+    if (buyOrders.length === 0) return;
+    const buyOrder = buyOrders[0];
+    let remainingQty = buyOrder.remaining_quantity;
+
+    // 지정가 이하의 유저 매도 주문 찾기
     const sellOrders = await query(
       `SELECT * FROM orders
        WHERE coin_id = ? AND order_type = 'SELL' AND price <= ? AND status IN ('PENDING', 'PARTIAL')
+       AND is_admin_order = FALSE
        ORDER BY price ASC, created_at ASC`,
       [coinId, buyPrice]
     );
 
-    const buyOrder = (await query('SELECT * FROM orders WHERE id = ?', [buyOrderId]))[0];
-    let remainingQty = buyOrder.remaining_quantity;
-
+    // 1. 유저 매도 주문과 매칭
     for (const sellOrder of sellOrders) {
       if (remainingQty <= 0) break;
 
@@ -200,6 +277,40 @@ export class TradingEngine {
       await this.executeTrade(buyOrder.wallet_id, sellOrder.wallet_id, coinId, sellOrder.price, matchQty, buyOrderId, sellOrder.id);
 
       remainingQty -= matchQty;
+    }
+
+    // 2. 남은 수량이 있고 지정가가 현재가 이상이면 AI 봇 재고에서 직접 판매
+    if (remainingQty > 0) {
+      // 코인 정보 조회 (현재가 확인)
+      const coins = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
+      if (coins.length > 0) {
+        const coin = coins[0];
+        const currentPrice = typeof coin.current_price === 'string' 
+          ? parseFloat(coin.current_price) 
+          : (coin.current_price || 0);
+
+        // 지정가가 현재가 이상이면 AI 봇 재고에서 판매
+        if (buyPrice >= currentPrice) {
+          // AI 봇 지갑 조회
+          const aiWallets = await query('SELECT * FROM user_wallets WHERE minecraft_username = "AI_BOT"');
+          if (aiWallets.length > 0) {
+            const aiWallet = aiWallets[0];
+
+            // AI 봇의 코인 잔액 확인
+            const aiBalances = await query(
+              'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+              [aiWallet.id, coinId]
+            );
+
+            if (aiBalances.length > 0 && aiBalances[0].available_amount > 0) {
+              // AI 봇 재고에서 직접 판매 (현재가로)
+              const availableQty = Math.min(remainingQty, parseFloat(aiBalances[0].available_amount));
+              await this.executeTrade(buyOrder.wallet_id, aiWallet.id, coinId, currentPrice, availableQty, buyOrderId, null);
+              remainingQty -= availableQty;
+            }
+          }
+        }
+      }
     }
   }
 

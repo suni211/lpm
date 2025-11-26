@@ -209,10 +209,60 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
     );
 
     const coins = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
+    const coin = coins[0];
+
+    // 초기 유동성 공급: AI 봇 지갑에 코인 배포 및 초기 매도 주문 생성
+    try {
+      // AI 봇 지갑 조회 또는 생성
+      let aiWallets = await query('SELECT * FROM user_wallets WHERE minecraft_username = "AI_BOT"');
+      let aiWallet;
+      
+      if (aiWallets.length === 0) {
+        const aiWalletId = uuidv4();
+        await query(
+          `INSERT INTO user_wallets (id, minecraft_username, minecraft_uuid, gold_balance, wallet_address)
+           VALUES (?, 'AI_BOT', 'AI_BOT_UUID', 999999999999, ?)`,
+          [aiWalletId, `AI_BOT_${aiWalletId.substring(0, 8)}`]
+        );
+        aiWallets = await query('SELECT * FROM user_wallets WHERE id = ?', [aiWalletId]);
+        aiWallet = aiWallets[0];
+      } else {
+        aiWallet = aiWallets[0];
+      }
+
+      // AI 봇 지갑에 전체 발행량 배포 (재고로 관리)
+      // 매도 주문 생성하지 않음 - 유저가 구매할 때마다 AI 봇의 재고에서 직접 판매
+      const totalSupply = parseFloat(circulating_supply);
+      const totalSupplyPrecise = parseFloat(totalSupply.toFixed(8));
+
+      // 코인 잔액 생성 또는 업데이트
+      const existingBalances = await query(
+        'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+        [aiWallet.id, coinId]
+      );
+
+      if (existingBalances.length > 0) {
+        await query(
+          'UPDATE user_coin_balances SET available_amount = available_amount + ? WHERE wallet_id = ? AND coin_id = ?',
+          [totalSupplyPrecise, aiWallet.id, coinId]
+        );
+      } else {
+        await query(
+          `INSERT INTO user_coin_balances (id, wallet_id, coin_id, available_amount, average_buy_price)
+           VALUES (?, ?, ?, ?, ?)`,
+          [uuidv4(), aiWallet.id, coinId, totalSupplyPrecise, current_price]
+        );
+      }
+
+      console.log(`✅ ${symbol}: 전체 발행량 배포 완료 (${totalSupplyPrecise.toLocaleString()}개, 유저가 바로 구매 가능)`);
+    } catch (error) {
+      console.error(`⚠️ ${symbol}: 초기 유동성 공급 실패:`, error);
+      // 유동성 공급 실패해도 코인 생성은 성공으로 처리
+    }
 
     res.json({
       success: true,
-      coin: coins[0],
+      coin: coin,
       message: '코인이 성공적으로 생성되었습니다',
     });
   } catch (error: any) {

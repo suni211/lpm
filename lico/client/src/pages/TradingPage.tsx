@@ -8,7 +8,6 @@ import type { Coin, Candle } from '../types';
 import Orderbook from '../components/Orderbook';
 import OrderForm from '../components/OrderForm';
 import CoinSidebar from '../components/CoinSidebar';
-import { MarketData } from '../components/TradingViewWidgets';
 import './TradingPage.css';
 
 const TradingPage = () => {
@@ -326,9 +325,6 @@ const TradingPage = () => {
                 </div>
               </div>
               <div ref={chartContainerRef} className="chart-container" />
-            </div>
-            <div className="chart-side">
-              <MarketData coinSymbol={selectedCoin.symbol} />
             </div>
           </div>
 
