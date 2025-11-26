@@ -31,8 +31,8 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
     const requestId = uuidv4();
     await query(
       `INSERT INTO deposit_requests
-       (id, account_id, amount, product_type, scheduled_date, contract_expiry, status)
-       VALUES (?, ?, ?, 'REGULAR', NOW(), NULL, 'PENDING')`,
+       (id, account_id, amount, status)
+       VALUES (?, ?, ?, 'PENDING')`,
       [requestId, account.id, amount]
     );
 
@@ -51,7 +51,11 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
 // 입금 신청 (상세 버전 - account_number 사용)
 router.post('/request', async (req: Request, res: Response) => {
   try {
-    const { account_number, amount, product_type, scheduled_date, contract_expiry } = req.body;
+    const { account_number, amount } = req.body;
+
+    if (!account_number || !amount) {
+      return res.status(400).json({ error: '계좌번호와 금액을 입력해주세요' });
+    }
 
     // 계좌 조회
     const accounts = await query(
@@ -69,9 +73,9 @@ router.post('/request', async (req: Request, res: Response) => {
     const requestId = uuidv4();
     await query(
       `INSERT INTO deposit_requests
-       (id, account_id, amount, product_type, scheduled_date, contract_expiry, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'PENDING')`,
-      [requestId, account.id, amount, product_type, scheduled_date, contract_expiry || null]
+       (id, account_id, amount, status)
+       VALUES (?, ?, ?, 'PENDING')`,
+      [requestId, account.id, amount]
     );
 
     const requests = await query('SELECT * FROM deposit_requests WHERE id = ?', [requestId]);
@@ -124,7 +128,7 @@ router.get('/pending', isAdmin, async (req: Request, res: Response) => {
        FROM deposit_requests dr
        JOIN accounts a ON dr.account_id = a.id
        WHERE dr.status = 'PENDING'
-       ORDER BY dr.scheduled_date ASC`
+       ORDER BY dr.requested_at ASC`
     );
 
     res.json({ requests });
@@ -225,34 +229,7 @@ router.post('/:id/reject', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
-// 계약 만료 입금 파기 (관리자)
-router.post('/:id/expire', isAdmin, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { notes } = req.body;
-
-    const requests = await query(
-      `SELECT * FROM deposit_requests
-       WHERE id = ? AND product_type = 'SAVINGS' AND contract_expiry < NOW() AND status = 'PENDING'`,
-      [id]
-    );
-
-    if (requests.length === 0) {
-      return res.status(400).json({ error: '만료 가능한 입금 신청이 아닙니다' });
-    }
-
-    await query(
-      `UPDATE deposit_requests
-       SET status = 'EXPIRED', processed_at = NOW(), processed_by = ?, notes = ?
-       WHERE id = ?`,
-      [req.session.adminId, notes || `계약 만료로 인한 거래 파기`, id]
-    );
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('입금 만료 처리 오류:', error);
-    res.status(500).json({ error: '입금 만료 처리 실패' });
-  }
-});
+// 입금 만료 처리 (관리자) - 현재 스키마에는 contract_expiry가 없으므로 제거
+// 필요시 나중에 추가 가능
 
 export default router;
