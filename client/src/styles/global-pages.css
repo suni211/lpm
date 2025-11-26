@@ -21,19 +21,10 @@
   }
 }
 
-/* Remove old gradient backgrounds */
-[class*="-page"],
-[class*="-container"] {
+/* Remove old gradient backgrounds - but keep navbar dropdown visible */
+[class*="-page"]:not(.navbar-dropdown),
+[class*="-container"]:not(.navbar-dropdown) {
   background: var(--color-bg-primary) !important;
-}
-
-/* Update all cards/surfaces */
-[class*="card"],
-[class*="panel"],
-[class*="section"] {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-md);
 }
 
 /* Loading states */
