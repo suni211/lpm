@@ -81,15 +81,24 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
 
     // �� pt0 �pt�
     if (candlestickSeriesRef.current && candles.length > 0) {
-      const formattedData = candles.map((candle) => ({
-        time: (new Date(candle.open_time).getTime() / 1000) as UTCTimestamp,
-        open: Number(candle.open_price),
-        high: Number(candle.high_price),
-        low: Number(candle.low_price),
-        close: Number(candle.close_price),
-      }));
+      const formattedData = candles.map((candle) => {
+        const open = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
+        const high = typeof candle.high_price === 'string' ? parseFloat(candle.high_price) : (candle.high_price || 0);
+        const low = typeof candle.low_price === 'string' ? parseFloat(candle.low_price) : (candle.low_price || 0);
+        const close = typeof candle.close_price === 'string' ? parseFloat(candle.close_price) : (candle.close_price || 0);
+        
+        return {
+          time: (new Date(candle.open_time).getTime() / 1000) as UTCTimestamp,
+          open: isNaN(open) ? 0 : open,
+          high: isNaN(high) ? 0 : high,
+          low: isNaN(low) ? 0 : low,
+          close: isNaN(close) ? 0 : close,
+        };
+      }).filter(candle => candle.time > 0); // 유효한 시간만 필터링
 
-      candlestickSeriesRef.current.setData(formattedData);
+      if (formattedData.length > 0) {
+        candlestickSeriesRef.current.setData(formattedData);
+      }
     }
 
     // ��t� x��
