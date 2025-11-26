@@ -12,6 +12,8 @@ export interface Coin {
   volume_24h: number;
   market_cap: number;
   status: 'ACTIVE' | 'PAUSED' | 'DELISTED';
+  min_volatility?: number;
+  max_volatility?: number;
   created_at: string;
   updated_at: string;
 }

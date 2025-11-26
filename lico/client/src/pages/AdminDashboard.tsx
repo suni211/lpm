@@ -22,6 +22,8 @@ const AdminDashboard = () => {
     description: '',
     circulating_supply: '',
     current_price: '',
+    min_volatility: '',
+    max_volatility: '',
   });
 
   useEffect(() => {

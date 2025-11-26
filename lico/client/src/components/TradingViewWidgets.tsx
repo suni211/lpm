@@ -5,14 +5,12 @@ import './TradingViewWidgets.css';
 
 // Ticker Tape 컴포넌트
 export const TickerTape = () => {
-  const [coins, setCoins] = useState<Coin[]>([]);
   const [symbols, setSymbols] = useState<string>('');
 
   useEffect(() => {
     const fetchCoins = async () => {
       try {
         const data = await coinService.getCoins('ACTIVE');
-        setCoins(data);
         // TradingView 심볼 형식으로 변환 (LICO:SYMBOL)
         if (data && data.length > 0) {
           const symbolString = data.map(coin => `LICO:${coin.symbol}`).join(',');
