@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './SoloRank.css';
 
@@ -17,7 +16,6 @@ interface PlayerRanking {
 }
 
 const SoloRank: React.FC = () => {
-  const navigate = useNavigate();
   const [rankings, setRankings] = useState<PlayerRanking[]>([]);
   const [myPlayers, setMyPlayers] = useState<PlayerRanking[]>([]);
   const [loading, setLoading] = useState(true);

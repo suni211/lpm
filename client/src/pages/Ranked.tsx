@@ -131,7 +131,7 @@ const Ranked: React.FC = () => {
                 rankings.map((entry, index) => (
                   <div
                     key={entry.team_id}
-                    className={`ranking-row ${entry.team_id === team?.team_id ? 'my-team' : ''}`}
+                    className={`ranking-row ${entry.team_id === team?.id ? 'my-team' : ''}`}
                   >
                     <div className="col-rank">
                       <span className="rank-number">{index + 1}</span>
