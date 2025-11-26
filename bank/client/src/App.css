@@ -20,6 +20,36 @@
   min-height: 100vh;
   padding: 20px;
   background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
+  color: #fff !important;
+}
+
+.auth-container * {
+  color: #fff !important;
+}
+
+.auth-container a {
+  color: #fff !important;
+}
+
+.auth-container strong {
+  color: #fff !important;
+}
+
+.auth-container small {
+  color: #fff !important;
+}
+
+.auth-container p {
+  color: #fff !important;
+}
+
+.auth-container h1,
+.auth-container h2,
+.auth-container h3,
+.auth-container h4,
+.auth-container h5,
+.auth-container h6 {
+  color: #fff !important;
 }
 
 .auth-card {
