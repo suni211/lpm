@@ -8,7 +8,7 @@ interface DashboardPageProps {
   setAuth: (auth: boolean) => void;
 }
 
-function DashboardPage({ userData, setAuth }: DashboardPageProps) {
+function DashboardPage({ userData }: DashboardPageProps) {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
