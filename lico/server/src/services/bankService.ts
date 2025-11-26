@@ -30,19 +30,36 @@ export const bankService = {
       // 먼저 모든 계좌 조회
       const response = await bankApi.get(`/accounts/minecraft/${username}`);
       
+      // 응답이 없거나 계좌가 없는 경우
+      if (!response.data) {
+        return null;
+      }
+      
       // 주식 계좌(02)가 있으면 우선 반환
-      if (response.data.accounts && Array.isArray(response.data.accounts)) {
+      if (response.data.accounts && Array.isArray(response.data.accounts) && response.data.accounts.length > 0) {
         const stockAccount = response.data.accounts.find((acc: any) => 
           acc.account_type === 'STOCK' || acc.account_number?.startsWith('02-')
         );
         if (stockAccount) {
           return { account: stockAccount };
         }
+        // 주식 계좌가 없으면 첫 번째 계좌 반환
+        return { account: response.data.accounts[0] };
       }
       
-      // 주식 계좌가 없으면 첫 번째 계좌 반환
-      return response.data;
+      // account가 직접 있는 경우
+      if (response.data.account) {
+        return response.data;
+      }
+      
+      // 계좌가 없는 경우
+      return null;
     } catch (error: any) {
+      // 404 오류는 계좌가 없는 것으로 처리
+      if (error.response?.status === 404) {
+        return null;
+      }
+      console.error('BANK 계좌 조회 오류:', error);
       throw new Error(error.response?.data?.error || '계좌 조회 실패');
     }
   },

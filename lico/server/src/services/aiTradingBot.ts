@@ -55,11 +55,11 @@ export class AITradingBot {
         const tradeCount = recentTrades[0]?.count || 0;
         const volume = parseFloat(recentTrades[0]?.volume || 0) || 0;
 
-        // 기본 변동성 범위: 0.01% ~ 5%
-        const minVolatility = 0.0001; // 0.01%
-        const maxVolatility = 0.05; // 5%
+        // 각 코인별 변동성 범위 사용 (설정되지 않으면 기본값: 0.01% ~ 5%)
+        const minVolatility = parseFloat(coin.min_volatility) || 0.0001; // 0.01%
+        const maxVolatility = parseFloat(coin.max_volatility) || 0.05; // 5%
         
-        // 거래가 활발하면 변동성 증가 (최대 5%까지)
+        // 거래가 활발하면 변동성 증가 (최대 maxVolatility까지)
         const baseVolatility = minVolatility + (maxVolatility - minVolatility) * Math.min(tradeCount / 100, 1);
         const dynamicVolatility = Math.min(baseVolatility, maxVolatility);
 

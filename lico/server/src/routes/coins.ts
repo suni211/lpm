@@ -251,6 +251,22 @@ router.patch('/:id', isAdmin, async (req: Request, res: Response) => {
       updates.push('status = ?');
       params.push(status);
     }
+    if (req.body.min_volatility !== undefined) {
+      const minVol = parseFloat(req.body.min_volatility);
+      if (isNaN(minVol) || minVol < 0 || minVol > 1) {
+        return res.status(400).json({ error: '최소 변동성은 0~1 사이의 값이어야 합니다' });
+      }
+      updates.push('min_volatility = ?');
+      params.push(minVol);
+    }
+    if (req.body.max_volatility !== undefined) {
+      const maxVol = parseFloat(req.body.max_volatility);
+      if (isNaN(maxVol) || maxVol < 0 || maxVol > 1) {
+        return res.status(400).json({ error: '최대 변동성은 0~1 사이의 값이어야 합니다' });
+      }
+      updates.push('max_volatility = ?');
+      params.push(maxVol);
+    }
 
     if (updates.length === 0) {
       return res.status(400).json({ error: '업데이트할 필드가 없습니다' });

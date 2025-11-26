@@ -93,17 +93,19 @@ router.post('/login', async (req: Request, res: Response) => {
     const bankUser = bankResponse.user;
 
     // BANK 계좌 정보 조회 (주식 계좌 우선)
-    const accountData = await bankService.getAccountByUsername(bankUser.minecraft_username);
-    
-    if (!accountData.account) {
-      return res.status(404).json({ error: 'BANK 계좌를 찾을 수 없습니다' });
+    let accountData = null;
+    let bankAccount = null;
+    try {
+      accountData = await bankService.getAccountByUsername(bankUser.minecraft_username);
+      bankAccount = accountData?.account || null;
+    } catch (error) {
+      console.error('BANK 계좌 조회 실패:', error);
+      // 계좌가 없어도 로그인은 허용 (나중에 계좌 생성 가능)
     }
-
-    const bankAccount = accountData.account;
     
     // 주식 계좌(02) 여부 확인
-    const isStockAccount = bankAccount.account_type === 'STOCK' || bankAccount.account_number?.startsWith('02-');
-    const requiresStockAccountAgreement = !isStockAccount;
+    const isStockAccount = bankAccount ? (bankAccount.account_type === 'STOCK' || bankAccount.account_number?.startsWith('02-')) : false;
+    const requiresStockAccountAgreement = bankAccount ? !isStockAccount : false;
 
     // 설문조사 완료 여부 확인
     const questionnaires = await query(
@@ -133,7 +135,7 @@ router.post('/login', async (req: Request, res: Response) => {
           user: {
             id: bankUser.id,
             minecraft_username: bankUser.minecraft_username,
-            bank_account_number: bankAccount.account_number,
+            bank_account_number: bankAccount?.account_number || null,
           },
         });
       }
@@ -155,7 +157,7 @@ router.post('/login', async (req: Request, res: Response) => {
         `INSERT INTO user_wallets
          (id, wallet_address, minecraft_username, minecraft_uuid, bank_account_number, questionnaire_completed, recovery_words_hash, address_shown)
          VALUES (?, ?, ?, ?, ?, TRUE, ?, FALSE)`,
-        [walletId, walletAddress, bankUser.minecraft_username, bankUser.minecraft_uuid, bankAccount.account_number, recoveryWordsHash]
+        [walletId, walletAddress, bankUser.minecraft_username, bankUser.minecraft_uuid, bankAccount?.account_number || null, recoveryWordsHash]
       );
 
       wallets = await query('SELECT * FROM user_wallets WHERE id = ?', [walletId]);
@@ -174,14 +176,14 @@ router.post('/login', async (req: Request, res: Response) => {
           id: bankUser.id,
           minecraft_username: bankUser.minecraft_username,
           wallet_address: walletAddress,
-          bank_account_number: bankAccount.account_number,
+          bank_account_number: bankAccount?.account_number || null,
         },
       });
     } else {
       wallet = wallets[0];
       
       // BANK 계좌 번호 동기화
-      if (wallet.bank_account_number !== bankAccount.account_number) {
+      if (bankAccount && wallet.bank_account_number !== bankAccount.account_number) {
         await query(
           'UPDATE user_wallets SET bank_account_number = ? WHERE id = ?',
           [bankAccount.account_number, wallet.id]
@@ -201,7 +203,7 @@ router.post('/login', async (req: Request, res: Response) => {
         id: bankUser.id,
         minecraft_username: bankUser.minecraft_username,
         wallet_address: wallet?.wallet_address || null,
-        bank_account_number: bankAccount.account_number,
+        bank_account_number: bankAccount?.account_number || null,
       },
     });
   } catch (error: any) {
@@ -234,7 +236,7 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
       let bankAccount = null;
       try {
         const accountData = await bankService.getAccountByUsername(req.session.username || '');
-        bankAccount = accountData.account;
+        bankAccount = accountData?.account || null;
       } catch (error) {
         console.error('BANK 계좌 조회 실패:', error);
       }
