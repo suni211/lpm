@@ -5,10 +5,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    charset: 'utf8',
     rollupOptions: {
       output: {
-        charset: 'utf8',
+        // UTF-8 인코딩 보장
+        format: 'es',
       },
     },
   },
