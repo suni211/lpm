@@ -1,7 +1,7 @@
 -- Lico Cryptocurrency Exchange Database Schema
 
-CREATE DATABASE IF NOT EXISTS lico_exchange CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE lico_exchange;
+CREATE DATABASE IF NOT EXISTS lico_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE lico_db;
 
 -- 관리자 계정 테이블
 CREATE TABLE admins (
