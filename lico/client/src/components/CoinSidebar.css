@@ -2,10 +2,10 @@
   background: #1a1d29;
   border-radius: 8px;
   padding: 16px;
-  height: calc(100vh - 120px);
+  height: 100%;
   overflow-y: auto;
-  position: sticky;
-  top: 80px;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-header {

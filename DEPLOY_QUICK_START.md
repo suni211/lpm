@@ -349,10 +349,10 @@ sudo ufw status
 sudo apt-get install -y certbot python3-certbot-nginx
 
 # SSL 인증서 발급 (Bank)
-sudo certbot --nginx -d bank.berrple.com --non-interactive --agree-tos --email your-email@example.com
+sudo certbot --nginx -d bank.berrple.com --non-interactive --agree-tos --email ine158lovely@gmail.com
 
 # SSL 인증서 발급 (Lico)
-sudo certbot --nginx -d lico.berrple.com --non-interactive --agree-tos --email your-email@example.com
+sudo certbot --nginx -d lico.berrple.com --non-interactive --agree-tos --email ine158lovely@gmail.com
 
 # 자동 갱신 테스트
 sudo certbot renew --dry-run

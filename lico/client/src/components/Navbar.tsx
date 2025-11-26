@@ -39,6 +39,14 @@ const Navbar = () => {
               투자내역
             </Link>
           </li>
+          <li>
+            <Link 
+              to="/admin" 
+              className={'navbar-link ' + (isActive('/admin') ? 'active' : '')}
+            >
+              관리자
+            </Link>
+          </li>
         </ul>
       </div>
     </nav>

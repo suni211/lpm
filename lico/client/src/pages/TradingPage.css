@@ -1,21 +1,27 @@
 .trading-page {
   min-height: calc(100vh - 64px);
   background: #0f1117;
-  padding: 24px;
+  padding: 16px;
+  width: 100%;
+  flex: 1;
 }
 
 .trading-container {
-  max-width: 1920px;
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 24px;
+  grid-template-columns: 1fr 350px;
+  gap: 16px;
+  height: calc(100vh - 80px);
 }
 
 .main-content {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .coin-header {
@@ -121,17 +127,23 @@
 
 .trading-panel {
   display: grid;
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: 1fr 420px;
   gap: 16px;
+  flex: 1;
+  min-height: 0;
 }
 
 .orderbook-section,
 .order-form-section {
-  min-height: 600px;
+  min-height: 0;
+  overflow: auto;
 }
 
 .sidebar-content {
   position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .loading-state,
@@ -144,26 +156,41 @@
   font-size: 18px;
 }
 
+@media (max-width: 1600px) {
+  .trading-container {
+    grid-template-columns: 1fr 300px;
+  }
+}
+
 @media (max-width: 1400px) {
   .trading-container {
+    grid-template-columns: 1fr 280px;
+  }
+  
+  .trading-panel {
+    grid-template-columns: 1fr 380px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .trading-container {
     grid-template-columns: 1fr;
+    height: auto;
   }
 
   .sidebar-content {
     order: -1;
+    height: 400px;
   }
-
-  .coin-sidebar {
-    position: relative;
-    top: 0;
-    height: auto;
-    max-height: 400px;
+  
+  .trading-panel {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 1024px) {
-  .trading-panel {
-    grid-template-columns: 1fr;
+  .trading-page {
+    padding: 12px;
   }
 
   .coin-stats {
@@ -171,15 +198,16 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .trading-page {
-    padding: 12px;
+    padding: 8px;
   }
 
   .coin-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+    padding: 16px;
   }
 
   .coin-header-right {
@@ -188,5 +216,10 @@
 
   .coin-stats {
     grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  
+  .trading-panel {
+    gap: 12px;
   }
 }
