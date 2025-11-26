@@ -20,9 +20,8 @@ const AdminDashboard = () => {
     name: '',
     logo_url: '',
     description: '',
-    initial_supply: '',
     circulating_supply: '',
-    initial_price: '',
+    current_price: '',
   });
 
   useEffect(() => {
@@ -105,9 +104,8 @@ const AdminDashboard = () => {
         name: formData.name,
         logo_url: formData.logo_url || null,
         description: formData.description || null,
-        initial_supply: parseInt(formData.initial_supply),
         circulating_supply: parseInt(formData.circulating_supply),
-        initial_price: parseFloat(formData.initial_price),
+        current_price: parseFloat(formData.current_price),
       });
       alert('코인이 성공적으로 생성되었습니다!');
       setShowCreateModal(false);
@@ -128,7 +126,7 @@ const AdminDashboard = () => {
         logo_url: formData.logo_url || null,
         description: formData.description || null,
         circulating_supply: parseInt(formData.circulating_supply),
-        current_price: parseFloat(formData.initial_price),
+        current_price: parseFloat(formData.current_price),
       });
       alert('코인이 성공적으로 수정되었습니다!');
       setEditingCoin(null);
@@ -158,9 +156,8 @@ const AdminDashboard = () => {
       name: coin.name,
       logo_url: coin.logo_url || '',
       description: coin.description || '',
-      initial_supply: coin.initial_supply.toString(),
       circulating_supply: coin.circulating_supply.toString(),
-      initial_price: coin.current_price.toString(),
+      current_price: coin.current_price.toString(),
     });
   };
 
@@ -170,9 +167,8 @@ const AdminDashboard = () => {
       name: '',
       logo_url: '',
       description: '',
-      initial_supply: '',
       circulating_supply: '',
-      initial_price: '',
+      current_price: '',
     });
   };
 
@@ -471,16 +467,6 @@ const AdminDashboard = () => {
                 />
               </div>
               <div className="form-group">
-                <label>초기 발행량 *</label>
-                <input
-                  type="number"
-                  value={formData.initial_supply}
-                  onChange={(e) => setFormData({ ...formData, initial_supply: e.target.value })}
-                  required
-                  min="0"
-                />
-              </div>
-              <div className="form-group">
                 <label>유통량 *</label>
                 <input
                   type="number"
@@ -491,11 +477,11 @@ const AdminDashboard = () => {
                 />
               </div>
               <div className="form-group">
-                <label>초기 가격 (GOLD) *</label>
+                <label>현재 가격 (GOLD) *</label>
                 <input
                   type="number"
-                  value={formData.initial_price}
-                  onChange={(e) => setFormData({ ...formData, initial_price: e.target.value })}
+                  value={formData.current_price}
+                  onChange={(e) => setFormData({ ...formData, current_price: e.target.value })}
                   required
                   min="0"
                   step="0.00000001"
@@ -561,8 +547,8 @@ const AdminDashboard = () => {
                 <label>현재 가격 (GOLD) *</label>
                 <input
                   type="number"
-                  value={formData.initial_price}
-                  onChange={(e) => setFormData({ ...formData, initial_price: e.target.value })}
+                  value={formData.current_price}
+                  onChange={(e) => setFormData({ ...formData, current_price: e.target.value })}
                   required
                   min="0"
                   step="0.00000001"

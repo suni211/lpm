@@ -143,9 +143,8 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
       name,
       logo_url,
       description,
-      initial_supply,
       circulating_supply,
-      initial_price,
+      current_price,
     } = req.body;
 
     // 심볼 중복 확인
@@ -156,6 +155,7 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
     }
 
     const coinId = uuidv4();
+    // initial_supply는 circulating_supply와 동일하게 설정, initial_price는 current_price와 동일하게 설정
     await query(
       `INSERT INTO coins
        (id, symbol, name, logo_url, description, initial_supply, circulating_supply, initial_price, current_price)
@@ -166,10 +166,10 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
         name,
         logo_url || null,
         description || null,
-        initial_supply,
+        circulating_supply, // initial_supply = circulating_supply
         circulating_supply,
-        initial_price,
-        initial_price,
+        current_price, // initial_price = current_price
+        current_price,
       ]
     );
 
