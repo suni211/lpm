@@ -16,7 +16,8 @@
     "react-router-dom": "^7.9.6",
     "socket.io-client": "^4.6.0",
     "recharts": "^2.10.3",
-    "date-fns": "^2.30.0"
+    "date-fns": "^2.30.0",
+    "react-google-recaptcha": "^3.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

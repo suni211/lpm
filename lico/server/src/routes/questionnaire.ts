@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
+import { isAuthenticated } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -20,9 +21,17 @@ const router = express.Router();
  *
  * 총점 90점 이상이면 자동 승인
  */
-router.post('/submit', async (req: Request, res: Response) => {
+router.post('/submit', isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const { minecraft_username, question1_answer, question2_answer, question3_answer } = req.body;
+    // 세션에서 사용자 정보 가져오기
+    const session = (req as any).session;
+    const minecraft_username = session?.username || req.body.minecraft_username;
+    
+    if (!minecraft_username) {
+      return res.status(400).json({ error: '사용자 정보를 찾을 수 없습니다' });
+    }
+
+    const { question1_answer, question2_answer, question3_answer } = req.body;
 
     // 이미 제출했는지 확인
     const existing = await query(
@@ -103,7 +112,47 @@ router.get('/my/:minecraft_username', async (req: Request, res: Response) => {
   }
 });
 
-// 설문조사 승인 여부 확인
+// 설문조사 승인 여부 확인 (현재 로그인한 사용자)
+router.get('/status', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    // 세션에서 사용자 정보 가져오기 (인증 필요)
+    const session = (req as any).session;
+    if (!session || !session.username) {
+      return res.status(401).json({ error: '로그인이 필요합니다' });
+    }
+
+    const minecraft_username = session.username;
+
+    const results = await query(
+      'SELECT is_approved, (question1_score + question2_score + question3_score) as total_score FROM lico_questionnaires WHERE minecraft_username = ?',
+      [minecraft_username]
+    );
+
+    if (results.length === 0) {
+      return res.status(404).json({
+        completed: false,
+        approved: false,
+        message: '설문조사를 먼저 완료해주세요'
+      });
+    }
+
+    const questionnaire = results[0];
+
+    res.json({
+      completed: true,
+      approved: questionnaire.is_approved,
+      total_score: questionnaire.total_score,
+      message: questionnaire.is_approved
+        ? 'LICO 이용이 승인되었습니다'
+        : `설문조사 점수가 부족합니다 (${questionnaire.total_score}/90점)`,
+    });
+  } catch (error) {
+    console.error('승인 확인 오류:', error);
+    res.status(500).json({ error: '승인 확인 실패' });
+  }
+});
+
+// 설문조사 승인 여부 확인 (마인크래프트 닉네임으로)
 router.get('/check/:minecraft_username', async (req: Request, res: Response) => {
   try {
     const { minecraft_username } = req.params;

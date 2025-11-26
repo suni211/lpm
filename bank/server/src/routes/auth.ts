@@ -1,9 +1,13 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import axios from 'axios';
 import { query, pool } from '../database/db';
 import { isAdmin, isAuthenticated } from '../middleware/auth';
 import minecraftService from '../services/minecraftService';
+
+// reCAPTCHA 시크릿 키
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || '6Lc5TxksAAAAAKF4U3NorMIhIiwVD8Wb6uEftmTl';
 
 const router = express.Router();
 
@@ -251,8 +255,34 @@ router.post('/recover-auth-code', async (req: Request, res: Response) => {
       minecraft_uuid,
       security_answer_1,
       security_answer_2,
-      security_answer_3
+      security_answer_3,
+      recaptcha_token
     } = req.body;
+
+    // reCAPTCHA 검증
+    if (!recaptcha_token) {
+      return res.status(400).json({ error: 'reCAPTCHA를 완료해주세요' });
+    }
+
+    try {
+      const recaptchaResponse = await axios.post(
+        'https://www.google.com/recaptcha/api/siteverify',
+        null,
+        {
+          params: {
+            secret: RECAPTCHA_SECRET_KEY,
+            response: recaptcha_token
+          }
+        }
+      );
+
+      if (!recaptchaResponse.data.success) {
+        return res.status(400).json({ error: 'reCAPTCHA 검증에 실패했습니다' });
+      }
+    } catch (recaptchaError) {
+      console.error('reCAPTCHA 검증 오류:', recaptchaError);
+      return res.status(500).json({ error: 'reCAPTCHA 검증 중 오류가 발생했습니다' });
+    }
 
     // 모든 필드 필수
     if (!email || !username || !password || !minecraft_uuid ||

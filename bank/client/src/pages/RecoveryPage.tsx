@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import ReCAPTCHA from 'react-google-recaptcha';
 import api from '../services/api';
+
+// reCAPTCHA 사이트 키
+const RECAPTCHA_SITE_KEY = '6Lc5TxksAAAAAE-Jkq1XR6MXFYIT-qjQ8xhqQuTb';
 
 function RecoveryPage() {
   const [formData, setFormData] = useState({
@@ -15,6 +19,8 @@ function RecoveryPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [newAuthCode, setNewAuthCode] = useState('');
+  const [recaptchaValue, setRecaptchaValue] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,10 +33,31 @@ function RecoveryPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // reCAPTCHA 확인
+    if (!recaptchaValue) {
+      setError('reCAPTCHA를 완료해주세요');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/recover-auth-code', formData);
+      // 최소 5초 로딩 시간 보장
+      const startTime = Date.now();
+      const minLoadingTime = 5000; // 5초
+
+      const response = await api.post('/auth/recover-auth-code', {
+        ...formData,
+        recaptcha_token: recaptchaValue,
+      });
+      
+      // 최소 로딩 시간이 지나지 않았다면 남은 시간만큼 대기
+      const elapsedTime = Date.now() - startTime;
+      if (elapsedTime < minLoadingTime) {
+        await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
+      }
+
       const data = response.data;
 
       if (data.auth_code) {
@@ -38,8 +65,13 @@ function RecoveryPage() {
       } else {
         setError(data.error || '인증 코드 복구에 실패했습니다');
       }
-    } catch (err) {
-      setError('서버 연결에 실패했습니다');
+    } catch (err: any) {
+      setError(err.response?.data?.error || '서버 연결에 실패했습니다');
+      // reCAPTCHA 리셋
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+        setRecaptchaValue(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -207,8 +239,17 @@ function RecoveryPage() {
             </div>
           </div>
 
-          <button type="submit" className="form-button" disabled={loading}>
-            {loading ? '복구 처리 중...' : '인증 코드 복구'}
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <ReCAPTCHA
+              ref={recaptchaRef}
+              sitekey={RECAPTCHA_SITE_KEY}
+              onChange={(value) => setRecaptchaValue(value)}
+              theme="dark"
+            />
+          </div>
+
+          <button type="submit" className="form-button" disabled={loading || !recaptchaValue}>
+            {loading ? '인증 코드 찾는 중...' : '인증 코드 복구'}
           </button>
         </form>
 

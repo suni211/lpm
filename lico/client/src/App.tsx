@@ -9,6 +9,7 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import AdminTradesPage from './pages/AdminTradesPage';
 import LoginPage from './pages/LoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
+import QuestionnairePage from './pages/QuestionnairePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -30,6 +31,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route path="/questionnaire" element={<QuestionnairePage />} />
             <Route
               path="/"
               element={
