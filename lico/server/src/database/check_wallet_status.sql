@@ -11,8 +11,9 @@ SELECT
         ELSE '지갑 있음'
     END AS wallet_status,
     w.wallet_address,
-    w.address_shown AS '주소 표시 여부',
+    COALESCE(w.address_shown, FALSE) AS '주소 표시 여부',
     w.recovery_words_hash IS NOT NULL AS '복구 단어 설정 여부',
+    COALESCE(w.wallet_info_shown, FALSE) AS '안내 표시 여부',
     w.created_at AS '지갑 생성일'
 FROM (
     SELECT DISTINCT minecraft_username 

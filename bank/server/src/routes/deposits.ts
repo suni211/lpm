@@ -6,7 +6,49 @@ import { createNotification } from './notifications';
 
 const router = express.Router();
 
-// 입금 신청
+// 입금 신청 (간단한 버전 - account_id 사용)
+router.post('/', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { account_id, amount } = req.body;
+
+    if (!account_id || !amount) {
+      return res.status(400).json({ error: '계좌 ID와 금액을 입력해주세요' });
+    }
+
+    // 계좌 조회 및 소유자 확인
+    const accounts = await query(
+      'SELECT * FROM accounts WHERE id = ? AND user_id = ? AND status = "ACTIVE"',
+      [account_id, req.session.userId]
+    );
+
+    if (accounts.length === 0) {
+      return res.status(404).json({ error: '계좌를 찾을 수 없습니다' });
+    }
+
+    const account = accounts[0];
+
+    // 입금 신청 생성
+    const requestId = uuidv4();
+    await query(
+      `INSERT INTO deposit_requests
+       (id, account_id, amount, product_type, scheduled_date, contract_expiry, status)
+       VALUES (?, ?, ?, 'REGULAR', NOW(), NULL, 'PENDING')`,
+      [requestId, account.id, amount]
+    );
+
+    const requests = await query('SELECT * FROM deposit_requests WHERE id = ?', [requestId]);
+
+    res.json({
+      success: true,
+      request: requests[0],
+    });
+  } catch (error) {
+    console.error('입금 신청 오류:', error);
+    res.status(500).json({ error: '입금 신청 실패' });
+  }
+});
+
+// 입금 신청 (상세 버전 - account_number 사용)
 router.post('/request', async (req: Request, res: Response) => {
   try {
     const { account_number, amount, product_type, scheduled_date, contract_expiry } = req.body;
