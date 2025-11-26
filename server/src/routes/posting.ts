@@ -16,7 +16,7 @@ router.get('/auctions', isAuthenticated, async (req: Request, res: Response) => 
         pc.power,
         pc.rarity,
         t.team_name as seller_team_name,
-        u.name as seller_name,
+        u.display_name as seller_name,
         (SELECT COUNT(*) FROM auction_bids WHERE auction_id = p.id) as bid_count,
         (SELECT MAX(bid_amount) FROM auction_bids WHERE auction_id = p.id) as highest_bid
       FROM postings p

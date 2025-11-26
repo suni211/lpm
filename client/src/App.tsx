@@ -24,6 +24,7 @@ import Training from './pages/Training';
 import Facility from './pages/Facility';
 import Facilities from './pages/Facilities';
 import './index.css';
+import './styles/dark-theme.css';
 
 function App() {
   return (
