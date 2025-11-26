@@ -36,8 +36,12 @@ const Facilities: React.FC = () => {
       console.log('Facilities response:', response.data);
       setFacilities(response.data.facilities);
       setTeam(response.data.team);
-    } catch (error) {
+    } catch (error: any) {
       console.error('시설 정보 조회 실패:', error);
+      if (error.response?.status === 401) {
+        alert('로그인이 필요합니다. 다시 로그인해주세요.');
+        window.location.href = '/';
+      }
     } finally {
       setLoading(false);
     }
@@ -47,8 +51,12 @@ const Facilities: React.FC = () => {
     try {
       const response = await api.get('/facilities/skill-lab/claim-status');
       setClaimStatus(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('스킬 카드 획득 가능 여부 확인 실패:', error);
+      if (error.response?.status !== 401) {
+        // 401이 아닌 다른 에러만 로그
+        console.error('Claim status error:', error);
+      }
     }
   };
 
