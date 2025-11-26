@@ -19,4 +19,9 @@ export const query = async (sql: string, params?: any[]) => {
   return results as any[];
 };
 
+// 트랜잭션을 위한 연결 가져오기
+export const getConnection = async () => {
+  return await pool.getConnection();
+};
+
 export default pool;

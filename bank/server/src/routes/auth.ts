@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { query } from '../database/db';
+import { query, pool } from '../database/db';
 import { isAdmin, isAuthenticated } from '../middleware/auth';
 import minecraftService from '../services/minecraftService';
 
@@ -80,22 +80,6 @@ router.post('/register', async (req: Request, res: Response) => {
     // UUID 생성
     const userId = crypto.randomUUID();
 
-    // 사용자 생성
-    await query(
-      `INSERT INTO users (
-        id, auth_code, username, password, email, minecraft_username, minecraft_uuid,
-        security_question_1, security_answer_1,
-        security_question_2, security_answer_2,
-        security_question_3, security_answer_3
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        userId, hashedAuthCode, username, hashedPassword, email, minecraft_username, minecraft_uuid,
-        '다니는 학교 또는 다녔던 학교는?', hashedAnswer1,
-        '좋아하는 동물은?', hashedAnswer2,
-        '좋아하는 선수는?', hashedAnswer3
-      ]
-    );
-
     // 계좌번호 생성 (랜덤 16자리: 1234-5678-9012-3456) - 중복 체크
     let accountNumber: string;
     let attempts = 0;
@@ -124,17 +108,40 @@ router.post('/register', async (req: Request, res: Response) => {
     // 계좌 ID 생성
     const accountId = crypto.randomUUID();
 
-    // 계좌 생성
+    // 트랜잭션으로 사용자 및 계좌 생성
+    const connection = await pool.getConnection();
     try {
-      await query(
+      await connection.beginTransaction();
+
+      // 사용자 생성
+      await connection.query(
+        `INSERT INTO users (
+          id, auth_code, username, password, email, minecraft_username, minecraft_uuid,
+          security_question_1, security_answer_1,
+          security_question_2, security_answer_2,
+          security_question_3, security_answer_3
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userId, hashedAuthCode, username, hashedPassword, email, minecraft_username, minecraft_uuid,
+          '다니는 학교 또는 다녔던 학교는?', hashedAnswer1,
+          '좋아하는 동물은?', hashedAnswer2,
+          '좋아하는 선수는?', hashedAnswer3
+        ]
+      );
+
+      // 계좌 생성
+      await connection.query(
         'INSERT INTO accounts (id, user_id, account_number, balance) VALUES (?, ?, ?, 0)',
         [accountId, userId, accountNumber]
       );
+
+      await connection.commit();
     } catch (dbError: any) {
-      // 계좌 생성 실패 시 사용자 삭제 (롤백)
-      await query('DELETE FROM users WHERE id = ?', [userId]);
-      console.error('계좌 생성 실패, 사용자 롤백:', dbError);
+      await connection.rollback();
+      console.error('트랜잭션 롤백:', dbError);
       throw dbError;
+    } finally {
+      connection.release();
     }
 
     res.status(201).json({
