@@ -99,18 +99,8 @@ DB_USER=root
 DB_PASSWORD=ss092888?
 DB_NAME=bank_db
 
-# OAuth (Google) - 실제 값으로 교체 필요
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_CALLBACK_URL=https://bank.berrple.com/auth/google/callback
-
-# OAuth (Kakao) - 실제 값으로 교체 필요
-KAKAO_CLIENT_ID=your_kakao_client_id
-KAKAO_CLIENT_SECRET=your_kakao_client_secret
-KAKAO_CALLBACK_URL=https://bank.berrple.com/auth/kakao/callback
-
 # Session - 강력한 시크릿으로 교체 필요
-SESSION_SECRET=change_this_to_random_32_chars_or_more
+SESSION_SECRET=grejipgjgiwgneipel23
 
 # URLs
 CLIENT_URL=https://bank.berrple.com
@@ -118,7 +108,7 @@ LICO_URL=https://lico.berrple.com
 EOF
 
 # 데이터베이스 스키마 초기화
-mysql -u bank_user -pbank_password_strong_123 bank_db < src/database/schema_mariadb.sql
+mysql -u bank_user -pss092888? bank_db < src/database/schema_mariadb.sql
 
 # TypeScript 빌드
 npm run build
@@ -140,12 +130,12 @@ NODE_ENV=production
 # Database
 DB_HOST=localhost
 DB_PORT=3306
-DB_USER=lico_user
-DB_PASSWORD=lico_password_strong_123
+DB_USER=root
+DB_PASSWORD=ss092888?
 DB_NAME=lico_db
 
 # Session - 강력한 시크릿으로 교체 필요
-SESSION_SECRET=change_this_to_random_32_chars_or_more_lico
+SESSION_SECRET=weffioefoieufjneiofen
 
 # URLs
 CLIENT_URL=https://lico.berrple.com

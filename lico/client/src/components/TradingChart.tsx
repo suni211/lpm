@@ -1,23 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, ISeriesApi } from 'lightweight-charts';
-import { Candle } from '../types';
+import { createChart, ColorType } from 'lightweight-charts';
+import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
+import type { Candle } from '../types';
 import './TradingChart.css';
 
 interface TradingChartProps {
   coinId: string;
-  coinSymbol: string;
+  coinSymbol?: string;
 }
 
 type Interval = '1m' | '1h' | '1d';
 
-const TradingChart = ({ coinId, coinSymbol }: TradingChartProps) => {
+const TradingChart = ({ coinId }: TradingChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const [interval, setInterval] = useState<Interval>('1h');
   const [candles, setCandles] = useState<Candle[]>([]);
 
-  // ”ä pt0 \Ü
+  // ï¿½ï¿½ pt0 \ï¿½
   useEffect(() => {
     const fetchCandles = async () => {
       try {
@@ -36,11 +37,11 @@ const TradingChart = ({ coinId, coinSymbol }: TradingChartProps) => {
     }
   }, [coinId, interval]);
 
-  // (¸ 0T  Åpt¸
+  // (ï¿½ 0T  ï¿½ptï¿½
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // (¸ Ý1
+    // (ï¿½ ï¿½1
     if (!chartRef.current) {
       const chart = createChart(chartContainerRef.current, {
         layout: {
@@ -68,15 +69,15 @@ const TradingChart = ({ coinId, coinSymbol }: TradingChartProps) => {
         borderDownColor: '#ef4444',
         wickUpColor: '#22c55e',
         wickDownColor: '#ef4444',
-      });
+      }) as ISeriesApi<'Candlestick'>;
 
       candlestickSeriesRef.current = candlestickSeries;
     }
 
-    // ”ä pt0 Åpt¸
+    // ï¿½ï¿½ pt0 ï¿½ptï¿½
     if (candlestickSeriesRef.current && candles.length > 0) {
       const formattedData = candles.map((candle) => ({
-        time: new Date(candle.open_time).getTime() / 1000,
+        time: (new Date(candle.open_time).getTime() / 1000) as UTCTimestamp,
         open: Number(candle.open_price),
         high: Number(candle.high_price),
         low: Number(candle.low_price),
@@ -86,7 +87,7 @@ const TradingChart = ({ coinId, coinSymbol }: TradingChartProps) => {
       candlestickSeriesRef.current.setData(formattedData);
     }
 
-    // ¬¬tˆ xäì
+    // ï¿½ï¿½tï¿½ xï¿½ï¿½
     const handleResize = () => {
       if (chartRef.current && chartContainerRef.current) {
         chartRef.current.applyOptions({
@@ -102,7 +103,7 @@ const TradingChart = ({ coinId, coinSymbol }: TradingChartProps) => {
     };
   }, [candles]);
 
-  // ôì¸ ¸È´¸ Ü (¸ p
+  // ï¿½ï¿½ï¿½ ï¿½È´ï¿½ ï¿½ (ï¿½ p
   useEffect(() => {
     return () => {
       if (chartRef.current) {
@@ -120,13 +121,13 @@ const TradingChart = ({ coinId, coinSymbol }: TradingChartProps) => {
             className={interval === '1m' ? 'active' : ''}
             onClick={() => setInterval('1m')}
           >
-            1„
+            1ï¿½
           </button>
           <button
             className={interval === '1h' ? 'active' : ''}
             onClick={() => setInterval('1h')}
           >
-            1Ü
+            1ï¿½
           </button>
           <button
             className={interval === '1d' ? 'active' : ''}

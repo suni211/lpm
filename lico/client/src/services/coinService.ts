@@ -1,5 +1,5 @@
 import api from './api';
-import { Coin, Candle, Trade, Orderbook } from '../types';
+import type { Coin, Candle, Trade, Orderbook } from '../types';
 
 export const coinService = {
   // 모든 코인 목록
