@@ -206,32 +206,18 @@ export class TradingEngine {
         [aiWallet.id, coinId]
       );
 
-      // AI 봇 재고가 부족하면 유통량만큼 보충
-      const aiAvailableAmount = aiBalances.length > 0 
-        ? parseFloat(aiBalances[0].available_amount || '0')
-        : 0;
-
-      // 구매 가능한 양만큼만 판매 (유통량 기준)
-      const sellableQty = Math.min(remainingQty, purchasableQty, aiAvailableAmount);
+      // 구매 가능한 양만큼만 판매 (유통량 기준, AI 봇 재고와 무관)
+      const sellableQty = Math.min(remainingQty, purchasableQty);
       
       if (sellableQty <= 0) {
         throw new Error('유통량이 부족합니다');
       }
 
-      const matchCost = currentPrice * sellableQty;
-      const fee = Math.floor(matchCost * 0.05);
-      const totalRequired = matchCost + fee;
+      // AI 봇 재고가 부족하면 유통량만큼 자동 보충
+      const aiAvailableAmount = aiBalances.length > 0 
+        ? parseFloat(aiBalances[0].available_amount || '0')
+        : 0;
 
-      // 잔액 확인 (이미 사용한 금액 포함)
-      const walletBalance = typeof wallet.gold_balance === 'string' 
-        ? parseFloat(wallet.gold_balance) 
-        : (wallet.gold_balance || 0);
-
-      if (walletBalance < totalCost + totalRequired) {
-        throw new Error('잔액이 부족합니다');
-      }
-
-      // AI 봇 재고가 부족하면 유통량만큼 보충
       if (aiAvailableAmount < sellableQty) {
         const neededAmount = sellableQty - aiAvailableAmount;
         if (aiBalances.length > 0) {
@@ -246,6 +232,19 @@ export class TradingEngine {
             [uuidv4(), aiWallet.id, coinId, neededAmount, currentPrice]
           );
         }
+      }
+
+      const matchCost = currentPrice * sellableQty;
+      const fee = Math.floor(matchCost * 0.05);
+      const totalRequired = matchCost + fee;
+
+      // 잔액 확인 (이미 사용한 금액 포함)
+      const walletBalance = typeof wallet.gold_balance === 'string' 
+        ? parseFloat(wallet.gold_balance) 
+        : (wallet.gold_balance || 0);
+
+      if (walletBalance < totalCost + totalRequired) {
+        throw new Error('잔액이 부족합니다');
       }
 
       // AI 봇과 직접 거래 체결 (executeTrade에서 잔액 차감 처리)
@@ -380,11 +379,11 @@ export class TradingEngine {
                 ? parseFloat(aiBalances[0].available_amount || '0')
                 : 0;
 
-              // 구매 가능한 양만큼만 판매 (유통량 기준)
-              const sellableQty = Math.min(remainingQty, purchasableQty, aiAvailableAmount);
+              // 구매 가능한 양만큼만 판매 (유통량 기준, AI 봇 재고와 무관)
+              const sellableQty = Math.min(remainingQty, purchasableQty);
 
               if (sellableQty > 0) {
-                // AI 봇 재고가 부족하면 유통량만큼 보충
+                // AI 봇 재고가 부족하면 유통량만큼 자동 보충
                 if (aiAvailableAmount < sellableQty) {
                   const neededAmount = sellableQty - aiAvailableAmount;
                   if (aiBalances.length > 0) {

@@ -9,11 +9,14 @@
 }
 
 .order-type-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 8px;
   margin-bottom: 12px;
   flex-shrink: 0;
+}
+
+.order-type-tabs .tab-button {
+  flex: 1;
 }
 
 .tab-button {

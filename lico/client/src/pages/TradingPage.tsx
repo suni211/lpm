@@ -9,8 +9,6 @@ import Orderbook from '../components/Orderbook';
 import OrderForm from '../components/OrderForm';
 import CoinSidebar from '../components/CoinSidebar';
 import TopRankingsTicker from '../components/TopRankingsTicker';
-import RecentTradesWidget from '../components/RecentTradesWidget';
-import PortfolioSummary from '../components/PortfolioSummary';
 import './TradingPage.css';
 
 const TradingPage = () => {
@@ -348,15 +346,7 @@ const TradingPage = () => {
         </div>
 
         <div className="sidebar-content">
-          <div className="sidebar-top">
-            <PortfolioSummary walletAddress={walletAddress} />
-          </div>
-          <div className="sidebar-middle">
-            <RecentTradesWidget coinId={selectedCoin.id} limit={10} />
-          </div>
-          <div className="sidebar-bottom">
-            <CoinSidebar selectedCoinId={selectedCoin.id} />
-          </div>
+          <CoinSidebar selectedCoinId={selectedCoin.id} />
         </div>
       </div>
     </div>
