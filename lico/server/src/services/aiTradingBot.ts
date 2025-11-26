@@ -67,10 +67,28 @@ export class AITradingBot {
         const priceChange = (Math.random() * 2 - 1) * dynamicVolatility;
         const newPrice = currentPrice * (1 + priceChange);
 
-        // 가격 업데이트
+        // 24시간 전 가격 조회 (캔들스틱 데이터에서)
+        const candles24h = await query(
+          `SELECT close_price FROM candles_1h
+           WHERE coin_id = ? AND open_time <= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+           ORDER BY open_time DESC LIMIT 1`,
+          [coin.id]
+        );
+        
+        // 24시간 전 가격이 없으면 initial_price 사용
+        const price24hAgo = candles24h.length > 0 
+          ? parseFloat(candles24h[0].close_price || coin.initial_price)
+          : parseFloat(coin.initial_price || currentPrice);
+        
+        // 24시간 변동률 계산 (%)
+        const priceChange24h = price24hAgo > 0 
+          ? ((newPrice - price24hAgo) / price24hAgo) * 100 
+          : 0;
+
+        // 가격 및 24시간 변동률 업데이트
         await query(
-          'UPDATE coins SET current_price = ? WHERE id = ?',
-          [newPrice, coin.id]
+          'UPDATE coins SET current_price = ?, price_change_24h = ? WHERE id = ?',
+          [newPrice, priceChange24h, coin.id]
         );
 
         // AI 로그 기록

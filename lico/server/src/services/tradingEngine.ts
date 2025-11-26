@@ -260,8 +260,30 @@ export class TradingEngine {
     if (buyOrderId) await this.updateOrderStatus(buyOrderId, quantity);
     if (sellOrderId) await this.updateOrderStatus(sellOrderId, quantity);
 
-    // 코인 현재가 업데이트
-    await query('UPDATE coins SET current_price = ? WHERE id = ?', [price, coinId]);
+    // 24시간 전 가격 조회 (캔들스틱 데이터에서)
+    const candles24h = await query(
+      `SELECT close_price FROM candles_1h
+       WHERE coin_id = ? AND open_time <= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+       ORDER BY open_time DESC LIMIT 1`,
+      [coinId]
+    );
+    
+    // 코인 정보 조회
+    const coins = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
+    const coin = coins[0];
+    
+    // 24시간 전 가격이 없으면 initial_price 사용
+    const price24hAgo = candles24h.length > 0 
+      ? parseFloat(candles24h[0].close_price || coin.initial_price)
+      : parseFloat(coin.initial_price || price);
+    
+    // 24시간 변동률 계산 (%)
+    const priceChange24h = price24hAgo > 0 
+      ? ((price - price24hAgo) / price24hAgo) * 100 
+      : 0;
+
+    // 코인 현재가 및 24시간 변동률 업데이트
+    await query('UPDATE coins SET current_price = ?, price_change_24h = ? WHERE id = ?', [price, priceChange24h, coinId]);
 
     // 캔들스틱 데이터 업데이트
     await this.updateCandlestick(coinId, price, quantity);
