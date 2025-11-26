@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType } from 'lightweight-charts';
-import type { ISeriesApi, UTCTimestamp } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickData, Time, UTCTimestamp } from 'lightweight-charts';
 import type { Candle } from '../types';
 import api from '../services/api';
 import './TradingChart.css';
@@ -12,9 +11,9 @@ interface TradingChartProps {
 
 type Interval = '1m' | '1h' | '1d';
 
-const TradingChart = ({ coinId }: TradingChartProps) => {
+const TradingChart = ({ coinId, coinSymbol }: TradingChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
+  const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const [interval, setInterval] = useState<Interval>('1h');
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -62,57 +61,61 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
 
       chartRef.current = chart;
 
-      // lightweight-charts v5에서는 addSeries를 사용해야 함
+      // 캔들스틱 시리즈 추가 (올바른 방법)
       try {
-        // 타입 오류를 피하기 위해 any로 캐스팅
-        const candlestickSeries = (chartRef.current as any).addSeries({
-          type: 'Candlestick',
+        const candlestickSeries = chart.addCandlestickSeries({
           upColor: '#22c55e',
           downColor: '#ef4444',
           borderUpColor: '#22c55e',
           borderDownColor: '#ef4444',
           wickUpColor: '#22c55e',
           wickDownColor: '#ef4444',
-        }) as ISeriesApi<'Candlestick'>;
+        });
 
         candlestickSeriesRef.current = candlestickSeries;
       } catch (error) {
         console.error('Failed to add candlestick series:', error);
-        // v5 이전 버전 호환성을 위한 폴백
-        if ('addCandlestickSeries' in chartRef.current && typeof (chartRef.current as any).addCandlestickSeries === 'function') {
-          const candlestickSeries = (chartRef.current as any).addCandlestickSeries({
-            upColor: '#22c55e',
-            downColor: '#ef4444',
-            borderUpColor: '#22c55e',
-            borderDownColor: '#ef4444',
-            wickUpColor: '#22c55e',
-            wickDownColor: '#ef4444',
-          }) as ISeriesApi<'Candlestick'>;
-          candlestickSeriesRef.current = candlestickSeries;
-        }
       }
     }
 
     // 차트 데이터 업데이트
     if (candlestickSeriesRef.current && candles.length > 0) {
-      const formattedData = candles.map((candle) => {
-        const open = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
-        const high = typeof candle.high_price === 'string' ? parseFloat(candle.high_price) : (candle.high_price || 0);
-        const low = typeof candle.low_price === 'string' ? parseFloat(candle.low_price) : (candle.low_price || 0);
-        const close = typeof candle.close_price === 'string' ? parseFloat(candle.close_price) : (candle.close_price || 0);
-        
-        return {
-          time: (new Date(candle.open_time).getTime() / 1000) as UTCTimestamp,
-          open: isNaN(open) ? 0 : open,
-          high: isNaN(high) ? 0 : high,
-          low: isNaN(low) ? 0 : low,
-          close: isNaN(close) ? 0 : close,
-        };
-      }).filter(candle => candle.time > 0 && candle.open > 0 && candle.high > 0 && candle.low > 0 && candle.close > 0); // 유효한 데이터만 필터링
+      const formattedData: CandlestickData<Time>[] = candles
+        .map((candle) => {
+          const open = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
+          const high = typeof candle.high_price === 'string' ? parseFloat(candle.high_price) : (candle.high_price || 0);
+          const low = typeof candle.low_price === 'string' ? parseFloat(candle.low_price) : (candle.low_price || 0);
+          const close = typeof candle.close_price === 'string' ? parseFloat(candle.close_price) : (candle.close_price || 0);
+          
+          // 유효성 검사
+          if (isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close) || 
+              open <= 0 || high <= 0 || low <= 0 || close <= 0) {
+            return null;
+          }
+
+          // 시간 변환
+          const timestamp = new Date(candle.open_time).getTime() / 1000;
+          if (isNaN(timestamp) || timestamp <= 0) {
+            return null;
+          }
+
+          return {
+            time: timestamp as UTCTimestamp,
+            open,
+            high,
+            low,
+            close,
+          };
+        })
+        .filter((candle): candle is CandlestickData<Time> => candle !== null);
 
       if (formattedData.length > 0) {
         try {
           candlestickSeriesRef.current.setData(formattedData);
+          // 차트 자동 스케일 조정
+          if (chartRef.current) {
+            chartRef.current.timeScale().fitContent();
+          }
         } catch (error) {
           console.error('Failed to set chart data:', error);
         }
@@ -141,6 +144,7 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
+        candlestickSeriesRef.current = null;
       }
     };
   }, []);
