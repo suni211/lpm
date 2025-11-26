@@ -14,19 +14,42 @@ CREATE TABLE admins (
     INDEX idx_username (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 고객 계좌 테이블 (마인크래프트 닉네임 기반)
+-- 사용자 계정 테이블 (마인크래프트 닉네임 기반 회원가입, 인증 코드 로그인)
+CREATE TABLE users (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    auth_code VARCHAR(255) UNIQUE NOT NULL COMMENT 'bcrypt 해시된 32자 인증 코드 (로그인용)',
+    username VARCHAR(50) UNIQUE NOT NULL COMMENT '복구용 아이디',
+    password VARCHAR(255) NOT NULL COMMENT 'bcrypt 해시된 복구용 비밀번호',
+    email VARCHAR(255) UNIQUE NOT NULL,
+    minecraft_username VARCHAR(16) UNIQUE NOT NULL,
+    minecraft_uuid VARCHAR(36) UNIQUE NOT NULL,
+    security_question_1 VARCHAR(255) NOT NULL COMMENT '보안질문1: 학교',
+    security_answer_1 VARCHAR(255) NOT NULL COMMENT 'bcrypt 해시된 답변1',
+    security_question_2 VARCHAR(255) NOT NULL COMMENT '보안질문2: 좋아하는 동물',
+    security_answer_2 VARCHAR(255) NOT NULL COMMENT 'bcrypt 해시된 답변2',
+    security_question_3 VARCHAR(255) NOT NULL COMMENT '보안질문3: 좋아하는 선수',
+    security_answer_3 VARCHAR(255) NOT NULL COMMENT 'bcrypt 해시된 답변3',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP NULL,
+    status ENUM('ACTIVE', 'SUSPENDED', 'CLOSED') DEFAULT 'ACTIVE',
+    INDEX idx_username (username),
+    INDEX idx_email (email),
+    INDEX idx_minecraft_username (minecraft_username),
+    INDEX idx_minecraft_uuid (minecraft_uuid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 고객 계좌 테이블 (사용자와 연결)
 CREATE TABLE accounts (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) UNIQUE NOT NULL,
     account_number VARCHAR(20) UNIQUE NOT NULL COMMENT '계좌번호 (예: 1234-5678-9012-3456)',
-    minecraft_username VARCHAR(16) UNIQUE NOT NULL,
-    minecraft_uuid VARCHAR(36) UNIQUE,
     balance BIGINT DEFAULT 0,
     status ENUM('ACTIVE', 'SUSPENDED', 'CLOSED') DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX idx_user_id (user_id),
     INDEX idx_account_number (account_number),
-    INDEX idx_username (minecraft_username),
-    INDEX idx_uuid (minecraft_uuid),
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
