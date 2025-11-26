@@ -21,4 +21,22 @@ body {
   min-height: 100vh;
   color: white;
   font-size: 24px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.loading::after {
+  content: '...';
+  animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20% {
+    content: '.';
+  }
+  40% {
+    content: '..';
+  }
+  60%, 100% {
+    content: '...';
+  }
 }

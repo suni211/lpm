@@ -207,8 +207,8 @@ function ScheduledTransfersPage({ userData }: ScheduledTransfersPageProps) {
             {transfers.length === 0 ? (
               <div className="empty-state">예약 이체가 없습니다</div>
             ) : (
-              transfers.map((transfer) => (
-                <div key={transfer.id} className="transfer-card">
+              transfers.map((transfer, index) => (
+                <div key={transfer.id} className="transfer-card stagger-item" style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="transfer-header">
                     <div>
                       <strong>{transfer.from_account_number}</strong> → <strong>{transfer.to_account_number}</strong>

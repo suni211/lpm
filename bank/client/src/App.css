@@ -1,6 +1,9 @@
+@import './styles/animations.css';
+
 .app {
   min-height: 100vh;
   position: relative;
+  animation: fadeIn 0.5s ease-out;
 }
 
 .notification-bell-wrapper {
@@ -25,11 +28,26 @@
   width: 100%;
   max-width: 500px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: scaleIn 0.5s ease-out;
 }
 
 .auth-header {
   text-align: center;
   margin-bottom: 32px;
+}
+
+.auth-logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.auth-logo {
+  max-width: 200px;
+  max-height: 80px;
+  object-fit: contain;
+  animation: scaleIn 0.5s ease-out;
 }
 
 .auth-title {
@@ -79,11 +97,36 @@
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.form-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.form-button:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 .form-button:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.form-button:active {
+  transform: translateY(-1px) scale(0.98);
 }
 
 .form-button:disabled {
@@ -144,6 +187,7 @@
 }
 
 .page-container {
+  animation: fadeIn 0.4s ease-out;
   display: flex;
   min-height: 100vh;
 }
@@ -158,6 +202,7 @@
 .dashboard-container {
   max-width: 1200px;
   margin: 0 auto;
+  animation: fadeIn 0.6s ease-out;
 }
 
 .dashboard-header {

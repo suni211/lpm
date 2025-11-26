@@ -108,8 +108,8 @@ function TransactionsPage({ userData }: TransactionsPageProps) {
             </div>
           ) : (
             <div className="transactions-list">
-              {filteredTransactions.map((transaction) => (
-                <div key={transaction.id} className="transaction-item">
+              {filteredTransactions.map((transaction, index) => (
+                <div key={transaction.id} className="transaction-item stagger-item" style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="transaction-icon">
                     {getTransactionIcon(transaction.transaction_type)}
                   </div>

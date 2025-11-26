@@ -142,12 +142,12 @@ function BudgetsPage({ userData }: BudgetsPageProps) {
             {budgets.length === 0 ? (
               <div className="empty-state">예산이 없습니다</div>
             ) : (
-              budgets.map((budget) => {
+              budgets.map((budget, index) => {
                 const percentage = (budget.current_spent / budget.monthly_limit) * 100;
                 const isOver = budget.current_spent > budget.monthly_limit;
 
                 return (
-                  <div key={budget.id} className="budget-card">
+                  <div key={budget.id} className="budget-card stagger-item" style={{ animationDelay: `${index * 0.1}s` }}>
                     <div className="budget-header">
                       <div>
                         <strong>{budget.category}</strong>

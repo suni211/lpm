@@ -216,8 +216,8 @@ function AutoTransfersPage({ userData }: AutoTransfersPageProps) {
             {rules.length === 0 ? (
               <div className="empty-state">자동 이체 규칙이 없습니다</div>
             ) : (
-              rules.map((rule) => (
-                <div key={rule.id} className="rule-card">
+              rules.map((rule, index) => (
+                <div key={rule.id} className="rule-card stagger-item" style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="rule-header">
                     <div>
                       <strong>{rule.from_account_number}</strong> → <strong>{rule.to_account_number}</strong>

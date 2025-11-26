@@ -7,6 +7,20 @@
   padding: 24px;
 }
 
+.login-logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.login-logo {
+  max-width: 200px;
+  max-height: 80px;
+  object-fit: contain;
+  animation: scaleIn 0.5s ease-out;
+}
+
 .admin-login-container {
   background: #1a1d29;
   border-radius: 12px;

@@ -12,7 +12,19 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/" className="navbar-logo">
-          🚀 CRYP-UP
+          <img 
+            src="/cryptup-logo.png" 
+            alt="CRYP-UP" 
+            className="navbar-logo-img"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              if (target.nextElementSibling) {
+                (target.nextElementSibling as HTMLElement).style.display = 'inline';
+              }
+            }}
+          />
+          <span style={{ display: 'none' }}>🚀 CRYP-UP</span>
         </Link>
         <ul className="navbar-menu">
           <li>

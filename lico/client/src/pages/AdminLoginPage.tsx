@@ -31,6 +31,17 @@ const AdminLoginPage = () => {
   return (
     <div className="admin-login-page">
       <div className="admin-login-container">
+        <div className="login-logo-container">
+          <img 
+            src="/cryptup-logo.png" 
+            alt="CRYP-UP" 
+            className="login-logo"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+        </div>
         <h1>관리자 로그인</h1>
         <p className="login-subtitle">관리자 계정으로 로그인하세요</p>
         

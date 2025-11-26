@@ -27,7 +27,22 @@ function Sidebar({ userData }: SidebarProps) {
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h2>🏦 CRYPBANK</h2>
+        <div className="sidebar-logo-container">
+          <img 
+            src="/cryptbank-logo.png" 
+            alt="CRYPBANK" 
+            className="sidebar-logo"
+            onError={(e) => {
+              // 로고가 없으면 텍스트로 대체
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              if (target.nextElementSibling) {
+                (target.nextElementSibling as HTMLElement).style.display = 'block';
+              }
+            }}
+          />
+          <h2 style={{ display: 'none' }}>🏦 CRYPBANK</h2>
+        </div>
         {userData && (
           <p className="sidebar-user">
             {userData.minecraft_username}

@@ -32,6 +32,17 @@ const LoginPage = () => {
   return (
     <div className="login-page">
       <div className="login-container">
+        <div className="login-logo-container">
+          <img 
+            src="/cryptup-logo.png" 
+            alt="CRYP-UP" 
+            className="login-logo"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+        </div>
         <h1>LICO 거래소 로그인</h1>
         <p className="login-subtitle">BANK 인증 코드를 입력하세요</p>
         

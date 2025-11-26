@@ -5,6 +5,7 @@
   background: white;
   border-radius: 16px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-out;
 }
 
 .transactions-container h1 {
@@ -63,11 +64,18 @@
   background: #f9f9f9;
   border-radius: 12px;
   border-left: 4px solid #667eea;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  animation: slideIn 0.4s ease-out;
+  cursor: pointer;
 }
 
 .transaction-item:hover {
   background: #f0f0f0;
+  transform: translateX(8px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.transaction-item:active {
   transform: translateX(4px);
 }
 
@@ -81,6 +89,12 @@
   background: white;
   border-radius: 12px;
   flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.transaction-item:hover .transaction-icon {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .transaction-details {

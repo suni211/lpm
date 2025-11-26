@@ -156,12 +156,12 @@ function SavingsGoalsPage({ userData }: SavingsGoalsPageProps) {
             {goals.length === 0 ? (
               <div className="empty-state">목표 저축이 없습니다</div>
             ) : (
-              goals.map((goal) => {
+              goals.map((goal, index) => {
                 const percentage = (goal.current_amount / goal.target_amount) * 100;
                 const isCompleted = goal.is_completed;
 
                 return (
-                  <div key={goal.id} className={`goal-card ${isCompleted ? 'completed' : ''}`}>
+                  <div key={goal.id} className={`goal-card stagger-item ${isCompleted ? 'completed' : ''}`} style={{ animationDelay: `${index * 0.1}s` }}>
                     <div className="goal-header">
                       <div>
                         <h3>{goal.title}</h3>

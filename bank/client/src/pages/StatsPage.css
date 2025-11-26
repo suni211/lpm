@@ -5,6 +5,7 @@
   background: white;
   border-radius: 16px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-out;
 }
 
 .stats-header {
@@ -33,16 +34,39 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.period-selector button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s, height 0.4s;
+}
+
+.period-selector button:hover::before {
+  width: 200px;
+  height: 200px;
 }
 
 .period-selector button:hover {
   background: #e0e0e0;
+  transform: translateY(-2px);
 }
 
 .period-selector button.active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  animation: pulse 2s ease-in-out infinite;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .stats-summary {
@@ -56,6 +80,14 @@
   padding: 24px;
   border-radius: 12px;
   text-align: center;
+  transition: all 0.3s ease;
+  animation: scaleIn 0.4s ease-out;
+  cursor: pointer;
+}
+
+.summary-card:hover {
+  transform: translateY(-8px) scale(1.05);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
 }
 
 .summary-card.income {
@@ -101,6 +133,13 @@
   padding: 24px;
   background: #f9f9f9;
   border-radius: 12px;
+  transition: all 0.3s ease;
+  animation: slideUp 0.5s ease-out;
+}
+
+.chart-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-5px);
 }
 
 .chart-card h3 {
@@ -128,6 +167,15 @@
   padding: 20px;
   background: #f9f9f9;
   border-radius: 12px;
+  transition: all 0.3s ease;
+  animation: slideIn 0.4s ease-out;
+  cursor: pointer;
+}
+
+.budget-stat-card:hover {
+  transform: translateX(8px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  background: #fff;
 }
 
 .budget-stat-header {
@@ -163,7 +211,20 @@
 .budget-stat-fill {
   height: 100%;
   background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
-  transition: width 0.3s;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.budget-stat-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
 }
 
 .budget-stat-fill.over {

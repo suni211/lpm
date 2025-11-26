@@ -51,10 +51,23 @@ function DashboardPage({ userData }: DashboardPageProps) {
       <div className="page-content">
         <div className="dashboard-container" style={{ padding: '40px', background: 'white', borderRadius: '16px', minHeight: '400px' }}>
           <div className="dashboard-header" style={{ marginBottom: '32px' }}>
-            <h1 className="dashboard-title" style={{ fontSize: '32px', margin: '0 0 8px 0', color: '#333' }}>대시보드</h1>
-            <p style={{ color: '#666', fontSize: '16px', margin: 0 }}>
-              환영합니다, <strong>{userData.minecraft_username || userData.username || '사용자'}</strong>님
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+              <img 
+                src="/cryptbank-logo.png" 
+                alt="CRYPBANK" 
+                className="dashboard-header-logo"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+              <div>
+                <h1 className="dashboard-title" style={{ fontSize: '32px', margin: '0 0 8px 0', color: '#333' }}>대시보드</h1>
+                <p style={{ color: '#666', fontSize: '16px', margin: 0 }}>
+                  환영합니다, <strong>{userData.minecraft_username || userData.username || '사용자'}</strong>님
+                </p>
+              </div>
+            </div>
           </div>
 
           {loading ? (
@@ -86,8 +99,9 @@ function DashboardPage({ userData }: DashboardPageProps) {
                 </div>
               ) : (
                 <div className="accounts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-                  {accounts.map((account: any) => (
-                    <div key={account.id} className="account-card" style={{ 
+                  {accounts.map((account: any, index: number) => (
+                    <div key={account.id} className="account-card stagger-item" style={{
+                      animationDelay: `${index * 0.1}s`, 
                       background: 'linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%)',
                       padding: '24px',
                       borderRadius: '12px',

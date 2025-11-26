@@ -38,7 +38,21 @@ function LoginPage({ setAuth }: LoginPageProps) {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1 className="auth-title">🏦 CRYPBANK</h1>
+          <div className="auth-logo-container">
+            <img 
+              src="/cryptbank-logo.png" 
+              alt="CRYPBANK" 
+              className="auth-logo"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                if (target.nextElementSibling) {
+                  (target.nextElementSibling as HTMLElement).style.display = 'block';
+                }
+              }}
+            />
+            <h1 className="auth-title" style={{ display: 'none' }}>🏦 CRYPBANK</h1>
+          </div>
           <p className="auth-subtitle">크립뱅크에 오신 것을 환영합니다</p>
         </div>
 

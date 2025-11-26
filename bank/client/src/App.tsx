@@ -16,6 +16,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import NotificationBell from './components/NotificationBell';
 import api from './services/api';
 import './App.css';
+import './styles/animations.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
