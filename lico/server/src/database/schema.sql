@@ -62,6 +62,7 @@ CREATE TABLE user_wallets (
     questionnaire_completed BOOLEAN DEFAULT FALSE COMMENT '설문조사 완료 여부',
     recovery_words_hash VARCHAR(64) NULL COMMENT '복구 단어 해시 (SHA256)',
     address_shown BOOLEAN DEFAULT FALSE COMMENT '지갑 주소 표시 여부 (한 번만 표시)',
+    wallet_info_shown BOOLEAN DEFAULT FALSE COMMENT '지갑 생성 안내 표시 여부 (1회만 표시)',
     status ENUM('ACTIVE', 'SUSPENDED', 'CLOSED') DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

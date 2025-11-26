@@ -158,12 +158,14 @@ router.post('/login', async (req: Request, res: Response) => {
       wallet = wallets[0];
       
       // 지갑 주소와 복구 단어를 응답에 포함 (한 번만 표시)
+      // wallet_info_shown은 FALSE로 유지 (지갑 생성 페이지에서 표시 후 TRUE로 변경)
       return res.json({
         success: true,
         requires_questionnaire: false,
         wallet_created: true,
         wallet_address: walletAddress,
         recovery_words: recoveryWords, // 한 번만 표시
+        show_wallet_info: true, // 지갑 생성 안내 표시 플래그
         user: {
           id: bankUser.id,
           minecraft_username: bankUser.minecraft_username,
@@ -183,9 +185,13 @@ router.post('/login', async (req: Request, res: Response) => {
       }
     }
 
+    // 지갑이 있고 안내를 아직 보지 않은 경우에만 안내 표시
+    const showWalletInfo = wallet && !wallet.wallet_info_shown && !wallet.address_shown;
+
     res.json({
       success: true,
       requires_questionnaire: !isQuestionnaireApproved,
+      show_wallet_info: showWalletInfo, // 재로그인 시 1회만 표시
       user: {
         id: bankUser.id,
         minecraft_username: bankUser.minecraft_username,

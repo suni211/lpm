@@ -25,13 +25,20 @@ const LoginPage = () => {
           return;
         }
         
-        // 지갑 생성 여부 확인
+        // 지갑 생성 여부 확인 (새로 생성된 경우)
         if (response.data.wallet_created && response.data.wallet_address && response.data.recovery_words) {
           // 지갑이 방금 생성된 경우 복구 단어 표시 페이지로 이동
           // 세션 스토리지에 임시 저장 (한 번만 표시)
           sessionStorage.setItem('wallet_address', response.data.wallet_address);
           sessionStorage.setItem('recovery_words', JSON.stringify(response.data.recovery_words));
           navigate('/wallet-created');
+          return;
+        }
+        
+        // 재로그인 시 지갑 안내 표시 (1회만)
+        if (response.data.show_wallet_info) {
+          // 안내 페이지로 이동 (지갑은 있지만 안내를 아직 보지 않은 경우)
+          navigate('/wallet-info');
           return;
         }
         

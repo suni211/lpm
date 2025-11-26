@@ -311,13 +311,37 @@ router.post('/mark-address-shown', isAuthenticated, async (req: Request, res: Re
     }
 
     await query(
-      'UPDATE user_wallets SET address_shown = TRUE WHERE minecraft_username = ?',
+      'UPDATE user_wallets SET address_shown = TRUE, wallet_info_shown = TRUE WHERE minecraft_username = ?',
       [req.session.username]
     );
 
     res.json({ success: true, message: '지갑 주소 표시 완료' });
   } catch (error) {
     console.error('지갑 주소 표시 플래그 업데이트 오류:', error);
+    res.status(500).json({ error: '업데이트 실패' });
+  }
+});
+
+// 지갑 안내 표시 플래그 업데이트 (안내만 본 경우)
+router.post('/mark-info-shown', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const wallets = await query(
+      'SELECT * FROM user_wallets WHERE minecraft_username = ?',
+      [req.session.username]
+    );
+
+    if (wallets.length === 0) {
+      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+    }
+
+    await query(
+      'UPDATE user_wallets SET wallet_info_shown = TRUE WHERE minecraft_username = ?',
+      [req.session.username]
+    );
+
+    res.json({ success: true, message: '안내 표시 완료' });
+  } catch (error) {
+    console.error('지갑 안내 표시 플래그 업데이트 오류:', error);
     res.status(500).json({ error: '업데이트 실패' });
   }
 });

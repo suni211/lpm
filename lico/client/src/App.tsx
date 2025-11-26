@@ -12,6 +12,7 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import QuestionnairePage from './pages/QuestionnairePage';
 import WalletCreatedPage from './pages/WalletCreatedPage';
 import WalletRecoveryPage from './pages/WalletRecoveryPage';
+import WalletInfoPage from './pages/WalletInfoPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -54,6 +55,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <WalletRecoveryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wallet-info"
+              element={
+                <ProtectedRoute skipQuestionnaireCheck>
+                  <WalletInfoPage />
                 </ProtectedRoute>
               }
             />
