@@ -71,7 +71,7 @@ function LoginPage({ setAuth }: LoginPageProps) {
               maxLength={32}
               required
             />
-            <small style={{ color: '#9ca3af', fontSize: '14px' }}>
+            <small style={{ color: '#fff', fontSize: '14px' }}>
               {authCode.length}/32자
             </small>
           </div>
@@ -84,7 +84,7 @@ function LoginPage({ setAuth }: LoginPageProps) {
         <div className="form-links">
           <Link to="/register" className="form-link">회원가입</Link>
           <Link to="/recovery" className="form-link">인증 코드 복구</Link>
-          <Link to="/admin-login" className="form-link" style={{ color: '#ef4444', fontWeight: 'bold' }}>관리자 로그인</Link>
+          <Link to="/admin-login" className="form-link" style={{ color: '#fff', fontWeight: 'bold' }}>관리자 로그인</Link>
         </div>
       </div>
     </div>

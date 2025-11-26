@@ -72,7 +72,7 @@ function RecoveryPage() {
           <div className="auth-code-display">
             <label className="form-label">새 인증 코드</label>
             <div className="auth-code-value">{newAuthCode}</div>
-            <p style={{ marginTop: '12px', fontSize: '14px', color: '#fca5a5' }}>
+            <p style={{ marginTop: '12px', fontSize: '14px', color: '#fff' }}>
               ⚠️ 이 코드는 다시 확인할 수 없습니다. 반드시 복사하여 안전한 곳에 보관하세요!
             </p>
           </div>
@@ -162,8 +162,8 @@ function RecoveryPage() {
               placeholder="예: 069a79f444e94726a5befca90e38aaf5"
               required
             />
-            <small style={{ color: '#9ca3af', fontSize: '14px' }}>
-              UUID는 <a href="https://mcuuid.net/" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>mcuuid.net</a>에서 확인 가능합니다
+            <small style={{ color: '#fff', fontSize: '14px' }}>
+              UUID는 <a href="https://mcuuid.net/" target="_blank" rel="noopener noreferrer" style={{ color: '#fff' }}>mcuuid.net</a>에서 확인 가능합니다
             </small>
           </div>
 

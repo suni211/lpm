@@ -45,15 +45,15 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
 
     // 주문 생성 및 매칭 (tradingEngine 사용)
     let orderId: string;
-    let matchResult: any;
+    let matchResult: { matched: number; remaining: number };
 
     try {
       if (order_method === 'MARKET') {
         // 시장가 주문: 즉시 매칭
         if (order_type === 'BUY') {
-          matchResult = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'MARKET', quantity);
+          matchResult = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'MARKET', quantity) as { matched: number; remaining: number };
         } else {
-          matchResult = await tradingEngine.processSellOrder(wallet.id, coin_id, 'MARKET', quantity);
+          matchResult = await tradingEngine.processSellOrder(wallet.id, coin_id, 'MARKET', quantity) as { matched: number; remaining: number };
         }
 
         // 시장가 주문 결과 처리
@@ -66,9 +66,9 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
       } else {
         // 지정가 주문: tradingEngine 사용
         if (order_type === 'BUY') {
-          orderId = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'LIMIT', quantity, orderPrice);
+          orderId = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'LIMIT', quantity, orderPrice) as string;
         } else {
-          orderId = await tradingEngine.processSellOrder(wallet.id, coin_id, 'LIMIT', quantity, orderPrice);
+          orderId = await tradingEngine.processSellOrder(wallet.id, coin_id, 'LIMIT', quantity, orderPrice) as string;
         }
 
         // 블록체인 거래 기록 생성

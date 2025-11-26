@@ -74,13 +74,13 @@ function RegisterPage() {
           <div className="auth-code-display">
             <label className="form-label">인증 코드 (로그인 시 필요)</label>
             <div className="auth-code-value">{authCode}</div>
-            <p style={{ marginTop: '12px', fontSize: '14px', color: '#666' }}>
+            <p style={{ marginTop: '12px', fontSize: '14px', color: '#fff' }}>
               ⚠️ 이 코드는 다시 확인할 수 없습니다. 반드시 복사하여 안전한 곳에 보관하세요!
             </p>
           </div>
 
           <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-            <p><strong>계좌번호:</strong> {accountNumber}</p>
+            <p style={{ color: '#fff' }}><strong>계좌번호:</strong> {accountNumber}</p>
           </div>
 
           <button
