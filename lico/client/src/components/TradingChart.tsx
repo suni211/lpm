@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType } from 'lightweight-charts';
-import type { ISeriesApi, UTCTimestamp } from 'lightweight-charts';
+import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import type { Candle } from '../types';
 import './TradingChart.css';
 
@@ -11,9 +11,14 @@ interface TradingChartProps {
 
 type Interval = '1m' | '1h' | '1d';
 
+// IChartApi에 addCandlestickSeries 메서드가 포함된 확장 타입
+interface ChartApiWithCandlestick extends IChartApi {
+  addCandlestickSeries(options?: any): ISeriesApi<'Candlestick'>;
+}
+
 const TradingChart = ({ coinId }: TradingChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
+  const chartRef = useRef<ChartApiWithCandlestick | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const [interval, setInterval] = useState<Interval>('1h');
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -60,16 +65,16 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
         },
       });
 
-      chartRef.current = chart;
+      chartRef.current = chart as ChartApiWithCandlestick;
 
-      const candlestickSeries = chart.addCandlestickSeries({
+      const candlestickSeries = chartRef.current.addCandlestickSeries({
         upColor: '#22c55e',
         downColor: '#ef4444',
         borderUpColor: '#22c55e',
         borderDownColor: '#ef4444',
         wickUpColor: '#22c55e',
         wickDownColor: '#ef4444',
-      }) as ISeriesApi<'Candlestick'>;
+      });
 
       candlestickSeriesRef.current = candlestickSeries;
     }
