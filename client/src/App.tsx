@@ -20,8 +20,7 @@ import Cards from './pages/Cards';
 import Fusion from './pages/Fusion';
 import Training from './pages/Training';
 import Facility from './pages/Facility';
-import './styles/dark-theme.css';
-import './App.css';
+import './index.css';
 
 function App() {
   return (
