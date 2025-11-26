@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { query } from '../database/db';
-import { isAdmin } from '../middleware/auth';
+import { isAdmin, isAuthenticated } from '../middleware/auth';
 
 const router = express.Router();
 

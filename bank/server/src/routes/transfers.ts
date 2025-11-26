@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
-import { isAdmin } from '../middleware/auth';
+import { isAdmin, isAuthenticated } from '../middleware/auth';
 import accountNumberService from '../services/accountNumberService';
 import { createNotification } from './notifications';
 

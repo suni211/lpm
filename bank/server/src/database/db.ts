@@ -24,4 +24,5 @@ export const getConnection = async () => {
   return await pool.getConnection();
 };
 
+export { pool };
 export default pool;
