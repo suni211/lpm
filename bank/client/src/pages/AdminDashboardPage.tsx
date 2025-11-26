@@ -9,9 +9,6 @@ interface AdminDashboardPageProps {
 
 function AdminDashboardPage({ setAuth }: AdminDashboardPageProps) {
   const [stats, setStats] = useState<any>(null);
-  const [pendingDeposits, setPendingDeposits] = useState<any[]>([]);
-  const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
-  const [pendingTransfers, setPendingTransfers] = useState<any[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -22,18 +19,10 @@ function AdminDashboardPage({ setAuth }: AdminDashboardPageProps) {
 
   const fetchDashboardData = async () => {
     try {
-      const [dashboardRes, depositsRes, withdrawalsRes, transfersRes] = await Promise.all([
-        api.get('/api/admin/dashboard'),
-        api.get('/api/deposits/pending'),
-        api.get('/api/withdrawals/pending'),
-        api.get('/api/transfers/pending')
-      ]);
+      const dashboardRes = await api.get('/api/admin/dashboard');
 
       setStats(dashboardRes.data.stats);
       setRecentTransactions(dashboardRes.data.recentTransactions || []);
-      setPendingDeposits(depositsRes.data.deposits || []);
-      setPendingWithdrawals(withdrawalsRes.data.withdrawals || []);
-      setPendingTransfers(transfersRes.data.transfers || []);
     } catch (error: any) {
       if (error.response?.status === 401) {
         setAuth(false);
