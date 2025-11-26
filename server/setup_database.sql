@@ -48,6 +48,7 @@ DROP TABLE IF EXISTS sponsors;
 DROP TABLE IF EXISTS player_traits;
 DROP TABLE IF EXISTS trait_acquisition_rates;
 DROP TABLE IF EXISTS traits;
+DROP TABLE IF EXISTS league_schedule;
 DROP TABLE IF EXISTS promotion_matches;
 DROP TABLE IF EXISTS playoff_matches;
 DROP TABLE IF EXISTS league_matches;
@@ -80,6 +81,9 @@ SOURCE src/database/facility_system.sql;
 
 -- 6. 랭크 리그 시스템
 SOURCE src/database/ranked_system.sql;
+
+-- 6-1. 리그 랭크 시스템 (새로운 4-tier 리그)
+SOURCE src/database/league_ranked_system.sql;
 
 -- 7. 솔랭 시스템
 SOURCE src/database/solo_rank_system.sql;

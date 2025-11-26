@@ -15,6 +15,7 @@ import Fandom from './pages/Fandom';
 import Ranked from './pages/Ranked';
 import SoloRank from './pages/SoloRank';
 import Auction from './pages/Auction';
+import League from './pages/League';
 import './App.css';
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
             <Route path="/ranked" element={<Ranked />} />
             <Route path="/solo-rank" element={<SoloRank />} />
             <Route path="/auction" element={<Auction />} />
+            <Route path="/league" element={<League />} />
           </Routes>
         </div>
       </AuthProvider>

@@ -25,6 +25,8 @@ import trainingRoutes from './routes/training';
 import facilityRoutes from './routes/facility';
 import sponsorRoutes from './routes/sponsors';
 import fusionRoutes from './routes/fusion';
+import leagueRoutes from './routes/league';
+import { startSoloRankCron } from './services/soloRankCron';
 
 // Load environment variables
 dotenv.config();
@@ -148,6 +150,7 @@ app.use('/api/training', trainingRoutes);
 app.use('/api/facility', facilityRoutes);
 app.use('/api/sponsor', sponsorRoutes);
 app.use('/api/fusion', fusionRoutes);
+app.use('/api/league', leagueRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {
@@ -168,6 +171,9 @@ httpServer.listen(PORT, () => {
 ║  🗄️  Database: MariaDB                 ║
 ╚═══════════════════════════════════════╝
   `);
+
+  // 솔로랭크 크론 작업 시작
+  startSoloRankCron();
 });
 
 // Graceful shutdown

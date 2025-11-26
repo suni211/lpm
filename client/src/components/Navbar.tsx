@@ -44,7 +44,7 @@ const Navbar: React.FC = () => {
       icon: '⚔️',
       children: [
         { label: '랭크 경기', path: '/match', icon: '🎯' },
-        { label: '랭크 리그', path: '/ranked', icon: '🏆' },
+        { label: '리그 시스템', path: '/league', icon: '🏆' },
         { label: '솔로 랭크', path: '/solo-rank', icon: '⭐' },
       ],
     },
