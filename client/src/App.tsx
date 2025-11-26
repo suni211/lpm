@@ -16,6 +16,11 @@ import Ranked from './pages/Ranked';
 import SoloRank from './pages/SoloRank';
 import Auction from './pages/Auction';
 import League from './pages/League';
+import Cards from './pages/Cards';
+import Fusion from './pages/Fusion';
+import Training from './pages/Training';
+import Facility from './pages/Facility';
+import './styles/theme.css';
 import './App.css';
 
 function App() {
@@ -40,6 +45,10 @@ function App() {
             <Route path="/solo-rank" element={<SoloRank />} />
             <Route path="/auction" element={<Auction />} />
             <Route path="/league" element={<League />} />
+            <Route path="/cards" element={<Cards />} />
+            <Route path="/fusion" element={<Fusion />} />
+            <Route path="/training" element={<Training />} />
+            <Route path="/facility" element={<Facility />} />
           </Routes>
         </div>
       </AuthProvider>
