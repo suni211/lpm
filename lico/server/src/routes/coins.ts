@@ -11,12 +11,13 @@ const router = express.Router();
 // 모든 코인 목록 조회
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { status = 'ACTIVE' } = req.query;
+    const { status } = req.query;
 
     let sql = 'SELECT * FROM coins';
     const params: any[] = [];
 
-    if (status) {
+    // status가 명시적으로 전달된 경우에만 필터링 (없으면 모든 코인 조회)
+    if (status && status !== 'ALL') {
       sql += ' WHERE status = ?';
       params.push(status);
     }
@@ -25,7 +26,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     const coins = await query(sql, params);
 
-    res.json({ coins });
+    res.json({ coins: coins || [] });
   } catch (error) {
     console.error('코인 목록 조회 오류:', error);
     res.status(500).json({ error: '코인 목록 조회 실패' });

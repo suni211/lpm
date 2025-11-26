@@ -40,13 +40,16 @@ const AdminDashboard = () => {
 
   const fetchCoins = async () => {
     try {
-      const data = await coinService.getCoins();
+      // 관리자 대시보드에서는 모든 코인 조회 (status 파라미터 없음)
+      const response = await api.get('/coins');
+      const data = response.data.coins || [];
       setCoins(data);
       if (data.length > 0 && !selectedCoin) {
         setSelectedCoin(data[0].id);
       }
     } catch (error) {
       console.error('코인 목록 조회 실패:', error);
+      setCoins([]);
     } finally {
       setLoading(false);
     }
@@ -274,45 +277,59 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {coins.map((coin) => (
-                <tr key={coin.id}>
-                  <td>
-                    <div className="coin-cell">
-                      {coin.logo_url && (
-                        <img src={coin.logo_url} alt={coin.symbol} className="coin-table-logo" />
-                      )}
-                      <span className="coin-symbol-text">{coin.symbol}</span>
-                    </div>
-                  </td>
-                  <td>{coin.name}</td>
-                  <td>{formatNumber(coin.current_price)} G</td>
-                  <td>{formatNumber(coin.circulating_supply)}</td>
-                  <td>{formatNumber(coin.market_cap)} G</td>
-                  <td>
-                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>
-                      {coin.min_volatility ? (parseFloat(coin.min_volatility.toString()) * 100).toFixed(4) : '0.01'}% ~ {coin.max_volatility ? (parseFloat(coin.max_volatility.toString()) * 100).toFixed(2) : '5.00'}%
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`status-badge ${coin.status.toLowerCase()}`}>
-                      {coin.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="edit-button" onClick={() => handleEditClick(coin)}>
-                        수정
-                      </button>
-                      <button
-                        className="delete-button"
-                        onClick={() => handleDeleteCoin(coin.id)}
-                      >
-                        삭제
-                      </button>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                    로딩 중...
                   </td>
                 </tr>
-              ))}
+              ) : coins.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                    등록된 코인이 없습니다
+                  </td>
+                </tr>
+              ) : (
+                coins.map((coin) => (
+                  <tr key={coin.id}>
+                    <td>
+                      <div className="coin-cell">
+                        {coin.logo_url && (
+                          <img src={coin.logo_url} alt={coin.symbol} className="coin-table-logo" />
+                        )}
+                        <span className="coin-symbol-text">{coin.symbol}</span>
+                      </div>
+                    </td>
+                    <td>{coin.name}</td>
+                    <td>{formatNumber(coin.current_price)} G</td>
+                    <td>{formatNumber(coin.circulating_supply)}</td>
+                    <td>{formatNumber(coin.market_cap)} G</td>
+                    <td>
+                      <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                        {coin.min_volatility ? (parseFloat(coin.min_volatility.toString()) * 100).toFixed(4) : '0.01'}% ~ {coin.max_volatility ? (parseFloat(coin.max_volatility.toString()) * 100).toFixed(2) : '5.00'}%
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`status-badge ${coin.status.toLowerCase()}`}>
+                        {coin.status}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button className="edit-button" onClick={() => handleEditClick(coin)}>
+                          수정
+                        </button>
+                        <button
+                          className="delete-button"
+                          onClick={() => handleDeleteCoin(coin.id)}
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
