@@ -1,23 +1,26 @@
 #!/bin/bash
-# SSL options-ssl-nginx.conf 중복 오류 수동 해결 스크립트
+# SSL 중복 오류 최종 해결 스크립트
 
-echo "SSL options-ssl-nginx.conf 중복 오류를 수정합니다..."
+echo "SSL 중복 오류를 최종적으로 해결합니다..."
 
-# 1. 파일 백업
-echo "파일 백업 중..."
-sudo cp /etc/letsencrypt/options-ssl-nginx.conf /etc/letsencrypt/options-ssl-nginx.conf.backup.$(date +%Y%m%d_%H%M%S)
-
-# 2. 파일 내용 확인
-echo "현재 파일 내용:"
-sudo cat /etc/letsencrypt/options-ssl-nginx.conf
-echo ""
+# 1. 모든 Nginx 설정 파일에서 ssl_session_timeout 검색
+echo "모든 Nginx 설정 파일에서 ssl_session_timeout 검색 중..."
+echo "---"
+sudo grep -rn "ssl_session_timeout" /etc/nginx/ 2>/dev/null
 echo "---"
 
-# 3. 중복된 ssl_session_timeout 제거
-echo "중복된 ssl_session_timeout 제거 중..."
+# 2. Lico Nginx 설정 파일에서 ssl_session_timeout 제거
+echo "Lico Nginx 설정 파일 확인 중..."
+if [ -f /etc/nginx/sites-available/lico ]; then
+    echo "Lico 설정 파일에서 ssl_session_timeout 제거 중..."
+    sudo sed -i '/ssl_session_timeout/d' /etc/nginx/sites-available/lico
+    sudo sed -i '/ssl_session_cache/d' /etc/nginx/sites-available/lico
+    sudo sed -i '/ssl_session_tickets/d' /etc/nginx/sites-available/lico
+fi
 
-# 임시 파일 생성
-sudo cat > /tmp/options-ssl-nginx.conf.fixed <<'EOF'
+# 3. options-ssl-nginx.conf 파일을 다시 확인하고 완전히 교체
+echo "options-ssl-nginx.conf 파일 완전 교체 중..."
+sudo tee /etc/letsencrypt/options-ssl-nginx.conf > /dev/null <<'EOF'
 # This file contains important security parameters. If you modify this file
 # manually, Certbot will be unable to automatically provide future security
 # updates. Instead, Certbot will print and log an error message with a path to
@@ -35,29 +38,23 @@ ssl_prefer_server_ciphers off;
 ssl_ciphers "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384";
 EOF
 
-# 4. 파일 교체
-sudo mv /tmp/options-ssl-nginx.conf.fixed /etc/letsencrypt/options-ssl-nginx.conf
 sudo chmod 644 /etc/letsencrypt/options-ssl-nginx.conf
 sudo chown root:root /etc/letsencrypt/options-ssl-nginx.conf
 
-# 5. 수정된 파일 확인
-echo "수정된 파일 내용:"
-sudo cat /etc/letsencrypt/options-ssl-nginx.conf
-echo ""
-echo "---"
+# 4. 파일 내용 확인 (바이트 단위로)
+echo "파일 내용 확인 (바이트 단위):"
+sudo cat -A /etc/letsencrypt/options-ssl-nginx.conf | grep ssl_session_timeout
 
-# 6. Nginx 설정 테스트
+# 5. Nginx 설정 테스트
 echo "Nginx 설정 테스트 중..."
 sudo nginx -t
 
 if [ $? -ne 0 ]; then
     echo "❌ Nginx 설정에 오류가 있습니다."
-    echo "백업 파일에서 복원:"
-    echo "sudo cp /etc/letsencrypt/options-ssl-nginx.conf.backup.* /etc/letsencrypt/options-ssl-nginx.conf"
     exit 1
 fi
 
-# 7. Nginx 재시작
+# 6. Nginx 재시작
 echo "Nginx 재시작 중..."
 sudo systemctl restart nginx
 
@@ -67,7 +64,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "✅ SSL 설정 완료!"
-echo "이제 인증서를 재설치할 수 있습니다:"
-echo "sudo certbot install --cert-name lico.berrple.com --nginx"
+# 7. 인증서 재설치
+echo "Lico SSL 인증서 재설치 중..."
+sudo certbot install --cert-name lico.berrple.com --nginx
+
+echo "✅ 완료!"
 
