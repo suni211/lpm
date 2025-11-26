@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { walletService } from '../services/coinService';
+import api from '../services/api';
 import './DepositWithdrawPage.css';
 
 const DepositWithdrawPage = () => {
@@ -7,14 +8,38 @@ const DepositWithdrawPage = () => {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [walletAddress, setWalletAddress] = useState<string>('');
+  const [goldBalance, setGoldBalance] = useState<number>(0);
+  const [bankBalance, setBankBalance] = useState<number>(0);
+  const [userLoading, setUserLoading] = useState(true);
 
-  const walletAddress = '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb8';
-  const goldBalance = 1000000;
-  const bankBalance = 5000000;
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await api.get('/auth/me');
+        if (response.data.user) {
+          setWalletAddress(response.data.user.wallet_address || '');
+          setGoldBalance(response.data.user.gold_balance || 0);
+          setBankBalance(response.data.user.bank_balance || 0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user info:', error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
+
+    if (!walletAddress) {
+      setMessage('지갑 정보를 불러올 수 없습니다');
+      return;
+    }
 
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) {
@@ -28,9 +53,21 @@ const DepositWithdrawPage = () => {
       if (activeTab === 'deposit') {
         await walletService.deposit(walletAddress, amt);
         setMessage('입금이 완료되었습니다!');
+        // 잔액 새로고침
+        const response = await api.get('/auth/me');
+        if (response.data.user) {
+          setGoldBalance(response.data.user.gold_balance || 0);
+          setBankBalance(response.data.user.bank_balance || 0);
+        }
       } else {
         const result = await walletService.withdraw(walletAddress, amt);
         setMessage('출금이 완료되었습니다! (수수료: ' + result.fee + ' G)');
+        // 잔액 새로고침
+        const response = await api.get('/auth/me');
+        if (response.data.user) {
+          setGoldBalance(response.data.user.gold_balance || 0);
+          setBankBalance(response.data.user.bank_balance || 0);
+        }
       }
       setAmount('');
     } catch (error: any) {
@@ -43,6 +80,16 @@ const DepositWithdrawPage = () => {
   const formatNumber = (num: number) => {
     return num.toLocaleString('ko-KR');
   };
+
+  if (userLoading) {
+    return (
+      <div className="deposit-withdraw-page">
+        <div className="page-container">
+          <div style={{ textAlign: 'center', padding: '40px', color: '#fff' }}>로딩 중...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="deposit-withdraw-page">

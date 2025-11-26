@@ -212,6 +212,7 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
           wallet_address: null,
           bank_account_number: bankAccount?.account_number || null,
           gold_balance: 0,
+          bank_balance: bankAccount?.balance || 0,
           requires_questionnaire: true,
         },
       });
@@ -219,18 +220,16 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
 
     const wallet = wallets[0];
 
-    // BANK 잔액 동기화
+    // BANK 잔액 조회
+    let bankBalance = 0;
     try {
       const balanceData = await bankService.getAccountBalance(req.session.username || '');
       if (balanceData.account) {
-        await query(
-          'UPDATE user_wallets SET gold_balance = ? WHERE id = ?',
-          [balanceData.account.balance, wallet.id]
-        );
-        wallet.gold_balance = balanceData.account.balance;
+        bankBalance = balanceData.account.balance || 0;
+        // LICO 지갑의 gold_balance는 BANK 잔액과 동기화하지 않음 (별도 잔액)
       }
     } catch (error) {
-      console.error('BANK 잔액 동기화 실패:', error);
+      console.error('BANK 잔액 조회 실패:', error);
     }
 
     res.json({
@@ -238,7 +237,8 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
         minecraft_username: wallet.minecraft_username,
         wallet_address: wallet.wallet_address,
         bank_account_number: wallet.bank_account_number,
-        gold_balance: wallet.gold_balance,
+        gold_balance: wallet.gold_balance || 0,
+        bank_balance: bankBalance,
         requires_questionnaire: false,
       },
     });
