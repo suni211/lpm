@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType } from 'lightweight-charts';
-import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
+import type { ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import type { Candle } from '../types';
+import api from '../services/api';
 import './TradingChart.css';
 
 interface TradingChartProps {
@@ -11,14 +12,9 @@ interface TradingChartProps {
 
 type Interval = '1m' | '1h' | '1d';
 
-// IChartApi에 addCandlestickSeries 메서드가 포함된 확장 타입
-interface ChartApiWithCandlestick extends IChartApi {
-  addCandlestickSeries(options?: any): ISeriesApi<'Candlestick'>;
-}
-
 const TradingChart = ({ coinId }: TradingChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<ChartApiWithCandlestick | null>(null);
+  const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const [interval, setInterval] = useState<Interval>('1h');
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -27,11 +23,10 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
   useEffect(() => {
     const fetchCandles = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:5002/api/coins/${coinId}/candles/${interval}?limit=100`
-        );
-        const data = await response.json();
-        setCandles(data.candles || []);
+        const response = await api.get(`/coins/${coinId}/candles/${interval}`, {
+          params: { limit: 100 }
+        });
+        setCandles(response.data.candles || []);
       } catch (error) {
         console.error('Failed to fetch candles:', error);
       }
@@ -65,18 +60,23 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
         },
       });
 
-      chartRef.current = chart as ChartApiWithCandlestick;
+      chartRef.current = chart;
 
-      const candlestickSeries = chartRef.current.addCandlestickSeries({
-        upColor: '#22c55e',
-        downColor: '#ef4444',
-        borderUpColor: '#22c55e',
-        borderDownColor: '#ef4444',
-        wickUpColor: '#22c55e',
-        wickDownColor: '#ef4444',
-      });
+      // addCandlestickSeries 메서드가 런타임에 존재하는지 확인하고 호출
+      if ('addCandlestickSeries' in chartRef.current && typeof (chartRef.current as any).addCandlestickSeries === 'function') {
+        const candlestickSeries = (chartRef.current as any).addCandlestickSeries({
+          upColor: '#22c55e',
+          downColor: '#ef4444',
+          borderUpColor: '#22c55e',
+          borderDownColor: '#ef4444',
+          wickUpColor: '#22c55e',
+          wickDownColor: '#ef4444',
+        }) as ISeriesApi<'Candlestick'>;
 
-      candlestickSeriesRef.current = candlestickSeries;
+        candlestickSeriesRef.current = candlestickSeries;
+      } else {
+        console.error('addCandlestickSeries method not available on chart');
+      }
     }
 
     // �� pt0 �pt�
