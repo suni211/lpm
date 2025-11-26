@@ -115,20 +115,26 @@ export class TradingEngine {
     let totalCost = 0;
 
     // 1. 유저 매도 주문과 매칭
+    const walletBalance = typeof wallet.gold_balance === 'string' 
+      ? parseFloat(wallet.gold_balance) 
+      : (wallet.gold_balance || 0);
+
     for (const sellOrder of sellOrders) {
       if (remainingQty <= 0) break;
 
-      const matchQty = Math.min(remainingQty, sellOrder.remaining_quantity);
-      const matchCost = sellOrder.price * matchQty;
+      const matchQty = Math.min(remainingQty, parseFloat(sellOrder.remaining_quantity || '0'));
+      const sellPrice = parseFloat(sellOrder.price || '0');
+      const matchCost = sellPrice * matchQty;
       const fee = Math.floor(matchCost * 0.05);
       const totalRequired = matchCost + fee;
 
-      // 잔액 확인
-      if (wallet.gold_balance < totalCost + totalRequired) {
+      // 잔액 확인 (이미 사용한 금액 포함)
+      if (walletBalance < totalCost + totalRequired) {
         break; // 잔액 부족
       }
 
-      await this.executeTrade(walletId, sellOrder.wallet_id, coinId, sellOrder.price, matchQty, null, sellOrder.id);
+      // executeTrade에서 잔액 차감 처리
+      await this.executeTrade(walletId, sellOrder.wallet_id, coinId, sellPrice, matchQty, null, sellOrder.id);
       totalCost += totalRequired;
       remainingQty -= matchQty;
     }
@@ -148,7 +154,11 @@ export class TradingEngine {
         [aiWallet.id, coinId]
       );
 
-      if (aiBalances.length === 0 || aiBalances[0].available_amount < remainingQty) {
+      const aiAvailableAmount = aiBalances.length > 0 
+        ? parseFloat(aiBalances[0].available_amount || '0')
+        : 0;
+
+      if (aiBalances.length === 0 || aiAvailableAmount < remainingQty) {
         // 발행량 부족 - 예약 주문 생성
         const orderId = uuidv4();
         const totalAmount = currentPrice * remainingQty;
@@ -156,7 +166,11 @@ export class TradingEngine {
         const totalRequired = totalAmount + fee;
 
         // 잔액 확인
-        if (wallet.gold_balance < totalCost + totalRequired) {
+        const walletBalanceCheck = typeof wallet.gold_balance === 'string' 
+          ? parseFloat(wallet.gold_balance) 
+          : (wallet.gold_balance || 0);
+        
+        if (walletBalanceCheck < totalCost + totalRequired) {
           throw new Error('잔액이 부족합니다');
         }
 
@@ -177,29 +191,27 @@ export class TradingEngine {
       }
 
       // AI 봇 재고에서 직접 판매
-      const availableQty = Math.min(remainingQty, parseFloat(aiBalances[0].available_amount));
+      const availableQty = Math.min(remainingQty, aiAvailableAmount);
       const matchCost = currentPrice * availableQty;
       const fee = Math.floor(matchCost * 0.05);
       const totalRequired = matchCost + fee;
 
-      // 잔액 확인
-      if (wallet.gold_balance < totalCost + totalRequired) {
+      // 잔액 확인 (이미 사용한 금액 포함)
+      const walletBalance = typeof wallet.gold_balance === 'string' 
+        ? parseFloat(wallet.gold_balance) 
+        : (wallet.gold_balance || 0);
+
+      if (walletBalance < totalCost + totalRequired) {
         throw new Error('잔액이 부족합니다');
       }
 
-      // AI 봇과 직접 거래 체결
+      // AI 봇과 직접 거래 체결 (executeTrade에서 잔액 차감 처리)
       await this.executeTrade(walletId, aiWallet.id, coinId, currentPrice, availableQty, null, null);
       totalCost += totalRequired;
       remainingQty -= availableQty;
     }
 
-    // 잔액 차감 (이미 executeTrade에서 처리되지만, 수수료를 위해 추가 차감)
-    if (totalCost > 0) {
-      await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
-        totalCost,
-        walletId,
-      ]);
-    }
+    // executeTrade에서 이미 잔액 차감을 처리하므로 추가 차감 불필요
 
     return { matched: quantity - remainingQty, remaining: remainingQty };
   }

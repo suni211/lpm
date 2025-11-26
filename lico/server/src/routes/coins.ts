@@ -32,6 +32,59 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+// 탑 5 순위 조회 (상승/하락/액티브)
+router.get('/rankings/top5', async (req: Request, res: Response) => {
+  try {
+    const coins = await query(
+      `SELECT id, symbol, name, logo_url, current_price, price_change_24h, volume_24h, market_cap
+       FROM coins
+       WHERE status = 'ACTIVE'
+       ORDER BY market_cap DESC`
+    );
+
+    // 가격 변동률 파싱
+    const coinsWithParsed = coins.map((coin: any) => ({
+      ...coin,
+      price_change_24h: typeof coin.price_change_24h === 'string' 
+        ? parseFloat(coin.price_change_24h) 
+        : (coin.price_change_24h || 0),
+      volume_24h: typeof coin.volume_24h === 'string' 
+        ? parseFloat(coin.volume_24h) 
+        : (coin.volume_24h || 0),
+      current_price: typeof coin.current_price === 'string' 
+        ? parseFloat(coin.current_price) 
+        : (coin.current_price || 0),
+    }));
+
+    // 상승률 상위 5개 (price_change_24h 내림차순)
+    const topGainers = [...coinsWithParsed]
+      .filter((coin) => coin.price_change_24h > 0)
+      .sort((a, b) => b.price_change_24h - a.price_change_24h)
+      .slice(0, 5);
+
+    // 하락률 상위 5개 (price_change_24h 오름차순, 음수만)
+    const topLosers = [...coinsWithParsed]
+      .filter((coin) => coin.price_change_24h < 0)
+      .sort((a, b) => a.price_change_24h - b.price_change_24h)
+      .slice(0, 5);
+
+    // 거래량 상위 5개 (volume_24h 내림차순)
+    const topActive = [...coinsWithParsed]
+      .filter((coin) => coin.volume_24h > 0)
+      .sort((a, b) => b.volume_24h - a.volume_24h)
+      .slice(0, 5);
+
+    res.json({
+      topGainers,
+      topLosers,
+      topActive,
+    });
+  } catch (error) {
+    console.error('순위 조회 오류:', error);
+    res.status(500).json({ error: '순위 조회 실패' });
+  }
+});
+
 // 코인 상세 조회 (심볼로)
 router.get('/symbol/:symbol', async (req: Request, res: Response) => {
   try {
