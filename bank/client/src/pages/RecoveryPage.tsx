@@ -72,7 +72,7 @@ function RecoveryPage() {
           <div className="auth-code-display">
             <label className="form-label">새 인증 코드</label>
             <div className="auth-code-value">{newAuthCode}</div>
-            <p style={{ marginTop: '12px', fontSize: '14px', color: '#666' }}>
+            <p style={{ marginTop: '12px', fontSize: '14px', color: '#fca5a5' }}>
               ⚠️ 이 코드는 다시 확인할 수 없습니다. 반드시 복사하여 안전한 곳에 보관하세요!
             </p>
           </div>
