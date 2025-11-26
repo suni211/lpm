@@ -105,9 +105,10 @@ router.get('/my/:account_number', async (req: Request, res: Response) => {
     }
 
     const requests = await query(
-      `SELECT dr.*, a.minecraft_username, a.account_number
+      `SELECT dr.*, u.minecraft_username, a.account_number
        FROM deposit_requests dr
        JOIN accounts a ON dr.account_id = a.id
+       JOIN users u ON a.user_id = u.id
        WHERE dr.account_id = ?
        ORDER BY dr.requested_at DESC`,
       [accounts[0].id]
@@ -124,9 +125,10 @@ router.get('/my/:account_number', async (req: Request, res: Response) => {
 router.get('/pending', isAdmin, async (req: Request, res: Response) => {
   try {
     const requests = await query(
-      `SELECT dr.*, a.minecraft_username, a.account_number
+      `SELECT dr.*, u.minecraft_username, a.account_number
        FROM deposit_requests dr
        JOIN accounts a ON dr.account_id = a.id
+       JOIN users u ON a.user_id = u.id
        WHERE dr.status = 'PENDING'
        ORDER BY dr.requested_at ASC`
     );
