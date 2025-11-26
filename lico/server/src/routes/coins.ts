@@ -1,0 +1,239 @@
+import express, { Request, Response } from 'express';
+import { query } from '../database/db';
+import { v4 as uuidv4 } from 'uuid';
+import { isAdmin } from '../middleware/auth';
+
+const router = express.Router();
+
+// 모든 코인 목록 조회
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { status = 'ACTIVE' } = req.query;
+
+    let sql = 'SELECT * FROM coins';
+    const params: any[] = [];
+
+    if (status) {
+      sql += ' WHERE status = ?';
+      params.push(status);
+    }
+
+    sql += ' ORDER BY market_cap DESC';
+
+    const coins = await query(sql, params);
+
+    res.json({ coins });
+  } catch (error) {
+    console.error('코인 목록 조회 오류:', error);
+    res.status(500).json({ error: '코인 목록 조회 실패' });
+  }
+});
+
+// 코인 상세 조회 (심볼로)
+router.get('/symbol/:symbol', async (req: Request, res: Response) => {
+  try {
+    const { symbol } = req.params;
+
+    const coins = await query('SELECT * FROM coins WHERE symbol = ?', [symbol.toUpperCase()]);
+
+    if (coins.length === 0) {
+      return res.status(404).json({ error: '코인을 찾을 수 없습니다' });
+    }
+
+    res.json({ coin: coins[0] });
+  } catch (error) {
+    console.error('코인 조회 오류:', error);
+    res.status(500).json({ error: '코인 조회 실패' });
+  }
+});
+
+// 코인 시세 정보 (차트용)
+router.get('/:coin_id/price', async (req: Request, res: Response) => {
+  try {
+    const { coin_id } = req.params;
+
+    const coins = await query('SELECT * FROM coins WHERE id = ?', [coin_id]);
+
+    if (coins.length === 0) {
+      return res.status(404).json({ error: '코인을 찾을 수 없습니다' });
+    }
+
+    const coin = coins[0];
+
+    res.json({
+      symbol: coin.symbol,
+      current_price: coin.current_price,
+      price_change_24h: coin.price_change_24h,
+      volume_24h: coin.volume_24h,
+      market_cap: coin.market_cap,
+      updated_at: coin.updated_at,
+    });
+  } catch (error) {
+    console.error('시세 조회 오류:', error);
+    res.status(500).json({ error: '시세 조회 실패' });
+  }
+});
+
+// 최근 거래 내역 (공개)
+router.get('/:coin_id/trades/recent', async (req: Request, res: Response) => {
+  try {
+    const { coin_id } = req.params;
+    const { limit = 50 } = req.query;
+
+    const trades = await query(
+      `SELECT t.id, t.price, t.quantity, t.total_amount, t.created_at,
+              bw.minecraft_username as buyer_username,
+              sw.minecraft_username as seller_username
+       FROM trades t
+       JOIN user_wallets bw ON t.buyer_wallet_id = bw.id
+       JOIN user_wallets sw ON t.seller_wallet_id = sw.id
+       WHERE t.coin_id = ?
+       ORDER BY t.created_at DESC
+       LIMIT ?`,
+      [coin_id, Number(limit)]
+    );
+
+    res.json({ trades });
+  } catch (error) {
+    console.error('거래 내역 조회 오류:', error);
+    res.status(500).json({ error: '거래 내역 조회 실패' });
+  }
+});
+
+// 캔들스틱 데이터 조회
+router.get('/:coin_id/candles/:interval', async (req: Request, res: Response) => {
+  try {
+    const { coin_id, interval } = req.params;
+    const { limit = 100 } = req.query;
+
+    let tableName = '';
+    if (interval === '1m') {
+      tableName = 'candles_1m';
+    } else if (interval === '1h') {
+      tableName = 'candles_1h';
+    } else if (interval === '1d') {
+      tableName = 'candles_1d';
+    } else {
+      return res.status(400).json({ error: '유효하지 않은 interval (1m, 1h, 1d만 지원)' });
+    }
+
+    const candles = await query(
+      `SELECT * FROM ${tableName}
+       WHERE coin_id = ?
+       ORDER BY open_time DESC
+       LIMIT ?`,
+      [coin_id, Number(limit)]
+    );
+
+    res.json({ candles: candles.reverse() });
+  } catch (error) {
+    console.error('캔들 데이터 조회 오류:', error);
+    res.status(500).json({ error: '캔들 데이터 조회 실패' });
+  }
+});
+
+// 코인 생성 (관리자)
+router.post('/', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const {
+      symbol,
+      name,
+      logo_url,
+      description,
+      initial_supply,
+      circulating_supply,
+      initial_price,
+    } = req.body;
+
+    // 심볼 중복 확인
+    const existing = await query('SELECT * FROM coins WHERE symbol = ?', [symbol.toUpperCase()]);
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: '이미 존재하는 코인 심볼입니다' });
+    }
+
+    const coinId = uuidv4();
+    await query(
+      `INSERT INTO coins
+       (id, symbol, name, logo_url, description, initial_supply, circulating_supply, initial_price, current_price)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        coinId,
+        symbol.toUpperCase(),
+        name,
+        logo_url || null,
+        description || null,
+        initial_supply,
+        circulating_supply,
+        initial_price,
+        initial_price,
+      ]
+    );
+
+    const coins = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
+
+    res.json({
+      success: true,
+      coin: coins[0],
+    });
+  } catch (error) {
+    console.error('코인 생성 오류:', error);
+    res.status(500).json({ error: '코인 생성 실패' });
+  }
+});
+
+// 코인 정보 수정 (관리자)
+router.patch('/:id', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, logo_url, description, circulating_supply, current_price, status } = req.body;
+
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (name !== undefined) {
+      updates.push('name = ?');
+      params.push(name);
+    }
+    if (logo_url !== undefined) {
+      updates.push('logo_url = ?');
+      params.push(logo_url);
+    }
+    if (description !== undefined) {
+      updates.push('description = ?');
+      params.push(description);
+    }
+    if (circulating_supply !== undefined) {
+      updates.push('circulating_supply = ?');
+      params.push(circulating_supply);
+    }
+    if (current_price !== undefined) {
+      updates.push('current_price = ?');
+      params.push(current_price);
+    }
+    if (status !== undefined) {
+      updates.push('status = ?');
+      params.push(status);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: '업데이트할 필드가 없습니다' });
+    }
+
+    params.push(id);
+
+    await query(`UPDATE coins SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    const coins = await query('SELECT * FROM coins WHERE id = ?', [id]);
+
+    res.json({
+      success: true,
+      coin: coins[0],
+    });
+  } catch (error) {
+    console.error('코인 수정 오류:', error);
+    res.status(500).json({ error: '코인 수정 실패' });
+  }
+});
+
+export default router;

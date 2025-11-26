@@ -35,6 +35,20 @@ CREATE TABLE coins (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- LICO 가입 설문조사 테이블
+CREATE TABLE lico_questionnaires (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    minecraft_username VARCHAR(16) UNIQUE NOT NULL,
+    question1_score INT NOT NULL COMMENT '계산적이며 골드 많고 감당 가능? 예(10) 아니요(0)',
+    question2_score INT NOT NULL COMMENT '현실 주식 성과? 예(50) 보통(30) 아니요(0)',
+    question3_score INT NOT NULL COMMENT '블록체인 책임 동의? 예(30) 아니요(0)',
+    total_score INT AS (question1_score + question2_score + question3_score) STORED,
+    is_approved BOOLEAN DEFAULT FALSE COMMENT '90점 이상 자동 승인',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_username (minecraft_username),
+    INDEX idx_approved (is_approved)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 사용자 계좌 (Bank 연동)
 CREATE TABLE user_wallets (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -45,6 +59,7 @@ CREATE TABLE user_wallets (
     gold_balance BIGINT DEFAULT 0 COMMENT 'Gold 잔액 (Bank 동기화)',
     total_deposit BIGINT DEFAULT 0 COMMENT '총 입금액',
     total_withdrawal BIGINT DEFAULT 0 COMMENT '총 출금액',
+    questionnaire_completed BOOLEAN DEFAULT FALSE COMMENT '설문조사 완료 여부',
     status ENUM('ACTIVE', 'SUSPENDED', 'CLOSED') DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -109,8 +124,8 @@ CREATE TABLE trades (
     price DECIMAL(20, 8) NOT NULL COMMENT '체결 가격',
     quantity DECIMAL(20, 8) NOT NULL COMMENT '체결 수량',
     total_amount DECIMAL(20, 2) AS (price * quantity) STORED,
-    buy_fee DECIMAL(20, 2) DEFAULT 0,
-    sell_fee DECIMAL(20, 2) DEFAULT 0,
+    buy_fee DECIMAL(20, 2) DEFAULT 0 COMMENT '매수 수수료 (5%)',
+    sell_fee DECIMAL(20, 2) DEFAULT 0 COMMENT '매도 수수료 (5%)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (coin_id) REFERENCES coins(id),
     FOREIGN KEY (buy_order_id) REFERENCES orders(id),
@@ -121,6 +136,66 @@ CREATE TABLE trades (
     INDEX idx_buyer (buyer_wallet_id),
     INDEX idx_seller (seller_wallet_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 블록체인 블록 테이블
+CREATE TABLE blockchain_blocks (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    block_number BIGINT UNIQUE NOT NULL AUTO_INCREMENT,
+    previous_hash VARCHAR(64) NOT NULL COMMENT '이전 블록 해시',
+    current_hash VARCHAR(64) UNIQUE NOT NULL COMMENT '현재 블록 해시',
+    merkle_root VARCHAR(64) NOT NULL COMMENT '거래 머클 트리 루트',
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    nonce BIGINT DEFAULT 0 COMMENT '채굴 nonce',
+    difficulty INT DEFAULT 4 COMMENT '채굴 난이도',
+    miner_address VARCHAR(42) NULL COMMENT '채굴자 지갑 주소',
+    reward BIGINT DEFAULT 0 COMMENT '채굴 보상',
+    transaction_count INT DEFAULT 0 COMMENT '블록 내 거래 수',
+    INDEX idx_block_number (block_number),
+    INDEX idx_timestamp (timestamp),
+    INDEX idx_miner (miner_address),
+    UNIQUE INDEX idx_block (block_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 블록체인 거래 내역
+CREATE TABLE blockchain_transactions (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    block_id CHAR(36) NULL COMMENT '포함된 블록 ID',
+    tx_hash VARCHAR(64) UNIQUE NOT NULL COMMENT '거래 해시',
+    from_address VARCHAR(42) NOT NULL COMMENT '송신 지갑',
+    to_address VARCHAR(42) NOT NULL COMMENT '수신 지갑',
+    amount DECIMAL(20, 8) NOT NULL COMMENT '금액',
+    fee DECIMAL(20, 8) NOT NULL COMMENT '수수료',
+    tx_type ENUM('TRANSFER', 'TRADE', 'DEPOSIT', 'WITHDRAWAL', 'MINING_REWARD') NOT NULL,
+    status ENUM('PENDING', 'CONFIRMED', 'FAILED') DEFAULT 'PENDING',
+    reference_id CHAR(36) NULL COMMENT '원본 거래 ID (trades, transfers 등)',
+    gas_price BIGINT DEFAULT 0,
+    gas_used BIGINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    confirmed_at TIMESTAMP NULL,
+    FOREIGN KEY (block_id) REFERENCES blockchain_blocks(id),
+    INDEX idx_block (block_id),
+    INDEX idx_from (from_address),
+    INDEX idx_to (to_address),
+    INDEX idx_status (status),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 수수료 설정 테이블
+CREATE TABLE fee_settings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    fee_type ENUM('TRADING', 'WITHDRAWAL', 'TRANSFER') NOT NULL UNIQUE,
+    fee_percentage DECIMAL(5, 2) NOT NULL COMMENT '수수료율 (%)',
+    min_fee DECIMAL(20, 2) DEFAULT 0 COMMENT '최소 수수료',
+    max_fee DECIMAL(20, 2) NULL COMMENT '최대 수수료',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_type (fee_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 기본 수수료 설정
+INSERT INTO fee_settings (fee_type, fee_percentage, min_fee, max_fee) VALUES
+('TRADING', 5.00, 100, NULL),      -- 거래 수수료 5%
+('WITHDRAWAL', 5.00, 500, NULL),   -- 출금 수수료 5%
+('TRANSFER', 0.00, 0, NULL);       -- 내부 이체 수수료 0%
 
 -- 캔들스틱 데이터 (1분봉)
 CREATE TABLE candles_1m (

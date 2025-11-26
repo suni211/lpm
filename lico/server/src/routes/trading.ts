@@ -1,0 +1,315 @@
+import express, { Request, Response } from 'express';
+import { query } from '../database/db';
+import { v4 as uuidv4 } from 'uuid';
+import blockchainService from '../services/blockchainService';
+
+const router = express.Router();
+
+// 주문 생성 (매수/매도)
+router.post('/order', async (req: Request, res: Response) => {
+  try {
+    const { wallet_address, coin_id, order_type, order_method, price, quantity } = req.body;
+
+    // 지갑 조회
+    const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
+      wallet_address,
+    ]);
+
+    if (wallets.length === 0) {
+      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+    }
+
+    const wallet = wallets[0];
+
+    // 코인 조회
+    const coins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coin_id]);
+
+    if (coins.length === 0) {
+      return res.status(404).json({ error: '코인을 찾을 수 없습니다' });
+    }
+
+    const coin = coins[0];
+
+    // 시장가 주문은 현재가로 설정
+    const orderPrice = order_method === 'MARKET' ? coin.current_price : price;
+
+    if (!orderPrice || orderPrice <= 0) {
+      return res.status(400).json({ error: '유효하지 않은 가격입니다' });
+    }
+
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({ error: '유효하지 않은 수량입니다' });
+    }
+
+    // 5% 거래 수수료
+    const totalAmount = orderPrice * quantity;
+    const fee = Math.floor(totalAmount * 0.05);
+
+    if (order_type === 'BUY') {
+      // 매수: Gold 잔액 확인 및 차감
+      const requiredAmount = totalAmount + fee;
+
+      if (wallet.gold_balance < requiredAmount) {
+        return res.status(400).json({
+          error: '잔액이 부족합니다',
+          required: requiredAmount,
+          available: wallet.gold_balance,
+          fee,
+        });
+      }
+
+      // Gold 차감
+      await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
+        requiredAmount,
+        wallet.id,
+      ]);
+    } else if (order_type === 'SELL') {
+      // 매도: 코인 잔액 확인
+      const balances = await query(
+        'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+        [wallet.id, coin_id]
+      );
+
+      if (balances.length === 0 || balances[0].available_amount < quantity) {
+        return res.status(400).json({
+          error: '보유 코인이 부족합니다',
+          required: quantity,
+          available: balances.length > 0 ? balances[0].available_amount : 0,
+        });
+      }
+
+      // 코인 잠금 (주문 체결될 때까지)
+      await query(
+        'UPDATE user_coin_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND coin_id = ?',
+        [quantity, quantity, wallet.id, coin_id]
+      );
+    }
+
+    // 주문 생성
+    const orderId = uuidv4();
+    await query(
+      `INSERT INTO orders
+       (id, wallet_id, coin_id, order_type, order_method, price, quantity, fee, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
+      [orderId, wallet.id, coin_id, order_type, order_method, orderPrice, quantity, fee]
+    );
+
+    // 블록체인 거래 기록 생성
+    await blockchainService.createTransaction(
+      wallet.wallet_address,
+      order_type === 'BUY' ? coin.symbol : 'SYSTEM',
+      totalAmount,
+      fee,
+      'TRADE',
+      orderId
+    );
+
+    const orders = await query(
+      `SELECT o.*, c.symbol, c.name
+       FROM orders o
+       JOIN coins c ON o.coin_id = c.id
+       WHERE o.id = ?`,
+      [orderId]
+    );
+
+    res.json({
+      success: true,
+      order: orders[0],
+      message: `${order_type === 'BUY' ? '매수' : '매도'} 주문이 등록되었습니다`,
+    });
+  } catch (error) {
+    console.error('주문 생성 오류:', error);
+    res.status(500).json({ error: '주문 생성 실패' });
+  }
+});
+
+// 내 주문 목록
+router.get('/orders/:wallet_address', async (req: Request, res: Response) => {
+  try {
+    const { wallet_address } = req.params;
+    const { status, coin_id } = req.query;
+
+    // 지갑 조회
+    const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
+      wallet_address,
+    ]);
+
+    if (wallets.length === 0) {
+      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+    }
+
+    const wallet = wallets[0];
+
+    let sql = `
+      SELECT o.*, c.symbol, c.name, c.logo_url
+      FROM orders o
+      JOIN coins c ON o.coin_id = c.id
+      WHERE o.wallet_id = ?
+    `;
+    const params: any[] = [wallet.id];
+
+    if (status) {
+      sql += ' AND o.status = ?';
+      params.push(status);
+    }
+
+    if (coin_id) {
+      sql += ' AND o.coin_id = ?';
+      params.push(coin_id);
+    }
+
+    sql += ' ORDER BY o.created_at DESC';
+
+    const orders = await query(sql, params);
+
+    res.json({ orders });
+  } catch (error) {
+    console.error('주문 조회 오류:', error);
+    res.status(500).json({ error: '주문 조회 실패' });
+  }
+});
+
+// 주문 취소
+router.post('/orders/:order_id/cancel', async (req: Request, res: Response) => {
+  try {
+    const { order_id } = req.params;
+    const { wallet_address } = req.body;
+
+    // 주문 조회
+    const orders = await query(
+      `SELECT o.*, w.wallet_address
+       FROM orders o
+       JOIN user_wallets w ON o.wallet_id = w.id
+       WHERE o.id = ? AND o.status = 'PENDING'`,
+      [order_id]
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({ error: '주문을 찾을 수 없거나 이미 처리되었습니다' });
+    }
+
+    const order = orders[0];
+
+    // 권한 확인
+    if (order.wallet_address !== wallet_address) {
+      return res.status(403).json({ error: '권한이 없습니다' });
+    }
+
+    // 주문 취소 처리
+    if (order.order_type === 'BUY') {
+      // 매수 취소: Gold 환불
+      const refundAmount = order.price * order.quantity + order.fee;
+      await query('UPDATE user_wallets SET gold_balance = gold_balance + ? WHERE id = ?', [
+        refundAmount,
+        order.wallet_id,
+      ]);
+    } else if (order.order_type === 'SELL') {
+      // 매도 취소: 코인 잠금 해제
+      await query(
+        'UPDATE user_coin_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND coin_id = ?',
+        [order.quantity, order.quantity, order.wallet_id, order.coin_id]
+      );
+    }
+
+    // 주문 상태 변경
+    await query('UPDATE orders SET status = "CANCELLED" WHERE id = ?', [order_id]);
+
+    res.json({
+      success: true,
+      message: '주문이 취소되었습니다',
+    });
+  } catch (error) {
+    console.error('주문 취소 오류:', error);
+    res.status(500).json({ error: '주문 취소 실패' });
+  }
+});
+
+// 호가창 (매수/매도 주문 목록)
+router.get('/orderbook/:coin_id', async (req: Request, res: Response) => {
+  try {
+    const { coin_id } = req.params;
+    const { limit = 20 } = req.query;
+
+    // 매수 호가 (높은 가격 순)
+    const buyOrders = await query(
+      `SELECT price, SUM(remaining_quantity) as total_quantity, COUNT(*) as order_count
+       FROM orders
+       WHERE coin_id = ? AND order_type = 'BUY' AND status IN ('PENDING', 'PARTIAL')
+       GROUP BY price
+       ORDER BY price DESC
+       LIMIT ?`,
+      [coin_id, Number(limit)]
+    );
+
+    // 매도 호가 (낮은 가격 순)
+    const sellOrders = await query(
+      `SELECT price, SUM(remaining_quantity) as total_quantity, COUNT(*) as order_count
+       FROM orders
+       WHERE coin_id = ? AND order_type = 'SELL' AND status IN ('PENDING', 'PARTIAL')
+       GROUP BY price
+       ORDER BY price ASC
+       LIMIT ?`,
+      [coin_id, Number(limit)]
+    );
+
+    res.json({
+      buy_orders: buyOrders,
+      sell_orders: sellOrders,
+    });
+  } catch (error) {
+    console.error('호가창 조회 오류:', error);
+    res.status(500).json({ error: '호가창 조회 실패' });
+  }
+});
+
+// 내 거래 체결 내역
+router.get('/trades/:wallet_address', async (req: Request, res: Response) => {
+  try {
+    const { wallet_address } = req.params;
+    const { coin_id, limit = 50 } = req.query;
+
+    // 지갑 조회
+    const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
+      wallet_address,
+    ]);
+
+    if (wallets.length === 0) {
+      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+    }
+
+    const wallet = wallets[0];
+
+    let sql = `
+      SELECT t.*, c.symbol, c.name,
+             CASE
+               WHEN t.buyer_wallet_id = ? THEN 'BUY'
+               WHEN t.seller_wallet_id = ? THEN 'SELL'
+             END as trade_type,
+             CASE
+               WHEN t.buyer_wallet_id = ? THEN t.buy_fee
+               WHEN t.seller_wallet_id = ? THEN t.sell_fee
+             END as my_fee
+      FROM trades t
+      JOIN coins c ON t.coin_id = c.id
+      WHERE (t.buyer_wallet_id = ? OR t.seller_wallet_id = ?)
+    `;
+    const params: any[] = [wallet.id, wallet.id, wallet.id, wallet.id, wallet.id, wallet.id];
+
+    if (coin_id) {
+      sql += ' AND t.coin_id = ?';
+      params.push(coin_id);
+    }
+
+    sql += ' ORDER BY t.created_at DESC LIMIT ?';
+    params.push(Number(limit));
+
+    const trades = await query(sql, params);
+
+    res.json({ trades });
+  } catch (error) {
+    console.error('거래 내역 조회 오류:', error);
+    res.status(500).json({ error: '거래 내역 조회 실패' });
+  }
+});
+
+export default router;

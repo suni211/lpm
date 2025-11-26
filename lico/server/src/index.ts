@@ -2,30 +2,36 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import session from 'express-session';
+import { createServer } from 'http';
 import pool from './database/db';
+import blockchainService from './services/blockchainService';
+import initializeWebSocket from './websocket';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const httpServer = createServer(app);
+const PORT = process.env.PORT || 5002;
 
 // Middleware
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://bank.berrple.com',
-    'https://bank.berrple.com',
-  ],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: [
+      'http://localhost:5173',
+      'http://lico.berrple.com',
+      'https://lico.berrple.com',
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Session configuration
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'minecraft-bank-secret',
+    secret: process.env.SESSION_SECRET || 'lico-exchange-secret',
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -40,9 +46,10 @@ app.use(
 // Routes
 app.get('/', (req: Request, res: Response) => {
   res.json({
-    message: '🏦 Minecraft Bank API Server',
+    message: '🪙 Lico Cryptocurrency Exchange API Server',
     version: '1.0.0',
     status: 'running',
+    blockchain: 'active',
   });
 });
 
@@ -64,20 +71,20 @@ app.get('/health', async (req: Request, res: Response) => {
   }
 });
 
-// Routes
+// API Routes
 import authRoutes from './routes/auth';
-import accountsRoutes from './routes/accounts';
-import depositsRoutes from './routes/deposits';
-import withdrawalsRoutes from './routes/withdrawals';
-import transfersRoutes from './routes/transfers';
-import transactionsRoutes from './routes/transactions';
+import questionnaireRoutes from './routes/questionnaire';
+import walletsRoutes from './routes/wallets';
+import coinsRoutes from './routes/coins';
+import tradingRoutes from './routes/trading';
+import blockchainRoutes from './routes/blockchain';
 
 app.use('/api/auth', authRoutes);
-app.use('/api/accounts', accountsRoutes);
-app.use('/api/deposits', depositsRoutes);
-app.use('/api/withdrawals', withdrawalsRoutes);
-app.use('/api/transfers', transfersRoutes);
-app.use('/api/transactions', transactionsRoutes);
+app.use('/api/questionnaire', questionnaireRoutes);
+app.use('/api/wallets', walletsRoutes);
+app.use('/api/coins', coinsRoutes);
+app.use('/api/trading', tradingRoutes);
+app.use('/api/blockchain', blockchainRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {
@@ -88,16 +95,37 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
   });
 });
 
+// Initialize blockchain
+async function initializeBlockchain() {
+  try {
+    await blockchainService.createGenesisBlock();
+    console.log('✅ Blockchain initialized');
+  } catch (error) {
+    console.error('❌ Blockchain initialization failed:', error);
+  }
+}
+
+// Initialize WebSocket
+const websocket = initializeWebSocket(httpServer);
+
+// Export websocket for use in other modules
+export { websocket };
+
 // Start server
-app.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   console.log(`
 ╔═══════════════════════════════════════╗
-║  🏦 Minecraft Bank Server Running    ║
+║  🪙 Lico Exchange Server Running     ║
 ║  📡 Port: ${PORT}                        ║
 ║  🌍 Environment: ${process.env.NODE_ENV || 'development'}      ║
 ║  🗄️  Database: MariaDB                ║
+║  ⛓️  Blockchain: Active               ║
+║  🔌 WebSocket: Active                 ║
 ╚═══════════════════════════════════════╝
   `);
+
+  // Initialize blockchain on startup
+  await initializeBlockchain();
 });
 
 // Graceful shutdown

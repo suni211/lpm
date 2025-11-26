@@ -1,0 +1,182 @@
+.orderbook {
+  background: #1a1d29;
+  border-radius: 8px;
+  padding: 16px;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.orderbook-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.orderbook-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.orderbook-mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: #2a2e3e;
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.orderbook-mode-toggle button {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.orderbook-mode-toggle button:hover {
+  color: #fff;
+}
+
+.orderbook-mode-toggle button.active {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.orderbook-table-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 80px;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #2a2e3e;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.header-price {
+  text-align: left;
+}
+
+.header-quantity {
+  text-align: right;
+}
+
+.header-count {
+  text-align: right;
+}
+
+.orderbook-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sell-orders,
+.buy-orders {
+  display: flex;
+  flex-direction: column;
+}
+
+.order-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr 80px;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.order-row:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.volume-bar {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  opacity: 0.2;
+  z-index: 0;
+  transition: width 0.3s;
+}
+
+.buy-bar {
+  background: #22c55e;
+}
+
+.sell-bar {
+  background: #ef4444;
+}
+
+.order-price,
+.order-quantity,
+.order-count {
+  position: relative;
+  z-index: 1;
+}
+
+.order-price {
+  font-weight: 600;
+  text-align: left;
+}
+
+.buy-price {
+  color: #22c55e;
+}
+
+.sell-price {
+  color: #ef4444;
+}
+
+.order-quantity {
+  color: #fff;
+  text-align: right;
+}
+
+.order-count {
+  color: #9ca3af;
+  text-align: right;
+}
+
+.spread-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin: 8px 0;
+  background: #2a2e3e;
+  border-radius: 4px;
+}
+
+.spread-label {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.spread-value {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9ca3af;
+}
