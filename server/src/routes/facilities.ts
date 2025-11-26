@@ -45,7 +45,7 @@ router.get("/", isAuthenticated, async (req, res) => {
     res.json({
       team: {
         id: team.id,
-        balance: team.balance,
+        balance: Number(team.balance) || 0,
       },
       facilities: facilities[0],
     });
@@ -119,7 +119,7 @@ router.post("/upgrade/tactic-lab", isAuthenticated, async (req, res) => {
       newLevel: nextLevel,
       cost,
       nextCost,
-      newBalance: team.balance - cost,
+      newBalance: Number(team.balance) - cost,
     });
   } catch (error) {
     console.error("작전 연구소 업그레이드 실패:", error);
@@ -183,7 +183,7 @@ router.post("/upgrade/skill-lab", isAuthenticated, async (req, res) => {
       newLevel: nextLevel,
       cost,
       nextCost,
-      newBalance: team.balance - cost,
+      newBalance: Number(team.balance) - cost,
     });
   } catch (error) {
     console.error("스킬 연구소 업그레이드 실패:", error);
@@ -243,7 +243,7 @@ router.post("/upgrade/training-center", isAuthenticated, async (req, res) => {
       newLevel: 1,
       cost,
       nextCost: 0,
-      newBalance: team.balance - cost,
+      newBalance: Number(team.balance) - cost,
     });
   } catch (error) {
     console.error("집중 훈련소 업그레이드 실패:", error);

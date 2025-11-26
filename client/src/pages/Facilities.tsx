@@ -33,6 +33,7 @@ const Facilities: React.FC = () => {
   const fetchFacilities = async () => {
     try {
       const response = await api.get('/facilities');
+      console.log('Facilities response:', response.data);
       setFacilities(response.data.facilities);
       setTeam(response.data.team);
     } catch (error) {
@@ -76,7 +77,8 @@ const Facilities: React.FC = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined) => {
+    if (!amount && amount !== 0) return '0';
     if (amount >= 100000000) {
       return `${(amount / 100000000).toFixed(1)}억`;
     } else if (amount >= 10000000) {
