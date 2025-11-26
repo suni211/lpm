@@ -19,7 +19,7 @@ const QuestionnairePage = () => {
 
     try {
       // 현재 사용자 정보 가져오기
-      const userResponse = await api.get('/api/auth/me');
+      const userResponse = await api.get('/auth/me');
       const minecraft_username = userResponse.data.user?.minecraft_username;
 
       if (!minecraft_username) {
@@ -28,7 +28,7 @@ const QuestionnairePage = () => {
         return;
       }
 
-      const response = await api.post('/api/questionnaire/submit', {
+      const response = await api.post('/questionnaire/submit', {
         minecraft_username,
         ...formData,
       });

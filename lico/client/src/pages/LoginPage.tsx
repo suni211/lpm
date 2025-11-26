@@ -20,7 +20,7 @@ const LoginPage = () => {
       if (response.data.success) {
         // 설문조사 완료 여부 확인
         try {
-          const questionnaireResponse = await api.get('/api/questionnaire/status');
+          const questionnaireResponse = await api.get('/questionnaire/status');
           const isApproved = questionnaireResponse.data.approved;
           
           if (!isApproved) {
