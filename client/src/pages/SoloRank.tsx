@@ -27,7 +27,7 @@ interface MatchResult {
 }
 
 const SoloRank: React.FC = () => {
-    const { user } = useAuth();
+    const { } = useAuth(); // Removed unused 'user'
     const { showToast } = useToast();
     const [myTopPlayer, setMyTopPlayer] = useState<PlayerRankInfo | null>(null);
     const [leaderboard, setLeaderboard] = useState<PlayerRankInfo[]>([]);
@@ -37,7 +37,7 @@ const SoloRank: React.FC = () => {
     const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
 
     const pollingInterval = 3000; // 3 seconds
-    let intervalId: NodeJS.Timeout | null = null;
+    let intervalId: number | null = null; // Changed NodeJS.Timeout to number
 
     const fetchMyTopPlayer = useCallback(async () => {
         try {
@@ -63,8 +63,6 @@ const SoloRank: React.FC = () => {
             setQueueStatus(data.status);
             if (data.status === 'MATCHED') {
                 setIsSearching(false);
-                // In a real scenario, you'd fetch match details with the data.match_id
-                // For now, we'll just show a success message
                 showToast('상대를 찾았습니다! 경기 결과가 곧 표시됩니다.', 'success');
                 // The join-queue endpoint already returns the result, so we just wait
             }
@@ -85,12 +83,12 @@ const SoloRank: React.FC = () => {
 
     useEffect(() => {
         if (isSearching && myTopPlayer) {
-            intervalId = setInterval(() => {
+            intervalId = window.setInterval(() => { // Use window.setInterval for browser environment
                 checkQueueStatus(myTopPlayer.player_card_id);
             }, pollingInterval);
         }
         return () => {
-            if (intervalId) clearInterval(intervalId);
+            if (intervalId) window.clearInterval(intervalId); // Use window.clearInterval
         };
     }, [isSearching, myTopPlayer, checkQueueStatus]);
 
@@ -151,7 +149,7 @@ const SoloRank: React.FC = () => {
                                 <button onClick={handleJoinQueue} className="btn-join">큐 시작</button>
                             ) : (
                                 <div className="searching-indicator">
-                                    <span>상대 검색 중...</span>
+                                    <span>상대 검색 중... ({queueStatus})</span>
                                     <div className="mini-spinner"></div>
                                     <button onClick={handleCancelQueue} className="btn-cancel">취소</button>
                                 </div>
