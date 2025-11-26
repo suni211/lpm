@@ -154,7 +154,24 @@ mysql -u lico_user -plico_password_strong_123 lico_db < src/database/schema_mari
 npm run build
 ```
 
-## 8단계: Lico Client 설정
+## 8단계: Bank Client 설정
+
+```bash
+cd ~/lpm/bank/client
+
+# 의존성 설치
+npm install
+
+# .env 파일 생성
+cat > .env <<'EOF'
+VITE_API_BASE_URL=https://bank.berrple.com
+EOF
+
+# 프로덕션 빌드
+npm run build
+```
+
+## 9단계: Lico Client 설정
 
 ```bash
 cd ~/lpm/lico/client
@@ -171,7 +188,7 @@ EOF
 npm run build
 ```
 
-## 9단계: PM2 설치 및 애플리케이션 실행
+## 10단계: PM2 설치 및 애플리케이션 실행
 
 ```bash
 # PM2 전역 설치
@@ -233,19 +250,32 @@ pm2 startup
 pm2 save
 ```
 
-## 10단계: Nginx 설치 및 설정
+## 11단계: Nginx 설치 및 설정
 
 ```bash
 # Nginx 설치
 sudo apt-get install -y nginx
 
-# Bank Server용 Nginx 설정
+# Bank Server & Client용 Nginx 설정
 sudo tee /etc/nginx/sites-available/bank > /dev/null <<'EOF'
 server {
     listen 80;
     server_name bank.berrple.com;
 
+    # Client (정적 파일)
     location / {
+        root /var/www/bank;
+        try_files $uri $uri/ /index.html;
+
+        # 캐싱 설정
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+
+    # API (Bank Server)
+    location /api {
         proxy_pass http://localhost:5001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -304,6 +334,12 @@ server {
 }
 EOF
 
+# Bank Client 빌드 파일 복사 (디렉토리 먼저 생성)
+sudo mkdir -p /var/www/bank
+sudo rm -rf /var/www/bank/*  # 기존 파일 삭제 (있는 경우)
+sudo cp -r ~/lpm/bank/client/dist/* /var/www/bank/
+sudo chown -R www-data:www-data /var/www/bank
+
 # Lico Client 빌드 파일 복사
 sudo mkdir -p /var/www/lico
 sudo cp -r ~/lpm/lico/client/dist/* /var/www/lico/
@@ -324,7 +360,7 @@ sudo systemctl restart nginx
 sudo systemctl enable nginx
 ```
 
-## 11단계: 방화벽 설정
+## 12단계: 방화벽 설정
 
 ```bash
 # UFW 방화벽 설치 (없는 경우)
@@ -413,6 +449,14 @@ git pull
 cd ~/lpm/bank/server
 npm install
 npm run build
+
+# Bank Client 재빌드
+cd ~/lpm/bank/client
+npm install
+npm run build
+sudo rm -rf /var/www/bank/*
+sudo cp -r dist/* /var/www/bank/
+sudo chown -R www-data:www-data /var/www/bank
 
 # Lico Server 재빌드
 cd ~/lpm/lico/server

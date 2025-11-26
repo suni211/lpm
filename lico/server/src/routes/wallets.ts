@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import walletAddressService from '../services/walletAddressService';
+import { isAuthenticated } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -97,8 +98,8 @@ router.get('/username/:minecraft_username', async (req: Request, res: Response) 
   }
 });
 
-// 내 코인 보유 현황
-router.get('/:wallet_address/balances', async (req: Request, res: Response) => {
+// 내 코인 보유 현황 - 로그인 필요
+router.get('/:wallet_address/balances', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { wallet_address } = req.params;
 

@@ -1,10 +1,13 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Navbar from './components/Navbar';
 import TradingPage from './pages/TradingPage';
 import DepositWithdrawPage from './pages/DepositWithdrawPage';
 import InvestmentHistoryPage from './pages/InvestmentHistoryPage';
 import AdminDashboard from './pages/AdminDashboard';
+import LoginPage from './pages/LoginPage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -23,11 +26,48 @@ function App() {
         <div className="app">
           <Navbar />
           <Routes>
-            <Route path="/" element={<TradingPage />} />
-            <Route path="/trading/:coinSymbol?" element={<TradingPage />} />
-            <Route path="/deposit-withdraw" element={<DepositWithdrawPage />} />
-            <Route path="/investment-history" element={<InvestmentHistoryPage />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <TradingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/trading/:coinSymbol?"
+              element={
+                <ProtectedRoute>
+                  <TradingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/deposit-withdraw"
+              element={
+                <ProtectedRoute>
+                  <DepositWithdrawPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/investment-history"
+              element={
+                <ProtectedRoute>
+                  <InvestmentHistoryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </div>
       </Router>

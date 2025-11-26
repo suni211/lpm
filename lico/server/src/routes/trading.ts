@@ -2,11 +2,12 @@ import express, { Request, Response } from 'express';
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import blockchainService from '../services/blockchainService';
+import { isAuthenticated } from '../middleware/auth';
 
 const router = express.Router();
 
-// 주문 생성 (매수/매도)
-router.post('/order', async (req: Request, res: Response) => {
+// 주문 생성 (매수/매도) - 로그인 필요
+router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { wallet_address, coin_id, order_type, order_method, price, quantity } = req.body;
 
@@ -123,8 +124,8 @@ router.post('/order', async (req: Request, res: Response) => {
   }
 });
 
-// 내 주문 목록
-router.get('/orders/:wallet_address', async (req: Request, res: Response) => {
+// 내 주문 목록 - 로그인 필요
+router.get('/orders/:wallet_address', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { wallet_address } = req.params;
     const { status, coin_id } = req.query;
@@ -169,8 +170,8 @@ router.get('/orders/:wallet_address', async (req: Request, res: Response) => {
   }
 });
 
-// 주문 취소
-router.post('/orders/:order_id/cancel', async (req: Request, res: Response) => {
+// 주문 취소 - 로그인 필요
+router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { order_id } = req.params;
     const { wallet_address } = req.body;
@@ -262,8 +263,8 @@ router.get('/orderbook/:coin_id', async (req: Request, res: Response) => {
   }
 });
 
-// 내 거래 체결 내역
-router.get('/trades/:wallet_address', async (req: Request, res: Response) => {
+// 내 거래 체결 내역 - 로그인 필요
+router.get('/trades/:wallet_address', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { wallet_address } = req.params;
     const { coin_id, limit = 50 } = req.query;
