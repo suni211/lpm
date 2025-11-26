@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { coinService } from '../services/coinService';
 import api from '../services/api';
 import type { Coin } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
