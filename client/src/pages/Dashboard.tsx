@@ -76,7 +76,6 @@ const RARITY_COLORS: { [key: string]: string } = {
 };
 
 const Dashboard: React.FC = () => {
-  const { team } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [moneyTrend, setMoneyTrend] = useState<MoneyTrend[]>([]);
   const [fanStats, setFanStats] = useState<FanStats | null>(null);
@@ -210,7 +209,7 @@ const Dashboard: React.FC = () => {
                 <YAxis
                   stroke="#a3a3a3"
                   style={{ fontSize: '12px' }}
-                  tickFormatter={(value) => `${(value / 100000000).toFixed(1)}억`}
+                  tickFormatter={(value: number) => `${(value / 100000000).toFixed(1)}억`}
                 />
                 <Tooltip
                   contentStyle={{
@@ -310,7 +309,7 @@ const Dashboard: React.FC = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ rarity, count }) => `${rarity} (${count})`}
+                  label={({ rarity, count }: { rarity: string; count: number }) => `${rarity} (${count})`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="count"

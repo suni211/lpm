@@ -56,7 +56,6 @@ const Fandom: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'meeting' | 'player-meeting' | 'events' | 'shop'>('meeting');
   const [showTutorial, setShowTutorial] = useState(false);
   const [selectedMerchandise, setSelectedMerchandise] = useState<Merchandise | null>(null);
-  const [selectedPlayer, setSelectedPlayer] = useState<RosterPlayer | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
 
   useEffect(() => {
