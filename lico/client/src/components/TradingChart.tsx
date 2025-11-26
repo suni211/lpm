@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType } from 'lightweight-charts';
+import { createChart, ColorType, CandlestickSeries } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, CandlestickData, UTCTimestamp } from 'lightweight-charts';
 import type { Candle } from '../types';
 import api from '../services/api';
@@ -85,8 +85,8 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
 
         chartRef.current = chart;
 
-        // lightweight-charts v5: addSeries 사용
-        const candlestickSeries = chart.addSeries('Candlestick', {
+        // lightweight-charts v5: CandlestickSeries 사용
+        const candlestickSeries = chart.addSeries(CandlestickSeries, {
           upColor: '#22c55e',
           downColor: '#ef4444',
           borderUpColor: '#22c55e',

@@ -56,7 +56,13 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
   };
 
   const calculateTotalWithFee = () => {
-    return calculateTotal() + calculateFee();
+    if (orderType === 'BUY') {
+      // 매수: 총 금액 = 주문 금액 + 수수료 (지불해야 할 금액)
+      return calculateTotal() + calculateFee();
+    } else {
+      // 매도: 총 금액 = 주문 금액 - 수수료 (받을 금액)
+      return calculateTotal() - calculateFee();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -253,7 +259,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
         {inputMode === 'amount' ? (
           <div className="form-group">
             <label>
-              구매 금액 (GOLD)
+              {orderType === 'BUY' ? '구매 금액' : '판매 금액'} (GOLD)
               {orderType === 'BUY' && (
                 <button
                   type="button"
@@ -281,7 +287,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
         ) : (
           <div className="form-group">
             <label>
-              구매 수량 ({coin.symbol})
+              {orderType === 'BUY' ? '구매 수량' : '판매 수량'} ({coin.symbol})
               {orderType === 'BUY' && (
                 <button
                   type="button"
@@ -318,7 +324,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
             <span>{formatNumber(calculateFee())} G</span>
           </div>
           <div className="summary-row total-row">
-            <span>총 금액</span>
+            <span>{orderType === 'BUY' ? '총 지불 금액' : '총 받을 금액'}</span>
             <span>{formatNumber(calculateTotalWithFee())} G</span>
           </div>
         </div>
