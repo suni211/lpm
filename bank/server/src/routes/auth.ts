@@ -101,10 +101,13 @@ router.post('/register', async (req: Request, res: Response) => {
       Math.floor(1000 + Math.random() * 9000)
     ).join('-');
 
+    // 계좌 ID 생성
+    const accountId = crypto.randomUUID();
+
     // 계좌 생성
     await query(
-      'INSERT INTO accounts (user_id, account_number, balance) VALUES (?, ?, 0)',
-      [userId, accountNumber]
+      'INSERT INTO accounts (id, user_id, account_number, balance) VALUES (?, ?, ?, 0)',
+      [accountId, userId, accountNumber]
     );
 
     res.status(201).json({

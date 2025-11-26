@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import blockchainService from '../services/blockchainService';
+import tradingEngine from '../services/tradingEngine';
 import { isAuthenticated } from '../middleware/auth';
 
 const router = express.Router();
@@ -42,82 +43,64 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(400).json({ error: '유효하지 않은 수량입니다' });
     }
 
-    // 5% 거래 수수료
-    const totalAmount = orderPrice * quantity;
-    const fee = Math.floor(totalAmount * 0.05);
+    // 주문 생성 및 매칭 (tradingEngine 사용)
+    let orderId: string;
+    let matchResult: any;
 
-    if (order_type === 'BUY') {
-      // 매수: Gold 잔액 확인 및 차감
-      const requiredAmount = totalAmount + fee;
+    try {
+      if (order_method === 'MARKET') {
+        // 시장가 주문: 즉시 매칭
+        if (order_type === 'BUY') {
+          matchResult = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'MARKET', quantity);
+        } else {
+          matchResult = await tradingEngine.processSellOrder(wallet.id, coin_id, 'MARKET', quantity);
+        }
 
-      if (wallet.gold_balance < requiredAmount) {
-        return res.status(400).json({
-          error: '잔액이 부족합니다',
-          required: requiredAmount,
-          available: wallet.gold_balance,
+        // 시장가 주문 결과 처리
+        return res.json({
+          success: true,
+          message: `${order_type === 'BUY' ? '매수' : '매도'} 주문이 체결되었습니다`,
+          matched: matchResult.matched,
+          remaining: matchResult.remaining,
+        });
+      } else {
+        // 지정가 주문: tradingEngine 사용
+        if (order_type === 'BUY') {
+          orderId = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'LIMIT', quantity, orderPrice);
+        } else {
+          orderId = await tradingEngine.processSellOrder(wallet.id, coin_id, 'LIMIT', quantity, orderPrice);
+        }
+
+        // 블록체인 거래 기록 생성
+        const totalAmount = orderPrice * quantity;
+        const fee = Math.floor(totalAmount * 0.05);
+        await blockchainService.createTransaction(
+          wallet.wallet_address,
+          order_type === 'BUY' ? coin.symbol : 'SYSTEM',
+          totalAmount,
           fee,
+          'TRADE',
+          orderId
+        );
+
+        const orders = await query(
+          `SELECT o.*, c.symbol, c.name
+           FROM orders o
+           JOIN coins c ON o.coin_id = c.id
+           WHERE o.id = ?`,
+          [orderId]
+        );
+
+        return res.json({
+          success: true,
+          order: orders[0],
+          message: `${order_type === 'BUY' ? '매수' : '매도'} 주문이 등록되었습니다`,
         });
       }
-
-      // Gold 차감
-      await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
-        requiredAmount,
-        wallet.id,
-      ]);
-    } else if (order_type === 'SELL') {
-      // 매도: 코인 잔액 확인
-      const balances = await query(
-        'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
-        [wallet.id, coin_id]
-      );
-
-      if (balances.length === 0 || balances[0].available_amount < quantity) {
-        return res.status(400).json({
-          error: '보유 코인이 부족합니다',
-          required: quantity,
-          available: balances.length > 0 ? balances[0].available_amount : 0,
-        });
-      }
-
-      // 코인 잠금 (주문 체결될 때까지)
-      await query(
-        'UPDATE user_coin_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND coin_id = ?',
-        [quantity, quantity, wallet.id, coin_id]
-      );
+    } catch (error: any) {
+      console.error('주문 처리 오류:', error);
+      return res.status(400).json({ error: error.message || '주문 처리 실패' });
     }
-
-    // 주문 생성
-    const orderId = uuidv4();
-    await query(
-      `INSERT INTO orders
-       (id, wallet_id, coin_id, order_type, order_method, price, quantity, fee, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
-      [orderId, wallet.id, coin_id, order_type, order_method, orderPrice, quantity, fee]
-    );
-
-    // 블록체인 거래 기록 생성
-    await blockchainService.createTransaction(
-      wallet.wallet_address,
-      order_type === 'BUY' ? coin.symbol : 'SYSTEM',
-      totalAmount,
-      fee,
-      'TRADE',
-      orderId
-    );
-
-    const orders = await query(
-      `SELECT o.*, c.symbol, c.name
-       FROM orders o
-       JOIN coins c ON o.coin_id = c.id
-       WHERE o.id = ?`,
-      [orderId]
-    );
-
-    res.json({
-      success: true,
-      order: orders[0],
-      message: `${order_type === 'BUY' ? '매수' : '매도'} 주문이 등록되었습니다`,
-    });
   } catch (error) {
     console.error('주문 생성 오류:', error);
     res.status(500).json({ error: '주문 생성 실패' });

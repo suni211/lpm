@@ -1,4 +1,7 @@
 import express, { Request, Response } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import { isAdmin } from '../middleware/auth';
@@ -233,6 +236,61 @@ router.patch('/:id', isAdmin, async (req: Request, res: Response) => {
   } catch (error) {
     console.error('코인 수정 오류:', error);
     res.status(500).json({ error: '코인 수정 실패' });
+  }
+});
+
+// 이미지 업로드 설정
+const uploadDir = path.join(process.cwd(), 'public', 'images', 'coins');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp|svg/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('이미지 파일만 업로드 가능합니다 (jpeg, jpg, png, gif, webp, svg)'));
+    }
+  },
+});
+
+// ICO 이미지 업로드 (관리자)
+router.post('/upload-logo', isAdmin, upload.single('logo'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: '이미지 파일을 업로드해주세요' });
+    }
+
+    const logoUrl = `/images/coins/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      logo_url: logoUrl,
+      message: '이미지가 업로드되었습니다',
+    });
+  } catch (error) {
+    console.error('이미지 업로드 오류:', error);
+    res.status(500).json({ error: '이미지 업로드 실패' });
   }
 });
 

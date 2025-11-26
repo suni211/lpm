@@ -5,6 +5,7 @@ import session from 'express-session';
 import { createServer } from 'http';
 import pool from './database/db';
 import blockchainService from './services/blockchainService';
+import aiTradingBot from './services/aiTradingBot';
 import initializeWebSocket from './websocket';
 
 // Load environment variables
@@ -27,6 +28,9 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 정적 파일 서빙 (이미지 업로드)
+app.use('/images', express.static('public/images'));
 
 // Session configuration
 app.use(
@@ -126,6 +130,10 @@ httpServer.listen(PORT, async () => {
 
   // Initialize blockchain on startup
   await initializeBlockchain();
+
+  // Initialize AI Trading Bot
+  aiTradingBot.start();
+  console.log('✅ AI Trading Bot started');
 });
 
 // Graceful shutdown
