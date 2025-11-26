@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import LoginPage from './pages/LoginPage';
+import AdminLoginPage from './pages/AdminLoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RecoveryPage from './pages/RecoveryPage';
 import DashboardPage from './pages/DashboardPage';
@@ -57,6 +58,7 @@ function App() {
           <Route path="/login" element={
             isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage setAuth={setIsAuthenticated} />
           } />
+          <Route path="/admin-login" element={<AdminLoginPage setAuth={setIsAuthenticated} />} />
           <Route path="/register" element={
             isAuthenticated ? <Navigate to="/dashboard" /> : <RegisterPage />
           } />

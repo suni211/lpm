@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import './AdminLoginPage.css';
 
-interface LoginPageProps {
+interface AdminLoginPageProps {
   setAuth: (auth: boolean) => void;
 }
 
-function LoginPage({ setAuth }: LoginPageProps) {
-  const [authCode, setAuthCode] = useState('');
+function AdminLoginPage({ setAuth }: AdminLoginPageProps) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -18,17 +20,17 @@ function LoginPage({ setAuth }: LoginPageProps) {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/login', { auth_code: authCode });
+      const response = await api.post('/auth/admin/login', { username, password });
       const data = response.data;
 
-      if (data.success || data.user) {
+      if (data.success || data.admin) {
         setAuth(true);
-        navigate('/dashboard');
+        navigate('/admin');
       } else {
         setError(data.error || '로그인에 실패했습니다');
       }
-    } catch (err) {
-      setError('서버 연결에 실패했습니다');
+    } catch (err: any) {
+      setError(err.response?.data?.error || '서버 연결에 실패했습니다');
     } finally {
       setLoading(false);
     }
@@ -54,41 +56,49 @@ function LoginPage({ setAuth }: LoginPageProps) {
             />
             <h1 className="auth-title auth-logo-fallback" style={{ display: 'none' }}>🏦 CRYPBANK</h1>
           </div>
-          <p className="auth-subtitle">크립뱅크에 오신 것을 환영합니다</p>
+          <h1 className="auth-title">관리자 로그인</h1>
+          <p className="auth-subtitle">관리자 계정으로 로그인하세요</p>
         </div>
 
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">인증 코드 (32자)</label>
+            <label className="form-label">아이디</label>
             <input
               type="text"
               className="form-input"
-              value={authCode}
-              onChange={(e) => setAuthCode(e.target.value)}
-              placeholder="32자 인증 코드를 입력하세요"
-              maxLength={32}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="관리자 아이디"
               required
             />
-            <small style={{ color: '#666', fontSize: '14px' }}>
-              {authCode.length}/32자
-            </small>
           </div>
 
-          <button type="submit" className="form-button" disabled={loading || authCode.length !== 32}>
+          <div className="form-group">
+            <label className="form-label">비밀번호</label>
+            <input
+              type="password"
+              className="form-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="비밀번호"
+              required
+            />
+          </div>
+
+          <button type="submit" className="form-button" disabled={loading}>
             {loading ? '로그인 중...' : '로그인'}
           </button>
         </form>
 
         <div className="form-links">
-          <Link to="/register" className="form-link">회원가입</Link>
-          <Link to="/recovery" className="form-link">인증 코드 복구</Link>
-          <Link to="/admin-login" className="form-link" style={{ color: '#ef4444', fontWeight: 'bold' }}>관리자 로그인</Link>
+          <Link to="/login" className="form-link">일반 로그인</Link>
         </div>
       </div>
     </div>
   );
 }
 
-export default LoginPage;
+export default AdminLoginPage;
+
