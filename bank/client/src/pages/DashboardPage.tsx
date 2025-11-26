@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 interface DashboardPageProps {
   setAuth: (auth: boolean) => void;
@@ -26,13 +27,9 @@ function DashboardPage({ setAuth }: DashboardPageProps) {
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch('/auth/me', {
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserData(data.user);
+      const response = await api.get('/auth/me');
+      if (response.data.user) {
+        setUserData(response.data.user);
       } else {
         setAuth(false);
         navigate('/login');
@@ -46,10 +43,7 @@ function DashboardPage({ setAuth }: DashboardPageProps) {
 
   const handleLogout = async () => {
     try {
-      await fetch('/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
+      await api.post('/auth/logout');
       setAuth(false);
       navigate('/login');
     } catch (error) {

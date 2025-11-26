@@ -162,7 +162,7 @@ cd ~/lpm/bank/client
 # 의존성 설치
 npm install
 
-# .env 파일 생성
+# .env 파일 생성 (API URL 설정)
 cat > .env <<'EOF'
 VITE_API_BASE_URL=https://bank.berrple.com
 EOF
@@ -170,6 +170,8 @@ EOF
 # 프로덕션 빌드
 npm run build
 ```
+
+**중요**: Bank Client는 이제 `https://bank.berrple.com`을 기본 API URL로 사용합니다. 환경 변수 `VITE_API_BASE_URL`이 설정되지 않으면 자동으로 `https://bank.berrple.com`을 사용합니다.
 
 ## 9단계: Lico Client 설정
 

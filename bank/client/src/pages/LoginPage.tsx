@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 interface LoginPageProps {
   setAuth: (auth: boolean) => void;
@@ -17,16 +18,10 @@ function LoginPage({ setAuth }: LoginPageProps) {
     setLoading(true);
 
     try {
-      const response = await fetch('/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ auth_code: authCode }),
-      });
+      const response = await api.post('/auth/login', { auth_code: authCode });
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (data.success || data.user) {
         setAuth(true);
         navigate('/dashboard');
       } else {

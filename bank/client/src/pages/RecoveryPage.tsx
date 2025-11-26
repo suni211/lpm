@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 function RecoveryPage() {
   const [formData, setFormData] = useState({
@@ -29,15 +30,10 @@ function RecoveryPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/auth/recover-auth-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      const response = await api.post('/auth/recover-auth-code', formData);
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (data.auth_code) {
         setNewAuthCode(data.auth_code);
       } else {
         setError(data.error || '인증 코드 복구에 실패했습니다');

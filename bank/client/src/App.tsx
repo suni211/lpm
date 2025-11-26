@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RecoveryPage from './pages/RecoveryPage';
 import DashboardPage from './pages/DashboardPage';
+import api from './services/api';
 import './App.css';
 
 function App() {
@@ -16,10 +17,8 @@ function App() {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch('/auth/me', {
-        credentials: 'include',
-      });
-      if (response.ok) {
+      const response = await api.get('/auth/me');
+      if (response.data.user) {
         setIsAuthenticated(true);
       }
     } catch (error) {
