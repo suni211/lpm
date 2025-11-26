@@ -1,88 +1,105 @@
+/* Fusion Page - Dark Theme */
 .fusion-page {
   min-height: 100vh;
-  padding: var(--spacing-xl);
-  background: var(--color-bg-primary);
+  padding: 80px 20px 40px;
+  background: var(--bg);
+}
+
+.fusion-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
 }
 
 .page-subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  margin-top: var(--spacing-sm);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
 }
 
+/* Fusion Content Layout */
 .fusion-content {
   display: grid;
   grid-template-columns: 350px 1fr;
-  gap: var(--spacing-xl);
-  margin-top: var(--spacing-xl);
+  gap: 2rem;
 }
 
+/* Recipes Section */
 .recipes-section {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
   height: fit-content;
 }
 
 .section-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-lg);
-  padding-bottom: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border-primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .recipes-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: 0.75rem;
 }
 
 .recipe-card {
-  padding: var(--spacing-md);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-sm);
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s;
 }
 
 .recipe-card:hover {
-  border-color: var(--color-primary);
-  background: var(--color-surface-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
 }
 
 .recipe-card.selected {
-  border-color: var(--color-primary);
-  background: var(--color-surface-hover);
-  box-shadow: 0 0 0 1px var(--color-primary);
+  border-color: var(--primary);
+  background: var(--bg);
 }
 
 .recipe-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: 0.75rem;
 }
 
 .recipe-name {
-  font-size: var(--font-size-base);
+  font-size: 1rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .recipe-success-rate {
-  font-size: var(--font-size-sm);
+  font-size: 0.875rem;
   font-weight: 600;
+  color: var(--success);
 }
 
 .recipe-details {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  font-size: var(--font-size-sm);
+  gap: 0.5rem;
+  font-size: 0.875rem;
 }
 
 .recipe-requirement,
@@ -96,89 +113,108 @@
 .requirement-label,
 .result-label,
 .cost-label {
-  color: var(--color-text-muted);
+  color: var(--text-muted);
 }
 
 .requirement-value,
-.result-value,
-.cost-value {
+.result-value {
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
+.cost-value {
+  font-weight: 600;
+  color: var(--warning);
+}
+
+/* Fusion Workspace */
 .fusion-workspace {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xl);
+  gap: 2rem;
 }
 
 .selected-cards-section,
 .available-cards-section {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
 }
 
+/* Selected Cards Area */
 .selected-cards-area {
   min-height: 200px;
-  padding: var(--spacing-lg);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-sm);
-  margin-bottom: var(--spacing-lg);
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .selected-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
 }
 
 .selected-card-slot {
   aspect-ratio: 3/4;
-  border: 2px dashed var(--color-border-secondary);
-  border-radius: var(--border-radius-sm);
+  border: 2px dashed var(--border);
+  border-radius: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: border-color 0.2s;
+}
+
+.selected-card-slot:hover {
+  border-color: var(--border-hover);
 }
 
 .selected-card {
   width: 100%;
   height: 100%;
-  padding: var(--spacing-md);
-  background: var(--color-surface);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--border-radius-sm);
+  padding: 1rem;
+  background: var(--bg-elevated);
+  border: 2px solid var(--primary);
+  border-radius: 0.5rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  position: relative;
 }
 
 .selected-card-name {
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
   text-align: center;
 }
 
 .btn-remove-card {
-  align-self: flex-end;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
   width: 24px;
   height: 24px;
   padding: 0;
-  background: var(--color-error);
+  background: var(--danger);
   color: white;
   border: none;
   border-radius: 50%;
-  font-size: var(--font-size-xs);
+  font-size: 0.75rem;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-remove-card:hover {
+  background: #dc2626;
 }
 
 .empty-slot {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  color: var(--text-muted);
 }
 
 .no-recipe-selected {
@@ -186,25 +222,71 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }
 
+/* Fusion Button */
 .btn-fusion {
   width: 100%;
-  padding: var(--spacing-md);
-  font-size: var(--font-size-base);
+  padding: 0.875rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
+.btn-fusion:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-fusion:disabled {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Available Cards Table */
 .available-cards-table {
-  overflow-x: auto;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.available-cards-table thead th {
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.available-cards-table tbody td {
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.available-cards-table tbody tr {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.available-cards-table tbody tr:hover {
+  background: var(--bg-secondary);
 }
 
 .selected-row {
-  background: var(--color-surface-hover) !important;
+  background: var(--bg-secondary) !important;
 }
 
+/* Fusion Result Modal */
 .fusion-result-modal {
   position: fixed;
   top: 0;
@@ -216,53 +298,135 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: fadeIn 0.2s ease;
 }
 
 .result-content {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-xl);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 2rem;
   max-width: 400px;
   width: 90%;
   text-align: center;
+  animation: slideUp 0.3s ease;
 }
 
 .result-title {
-  font-size: var(--font-size-2xl);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-lg);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+}
+
+.result-title.success {
+  color: var(--success);
+}
+
+.result-title.failure {
+  color: var(--danger);
 }
 
 .result-card {
-  padding: var(--spacing-lg);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-sm);
-  margin-bottom: var(--spacing-lg);
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .result-card-name {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-sm);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.5rem;
 }
 
 .result-card-rarity {
-  font-size: var(--font-size-base);
+  font-size: 1rem;
   font-weight: 600;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: 0.5rem;
+}
+
+.result-card-rarity.common {
+  color: #6b7280;
+}
+
+.result-card-rarity.rare {
+  color: #3b82f6;
+}
+
+.result-card-rarity.epic {
+  color: #8b5cf6;
+}
+
+.result-card-rarity.legendary {
+  color: #f59e0b;
 }
 
 .result-card-power {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
 }
 
+.btn-close-modal {
+  padding: 0.75rem 1.5rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-close-modal:hover {
+  background: var(--primary-hover);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Responsive */
 @media (max-width: 1024px) {
   .fusion-content {
     grid-template-columns: 1fr;
+  }
+
+  .recipes-section {
+    height: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .fusion-page {
+    padding: 80px 15px 40px;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .selected-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   }
 }

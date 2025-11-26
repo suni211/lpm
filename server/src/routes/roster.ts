@@ -1,10 +1,10 @@
 import express, { Request, Response } from 'express';
 import { isAuthenticated } from '../middleware/auth';
-import pool, { query } from '../database/db';
+import pool, { IQuery, query } from '../database/db';
 
 const router = express.Router();
 
-const MAX_COST = 48;
+const MAX_COST = 58; // Increased for 7 players
 
 // 현재 로스터 조회
 router.get('/', isAuthenticated, async (req: Request, res: Response) => {
@@ -13,285 +13,151 @@ router.get('/', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // 팀의 로스터 조회
-    const teamResult = await query(
-      'SELECT id FROM teams WHERE user_id = ?',
-      [req.user.id]
-    );
-
+    const teamResult: IQuery[] = await query('SELECT id FROM teams WHERE user_id = ?', [req.user.id]);
     if (teamResult.length === 0) {
       return res.status(404).json({ error: '팀을 찾을 수 없습니다' });
     }
-
     const teamId = teamResult[0].id;
 
-    // 로스터 정보
-    const rosterResult = await query(
-      'SELECT * FROM rosters WHERE team_id = ?',
-      [teamId]
-    );
+    const rosterResult: IQuery[] = await query('SELECT * FROM rosters WHERE team_id = ?', [teamId]);
+    if (rosterResult.length === 0) {
+      return res.status(200).json({ roster: null, players: {} });
+    }
 
     const roster = rosterResult[0];
-
-    // 각 포지션의 선수 정보 가져오기
-    const positions = ['top', 'jungle', 'mid', 'adc', 'support'];
     const players: any = {};
-
-    for (const pos of positions) {
+    const positionKeys = ['top', 'jungle', 'mid', 'adc', 'support', 'sub1', 'sub2'];
+    
+    for (const pos of positionKeys) {
       const playerId = roster[`${pos}_player_id`];
       if (playerId) {
-        const playerResult = await query(
-          `SELECT upc.*, pc.card_name, pc.card_image, pc.position, pc.cost,
-                  pc.mental, pc.team_fight, pc.cs_ability, pc.vision,
-                  pc.judgment, pc.laning, pc.power, pc.rarity
+        const playerDetails = await query(
+          `SELECT upc.id, upc.level, upc.condition, upc.exp,
+                  pc.card_name, pc.position, pc.cost,
+                  pc.mental, pc.teamfight, pc.cs_ability, pc.vision,
+                  pc.judgement, pc.laning
            FROM user_player_cards upc
            JOIN player_cards pc ON upc.player_card_id = pc.id
            WHERE upc.id = ?`,
           [playerId]
         );
-        players[pos] = playerResult[0] || null;
+        if (playerDetails.length > 0) {
+          const p = playerDetails[0];
+          players[pos] = {
+            ...p,
+            overall: Math.floor((p.mental + p.teamfight + p.cs_ability + p.vision + p.judgement + p.laning) / 6)
+          };
+        } else {
+           players[pos] = null;
+        }
       } else {
         players[pos] = null;
       }
     }
 
-    res.json({
-      roster,
-      players,
-    });
+    res.json({ roster, players });
   } catch (error) {
     console.error('로스터 조회 오류:', error);
-    res.status(500).json({ error: '로스터 조회에 실패했습니다' });
+    res.status(500).json({ error: '서버 오류로 로스터 조회에 실패했습니다.' });
   }
 });
 
-// 로스터에 선수 배치
-router.post('/assign', isAuthenticated, async (req: Request, res: Response) => {
+// 로스터 저장
+router.post('/save', isAuthenticated, async (req: Request, res: Response) => {
+  const connection = await pool.getConnection();
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { position, userCardId } = req.body;
+    const {
+      top_player_id, jungle_player_id, mid_player_id, adc_player_id, support_player_id,
+      sub1_player_id, sub2_player_id,
+    } = req.body;
+    
+    const mainPlayerIds = [top_player_id, jungle_player_id, mid_player_id, adc_player_id, support_player_id];
+    const subPlayerIds = [sub1_player_id, sub2_player_id].filter(id => id); // Filter out null/undefined subs
+    const allPlayerIds = [...mainPlayerIds, ...subPlayerIds];
+    const positions = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 
-    if (!['top', 'jungle', 'mid', 'adc', 'support'].includes(position)) {
-      return res.status(400).json({ error: '유효하지 않은 포지션입니다' });
+    if (mainPlayerIds.some(id => id === null || id === undefined)) {
+      return res.status(400).json({ error: '모든 주전 포지션에 선수를 배치해야 합니다.' });
+    }
+    
+    const uniquePlayerIds = new Set(allPlayerIds);
+    if (uniquePlayerIds.size !== allPlayerIds.length) {
+      return res.status(400).json({ error: '한 선수를 여러 포지션에 배치할 수 없습니다.' });
     }
 
-    // 팀 조회
-    const teamResult = await query(
-      'SELECT id FROM teams WHERE user_id = ?',
-      [req.user.id]
-    );
-
+    const teamResult: IQuery[] = await query('SELECT id FROM teams WHERE user_id = ?', [req.user.id]);
     if (teamResult.length === 0) {
-      return res.status(404).json({ error: '팀을 찾을 수 없습니다' });
+      return res.status(404).json({ error: '팀을 찾을 수 없습니다.' });
     }
-
     const teamId = teamResult[0].id;
 
-    // 선수 카드 조회
-    const cardResult = await query(
-      `SELECT upc.*, pc.position, pc.cost
-       FROM user_player_cards upc
-       JOIN player_cards pc ON upc.player_card_id = pc.id
-       WHERE upc.id = ? AND upc.user_id = ?`,
-      [userCardId, req.user.id]
-    );
+    await connection.beginTransaction();
 
-    if (cardResult.length === 0) {
-      return res.status(404).json({ error: '선수 카드를 찾을 수 없습니다' });
-    }
-
-    const card = cardResult[0];
-
-    // 포지션 확인
-    const positionMap: any = {
-      top: 'TOP',
-      jungle: 'JUNGLE',
-      mid: 'MID',
-      adc: 'ADC',
-      support: 'SUPPORT',
-    };
-
-    if (card.position !== positionMap[position]) {
-      return res.status(400).json({
-        error: `${card.position} 선수는 ${position.toUpperCase()} 포지션에 배치할 수 없습니다`,
-      });
-    }
-
-    // 현재 로스터
-    const rosterResult = await query(
-      'SELECT * FROM rosters WHERE team_id = ?',
-      [teamId]
-    );
-
-    const roster = rosterResult[0];
-
-    // 새로운 총 코스트 계산
-    let newTotalCost = 0;
-
-    for (const pos of ['top', 'jungle', 'mid', 'adc', 'support']) {
-      if (pos === position) {
-        newTotalCost += card.cost;
-      } else {
-        const currentPlayerId = roster[`${pos}_player_id`];
-        if (currentPlayerId) {
-          const currentPlayerResult = await query(
-            `SELECT pc.cost FROM user_player_cards upc
-             JOIN player_cards pc ON upc.player_card_id = pc.id
-             WHERE upc.id = ?`,
-            [currentPlayerId]
-          );
-          if (currentPlayerResult.length > 0) {
-            newTotalCost += currentPlayerResult[0].cost;
-          }
-        }
+    const [oldRoster] : any = await connection.query('SELECT * FROM rosters WHERE team_id = ?', [teamId]);
+    if (oldRoster.length > 0) {
+      const oldPlayerIds = [
+        ...Object.values(oldRoster[0]).filter(id => id !== null && typeof id !== 'number' && id !== teamId),
+      ].slice(0, 7); // Ensure we only get player IDs
+       if (oldPlayerIds.length > 0) {
+        await connection.query('UPDATE user_player_cards SET in_roster = ? WHERE id IN (?)', [false, oldPlayerIds]);
       }
     }
 
-    // 코스트 제한 확인
-    if (newTotalCost > MAX_COST) {
-      return res.status(400).json({
-        error: `총 코스트가 ${MAX_COST}를 초과할 수 없습니다 (현재: ${newTotalCost})`,
-      });
-    }
-
-    // 이전에 로스터에 있던 선수 제거
-    const oldPlayerId = roster[`${position}_player_id`];
-    if (oldPlayerId) {
-      await query(
-        'UPDATE user_player_cards SET in_roster = false WHERE id = ?',
-        [oldPlayerId]
+    let total_cost = 0;
+    // Validate main players
+    for (let i = 0; i < mainPlayerIds.length; i++) {
+      const [rows]: any = await connection.query(
+        `SELECT pc.cost, pc.position FROM user_player_cards upc
+         JOIN player_cards pc ON upc.player_card_id = pc.id
+         WHERE upc.id = ? AND upc.user_id = ?`,
+        [mainPlayerIds[i], req.user.id]
       );
+      if (rows.length === 0) throw new Error(`유효하지 않거나 소유하지 않은 주전 선수 카드입니다.`);
+      if (rows[0].position !== positions[i]) throw new Error(`주전 선수의 포지션이 일치하지 않습니다.`);
+      total_cost += rows[0].cost;
     }
 
-    // 새 선수 배치
-    await query(
-      `UPDATE rosters SET ${position}_player_id = ?, total_cost = ?, updated_at = CURRENT_TIMESTAMP
+    // Validate sub players
+    for (const subId of subPlayerIds) {
+       const [rows]: any = await connection.query(
+        `SELECT pc.cost FROM user_player_cards upc
+         JOIN player_cards pc ON upc.player_card_id = pc.id
+         WHERE upc.id = ? AND upc.user_id = ?`,
+        [subId, req.user.id]
+      );
+      if (rows.length === 0) throw new Error(`유효하지 않거나 소유하지 않은 후보 선수 카드입니다.`);
+      total_cost += rows[0].cost;
+    }
+
+    if (total_cost > MAX_COST) {
+      throw new Error(`총 코스트(${total_cost})가 최대 코스트(${MAX_COST})를 초과했습니다.`);
+    }
+
+    await connection.query(
+      `UPDATE rosters 
+       SET top_player_id = ?, jungle_player_id = ?, mid_player_id = ?, adc_player_id = ?, support_player_id = ?, 
+           sub1_player_id = ?, sub2_player_id = ?, total_cost = ?
        WHERE team_id = ?`,
-      [userCardId, newTotalCost, teamId]
+      [...mainPlayerIds, sub1_player_id || null, sub2_player_id || null, total_cost, teamId]
     );
 
-    // 선수를 로스터에 추가
-    await query(
-      'UPDATE user_player_cards SET in_roster = true WHERE id = ?',
-      [userCardId]
-    );
-
-    res.json({ message: '선수가 배치되었습니다', totalCost: newTotalCost });
-  } catch (error) {
-    console.error('선수 배치 오류:', error);
-    res.status(500).json({ error: '선수 배치에 실패했습니다' });
-  }
-});
-
-// 로스터에서 선수 제거
-router.post('/remove', isAuthenticated, async (req: Request, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    if (allPlayerIds.length > 0) {
+      await connection.query('UPDATE user_player_cards SET in_roster = ? WHERE id IN (?)', [true, allPlayerIds]);
     }
 
-    const { position } = req.body;
+    await connection.commit();
+    res.status(200).json({ message: '로스터가 성공적으로 저장되었습니다.', total_cost });
 
-    if (!['top', 'jungle', 'mid', 'adc', 'support'].includes(position)) {
-      return res.status(400).json({ error: '유효하지 않은 포지션입니다' });
-    }
-
-    // 팀 조회
-    const teamResult = await query(
-      'SELECT id FROM teams WHERE user_id = ?',
-      [req.user.id]
-    );
-
-    if (teamResult.length === 0) {
-      return res.status(404).json({ error: '팀을 찾을 수 없습니다' });
-    }
-
-    const teamId = teamResult[0].id;
-
-    // 현재 로스터
-    const rosterResult = await query(
-      'SELECT * FROM rosters WHERE team_id = ?',
-      [teamId]
-    );
-
-    const roster = rosterResult[0];
-    const playerId = roster[`${position}_player_id`];
-
-    if (!playerId) {
-      return res.status(400).json({ error: '해당 포지션에 선수가 없습니다' });
-    }
-
-    // 선수의 코스트 가져오기
-    const playerResult = await query(
-      `SELECT pc.cost FROM user_player_cards upc
-       JOIN player_cards pc ON upc.player_card_id = pc.id
-       WHERE upc.id = ?`,
-      [playerId]
-    );
-
-    const cost = playerResult[0].cost;
-    const newTotalCost = roster.total_cost - cost;
-
-    // 로스터에서 제거
-    await query(
-      `UPDATE rosters SET ${position}_player_id = NULL, total_cost = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE team_id = ?`,
-      [newTotalCost, teamId]
-    );
-
-    // 선수 상태 업데이트
-    await query(
-      'UPDATE user_player_cards SET in_roster = false WHERE id = ?',
-      [playerId]
-    );
-
-    res.json({ message: '선수가 제거되었습니다', totalCost: newTotalCost });
-  } catch (error) {
-    console.error('선수 제거 오류:', error);
-    res.status(500).json({ error: '선수 제거에 실패했습니다' });
-  }
-});
-
-// 사용 가능한 선수 목록 (포지션별)
-router.get('/available/:position', isAuthenticated, async (req: Request, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const { position } = req.params;
-
-    const positionMap: any = {
-      top: 'TOP',
-      jungle: 'JUNGLE',
-      mid: 'MID',
-      adc: 'ADC',
-      support: 'SUPPORT',
-    };
-
-    if (!positionMap[position]) {
-      return res.status(400).json({ error: '유효하지 않은 포지션입니다' });
-    }
-
-    // 해당 포지션의 사용 가능한 선수들
-    const playersResult = await query(
-      `SELECT upc.*, pc.card_name, pc.card_image, pc.position, pc.cost,
-              pc.mental, pc.team_fight, pc.cs_ability, pc.vision,
-              pc.judgment, pc.laning, pc.power, pc.rarity
-       FROM user_player_cards upc
-       JOIN player_cards pc ON upc.player_card_id = pc.id
-       WHERE upc.user_id = ? AND pc.position = ? AND upc.in_roster = false
-       ORDER BY pc.power DESC`,
-      [req.user.id, positionMap[position]]
-    );
-
-    res.json({ players: playersResult });
-  } catch (error) {
-    console.error('선수 목록 조회 오류:', error);
-    res.status(500).json({ error: '선수 목록 조회에 실패했습니다' });
+  } catch (error: any) {
+    if (connection) await connection.rollback();
+    console.error('로스터 저장 오류:', error);
+    res.status(500).json({ error: error.message || '서버 오류로 로스터 저장에 실패했습니다.' });
+  } finally {
+    if (connection) connection.release();
   }
 });
 

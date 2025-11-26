@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 import Navbar from './components/Navbar';
+import ToastContainer from './components/ToastContainer';
 import Home from './pages/Home';
 import CreateTeam from './pages/CreateTeam';
 import Dashboard from './pages/Dashboard';
@@ -26,30 +28,33 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="app">
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/create-team" element={<CreateTeam />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/gacha" element={<Gacha />} />
-            <Route path="/roster" element={<Roster />} />
-            <Route path="/match" element={<Match />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/posting" element={<Posting />} />
-            <Route path="/achievements" element={<Achievements />} />
-            <Route path="/sponsors" element={<Sponsors />} />
-            <Route path="/fandom" element={<Fandom />} />
-            <Route path="/ranked" element={<Ranked />} />
-            <Route path="/solo-rank" element={<SoloRank />} />
-            <Route path="/auction" element={<Auction />} />
-            <Route path="/league" element={<League />} />
-            <Route path="/cards" element={<Cards />} />
-            <Route path="/fusion" element={<Fusion />} />
-            <Route path="/training" element={<Training />} />
-            <Route path="/facility" element={<Facility />} />
-          </Routes>
-        </div>
+        <ToastProvider>
+          <div className="app">
+            <Navbar />
+            <ToastContainer />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/create-team" element={<CreateTeam />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/gacha" element={<Gacha />} />
+              <Route path="/roster" element={<Roster />} />
+              <Route path="/match" element={<Match />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/posting" element={<Posting />} />
+              <Route path="/achievements" element={<Achievements />} />
+              <Route path="/sponsors" element={<Sponsors />} />
+              <Route path="/fandom" element={<Fandom />} />
+              <Route path="/ranked" element={<Ranked />} />
+              <Route path="/solo-rank" element={<SoloRank />} />
+              <Route path="/auction" element={<Auction />} />
+              <Route path="/league" element={<League />} />
+              <Route path="/cards" element={<Cards />} />
+              <Route path="/fusion" element={<Fusion />} />
+              <Route path="/training" element={<Training />} />
+              <Route path="/facility" element={<Facility />} />
+            </Routes>
+          </div>
+        </ToastProvider>
       </AuthProvider>
     </Router>
   );

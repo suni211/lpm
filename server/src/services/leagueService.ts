@@ -79,11 +79,13 @@ export async function getLeagueStandings(leagueId: number, seasonId: number): Pr
 export async function getLeagueMatches(leagueId: number, seasonId: number) {
   const [result]: any = await query(
     `SELECT lm.*,
-            hp.team_name as home_team_name, hp.is_ai as home_is_ai,
-            ap.team_name as away_team_name, ap.is_ai as away_is_ai
+            hp.team_name as home_team_name, hp.is_ai as home_is_ai, home_team.logo_url as home_team_logo,
+            ap.team_name as away_team_name, ap.is_ai as away_is_ai, away_team.logo_url as away_team_logo
      FROM league_matches lm
      JOIN league_participants hp ON lm.home_participant_id = hp.id
      JOIN league_participants ap ON lm.away_participant_id = ap.id
+     LEFT JOIN teams home_team ON hp.team_id = home_team.id
+     LEFT JOIN teams away_team ON ap.team_id = away_team.id
      WHERE lm.league_id = ? AND lm.season_id = ?
      ORDER BY lm.match_week ASC, lm.match_date ASC`,
     [leagueId, seasonId]

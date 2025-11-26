@@ -116,6 +116,54 @@ router.get('/leaderboard', isAuthenticated, async (req: Request, res: Response) 
   }
 });
 
+// 내 소속팀의 선수 중 가장 높은 점수를 가진 선수 조회
+router.get('/my-top-player', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const [teamResult]: any = await query('SELECT id FROM teams WHERE user_id = ?', [req.user.id]);
+    if (teamResult.length === 0) {
+      return res.status(404).json({ error: '팀을 찾을 수 없습니다.' });
+    }
+    const teamId = teamResult[0].id;
+
+    const [topPlayer]: any = await query(`
+        SELECT psr.*, pc.player_name, pc.position, pc.ovr, t.team_name
+        FROM player_solo_rank psr
+        JOIN user_player_cards upc ON psr.player_card_id = upc.id
+        JOIN player_cards pc ON upc.player_card_id = pc.id
+        JOIN teams t ON upc.team_id = t.id
+        WHERE upc.team_id = ?
+        ORDER BY psr.solo_rating DESC
+        LIMIT 1
+    `, [teamId]);
+
+    if (topPlayer.length === 0) {
+        // Find the first player of the team if no one has a solo rank yet
+        const [firstPlayer]: any = await query(`
+            SELECT upc.id as player_card_id, pc.player_name, pc.position, pc.ovr, t.team_name
+            FROM user_player_cards upc
+            JOIN player_cards pc ON upc.player_card_id = pc.id
+            JOIN teams t ON upc.team_id = t.id
+            WHERE upc.team_id = ?
+            LIMIT 1
+        `, [teamId]);
+
+        if (firstPlayer.length === 0) {
+            return res.status(404).json({ error: '팀에 선수가 없습니다.' });
+        }
+        return res.json({ player: { ...firstPlayer[0], solo_rating: 1500, wins: 0, losses: 0 } });
+    }
+
+    res.json({ player: topPlayer[0] });
+  } catch (error) {
+    console.error('내 최고 선수 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
 // 솔랭 큐 참가
 router.post('/queue/join', isAuthenticated, async (req: Request, res: Response) => {
   const client = await getConnection();
@@ -309,6 +357,27 @@ router.post('/queue/cancel', isAuthenticated, async (req: Request, res: Response
     console.error('큐 취소 오류:', error);
     res.status(500).json({ error: '큐 취소에 실패했습니다' });
   }
+});
+
+// 솔랭 큐 상태 확인
+router.get('/queue/status/:playerCardId', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+        const { playerCardId } = req.params;
+        const [result]:any = await query(
+            `SELECT status, match_id FROM solo_rank_queue WHERE player_card_id = ? ORDER BY queue_joined_at DESC LIMIT 1`,
+            [playerCardId]
+        );
+
+        if (result.length === 0) {
+            return res.json({ status: 'IDLE' });
+        }
+
+        res.json(result[0]);
+
+    } catch (error) {
+        console.error('큐 상태 조회 오류:', error);
+        res.status(500).json({ error: '큐 상태 조회에 실패했습니다' });
+    }
 });
 
 // 솔랭 매치 기록 조회

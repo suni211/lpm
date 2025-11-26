@@ -1,165 +1,220 @@
+/* Facility Page - Dark Theme */
 .facility-page {
   min-height: 100vh;
-  padding: var(--spacing-xl);
-  background: var(--color-bg-primary);
+  padding: 80px 20px 40px;
+  background: var(--bg);
 }
 
+.facility-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.facility-header {
+  margin-bottom: 2rem;
+}
+
+.facility-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* Facilities Grid */
 .facilities-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: var(--spacing-xl);
-  margin-top: var(--spacing-xl);
-  margin-bottom: var(--spacing-xl);
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .facility-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: 1rem;
+  transition: border-color 0.2s;
 }
 
+.facility-card:hover {
+  border-color: var(--border-hover);
+}
+
+/* Facility Header */
 .facility-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border-primary);
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .facility-name {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text-primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .facility-level {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: var(--spacing-xs);
+  gap: 0.25rem;
 }
 
 .level-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .level-value {
-  font-size: var(--font-size-xl);
+  font-size: 1.5rem;
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--primary);
 }
 
+/* Facility Content */
 .facility-description {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
 .facility-bonus {
-  padding: var(--spacing-md);
-  background: var(--color-bg-secondary);
-  border-radius: var(--border-radius-sm);
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 0.5rem;
+}
+
+.bonus-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.5rem;
 }
 
 .bonus-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0.25rem 0;
 }
 
 .bonus-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
 }
 
 .bonus-value {
-  font-size: var(--font-size-base);
+  font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-success);
+  color: var(--success);
 }
 
+/* Level Progress Bar */
 .facility-level-bar {
   position: relative;
   width: 100%;
   height: 8px;
-  background: var(--color-bg-secondary);
+  background: var(--bg-secondary);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .level-bar-fill {
   height: 100%;
-  background: var(--color-primary);
+  background: var(--primary);
   transition: width 0.3s;
 }
 
+/* Upgrade Section */
 .facility-upgrade-section {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border-light);
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 
 .upgrade-info {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: 0.5rem;
 }
 
 .upgrade-info-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: var(--font-size-sm);
+  font-size: 0.875rem;
 }
 
 .info-label {
-  color: var(--color-text-muted);
+  color: var(--text-muted);
 }
 
 .info-value {
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .info-value.cost {
-  color: var(--color-warning);
+  color: var(--warning);
 }
 
 .btn-upgrade {
   width: 100%;
-  padding: var(--spacing-md);
+  padding: 0.75rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
+.btn-upgrade:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-upgrade:disabled {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Max Level State */
 .facility-maxed {
   display: flex;
   justify-content: center;
-  padding: var(--spacing-md);
-  background: rgba(5, 150, 105, 0.1);
-  border-radius: var(--border-radius-sm);
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--success);
+  border-radius: 0.5rem;
+  color: var(--success);
+  font-weight: 600;
 }
 
+/* Tips Section */
 .facility-tips {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-md);
-  padding: var(--spacing-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
 }
 
 .tips-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-md);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1rem;
 }
 
 .tips-list {
@@ -168,25 +223,58 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: 0.75rem;
 }
 
 .tips-list li {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  padding-left: var(--spacing-lg);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  padding-left: 1.5rem;
   position: relative;
+  line-height: 1.5;
 }
 
 .tips-list li::before {
   content: '•';
   position: absolute;
   left: 0;
-  color: var(--color-primary);
+  color: var(--primary);
   font-weight: 700;
 }
 
-@media (max-width: 1024px) {
+/* Loading State */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .facility-page {
+    padding: 80px 15px 40px;
+  }
+
+  .facility-title {
+    font-size: 1.5rem;
+  }
+
   .facilities-grid {
     grid-template-columns: 1fr;
   }
