@@ -9,6 +9,7 @@ interface PlayerCard {
   power: number;
   rarity: string;
   level: number;
+  in_roster: boolean;
 }
 
 interface FusionRecipe {
