@@ -164,15 +164,15 @@
 }
 
 .meeting-header.basic {
-  background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
 }
 
 .meeting-header.premium {
-  background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
 }
 
 .meeting-header.special {
-  background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
 }
 
 .meeting-header h3 {

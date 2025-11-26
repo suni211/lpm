@@ -24,7 +24,7 @@
 .roster-title {
   font-size: 2.5rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
@@ -37,7 +37,7 @@
   padding: 1rem 1.5rem;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 12px;
-  border: 2px solid rgba(102, 126, 234, 0.3);
+  border: 2px solid rgba(37, 99, 235, 0.3);
 }
 
 .cost-label {
@@ -49,7 +49,7 @@
 .cost-value {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #667eea;
+  color: #2563eb;
   transition: all 0.3s ease;
 }
 
@@ -82,12 +82,12 @@
 
 .position-card:hover {
   transform: translateY(-5px);
-  border-color: rgba(102, 126, 234, 0.5);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3);
 }
 
 .position-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   padding: 1rem;
   text-align: center;
 }
@@ -130,7 +130,7 @@
 
 .player-cost span,
 .player-power span {
-  color: #667eea;
+  color: #2563eb;
   font-weight: 700;
 }
 
@@ -152,13 +152,13 @@
 }
 
 .btn-change {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: white;
 }
 
 .btn-change:hover {
   transform: scale(1.05);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 5px 15px rgba(37, 99, 235, 0.4);
 }
 
 .btn-remove {
@@ -232,7 +232,7 @@
   max-width: 600px;
   max-height: 80vh;
   overflow: hidden;
-  border: 2px solid rgba(102, 126, 234, 0.3);
+  border: 2px solid rgba(37, 99, 235, 0.3);
   animation: slideUp 0.3s ease;
 }
 
@@ -252,7 +252,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   border-bottom: 2px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -299,7 +299,7 @@
 }
 
 .player-list::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   border-radius: 4px;
 }
 
@@ -324,7 +324,7 @@
 }
 
 .player-item:hover {
-  border-color: rgba(102, 126, 234, 0.5);
+  border-color: rgba(37, 99, 235, 0.5);
   transform: translateX(5px);
 }
 
@@ -347,7 +347,7 @@
 
 .btn-select {
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -359,7 +359,7 @@
 
 .btn-select:hover {
   transform: scale(1.1);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 5px 15px rgba(37, 99, 235, 0.4);
 }
 
 .roster-loading {
@@ -373,8 +373,8 @@
 .spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid rgba(102, 126, 234, 0.2);
-  border-top-color: #667eea;
+  border: 4px solid rgba(37, 99, 235, 0.2);
+  border-top-color: #2563eb;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
