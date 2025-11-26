@@ -85,9 +85,8 @@ const TradingChart = ({ coinId }: TradingChartProps) => {
 
         chartRef.current = chart;
 
-        // lightweight-charts v5: addSeries 사용 (타입을 객체로 전달)
-        const candlestickSeries = chart.addSeries({
-          type: 'Candlestick',
+        // lightweight-charts v5: addSeries 사용
+        const candlestickSeries = chart.addSeries('Candlestick', {
           upColor: '#22c55e',
           downColor: '#ef4444',
           borderUpColor: '#22c55e',
