@@ -12,6 +12,9 @@ import Posting from './pages/Posting';
 import Achievements from './pages/Achievements';
 import Sponsors from './pages/Sponsors';
 import Fandom from './pages/Fandom';
+import Ranked from './pages/Ranked';
+import SoloRank from './pages/SoloRank';
+import Auction from './pages/Auction';
 import './App.css';
 
 function App() {
@@ -32,6 +35,9 @@ function App() {
             <Route path="/achievements" element={<Achievements />} />
             <Route path="/sponsors" element={<Sponsors />} />
             <Route path="/fandom" element={<Fandom />} />
+            <Route path="/ranked" element={<Ranked />} />
+            <Route path="/solo-rank" element={<SoloRank />} />
+            <Route path="/auction" element={<Auction />} />
           </Routes>
         </div>
       </AuthProvider>

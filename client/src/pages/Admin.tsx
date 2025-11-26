@@ -20,31 +20,29 @@ interface PlayerCardForm {
 }
 
 interface CoachCardForm {
-  card_name: string;
-  specialty: string;
-  effect_stat: string;
-  effect_value: number;
-  cost: number;
+  coach_name: string;
+  command: number;
+  ban_pick: number;
+  meta: number;
+  cold: number;
+  warm: number;
   rarity: string;
 }
 
 interface TacticCardForm {
-  card_name: string;
-  tactic_type: string;
+  tactic_name: string;
+  position: string | null;
   effect_description: string;
-  phase: number;
+  effect_type: string;
   effect_value: number;
-  cost: number;
   rarity: string;
 }
 
 interface SupportCardForm {
-  card_name: string;
-  support_type: string;
+  support_name: string;
   effect_description: string;
+  effect_type: string;
   effect_value: number;
-  duration_days: number;
-  cost: number;
   rarity: string;
 }
 
@@ -52,6 +50,9 @@ const Admin: React.FC = () => {
   const [selectedType, setSelectedType] = useState<CardType>('player');
   const [image, setImage] = useState<File | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [cardList, setCardList] = useState<any[]>([]);
+  const [showCardList, setShowCardList] = useState(false);
+  const [uploadingCardId, setUploadingCardId] = useState<number | null>(null);
 
   // Player Card Form
   const [playerForm, setPlayerForm] = useState<PlayerCardForm>({
@@ -71,34 +72,32 @@ const Admin: React.FC = () => {
 
   // Coach Card Form
   const [coachForm, setCoachForm] = useState<CoachCardForm>({
-    card_name: '',
-    specialty: '',
-    effect_stat: 'mental',
-    effect_value: 5,
-    cost: 5,
-    rarity: 'COMMON',
+    coach_name: '',
+    command: 70,
+    ban_pick: 70,
+    meta: 70,
+    cold: 70,
+    warm: 70,
+    rarity: 'RARE',
   });
 
   // Tactic Card Form
   const [tacticForm, setTacticForm] = useState<TacticCardForm>({
-    card_name: '',
-    tactic_type: '공격형',
+    tactic_name: '',
+    position: null,
     effect_description: '',
-    phase: 1,
-    effect_value: 10,
-    cost: 3,
-    rarity: 'COMMON',
+    effect_type: '',
+    effect_value: 3,
+    rarity: 'RARE',
   });
 
   // Support Card Form
   const [supportForm, setSupportForm] = useState<SupportCardForm>({
-    card_name: '',
-    support_type: '컨디션',
+    support_name: '',
     effect_description: '',
+    effect_type: '',
     effect_value: 10,
-    duration_days: 7,
-    cost: 2,
-    rarity: 'COMMON',
+    rarity: 'NORMAL',
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -215,31 +214,66 @@ const Admin: React.FC = () => {
       nationality: 'KR',
     });
     setCoachForm({
-      card_name: '',
-      specialty: '',
-      effect_stat: 'mental',
-      effect_value: 5,
-      cost: 5,
-      rarity: 'COMMON',
+      coach_name: '',
+      command: 70,
+      ban_pick: 70,
+      meta: 70,
+      cold: 70,
+      warm: 70,
+      rarity: 'RARE',
     });
     setTacticForm({
-      card_name: '',
-      tactic_type: '공격형',
+      tactic_name: '',
+      position: null,
       effect_description: '',
-      phase: 1,
-      effect_value: 10,
-      cost: 3,
-      rarity: 'COMMON',
+      effect_type: '',
+      effect_value: 3,
+      rarity: 'RARE',
     });
     setSupportForm({
-      card_name: '',
-      support_type: '컨디션',
+      support_name: '',
       effect_description: '',
+      effect_type: '',
       effect_value: 10,
-      duration_days: 7,
-      cost: 2,
-      rarity: 'COMMON',
+      rarity: 'NORMAL',
     });
+  };
+
+  const loadCards = async () => {
+    try {
+      const response = await api.get(`/admin/cards?type=${selectedType}`);
+      setCardList(response.data.cards);
+      setShowCardList(true);
+    } catch (error: any) {
+      alert(error.response?.data?.error || '카드 목록 조회에 실패했습니다');
+    }
+  };
+
+  const uploadCardImage = async (cardId: number, file: File) => {
+    try {
+      setUploadingCardId(cardId);
+      const formData = new FormData();
+      formData.append('image', file);
+
+      await api.post(`/admin/cards/${selectedType}/${cardId}/image`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      alert('이미지가 업로드되었습니다!');
+      loadCards(); // 목록 새로고침
+    } catch (error: any) {
+      alert(error.response?.data?.error || '이미지 업로드에 실패했습니다');
+    } finally {
+      setUploadingCardId(null);
+    }
+  };
+
+  const handleCardImageUpload = (cardId: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      uploadCardImage(cardId, e.target.files[0]);
+    }
   };
 
   return (
@@ -434,54 +468,66 @@ const Admin: React.FC = () => {
               <h2 className="section-title">감독 카드 정보</h2>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>카드 이름</label>
+                  <label>감독 이름</label>
                   <input
                     type="text"
-                    value={coachForm.card_name}
-                    onChange={(e) => setCoachForm({ ...coachForm, card_name: e.target.value })}
+                    value={coachForm.coach_name}
+                    onChange={(e) => setCoachForm({ ...coachForm, coach_name: e.target.value })}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label>특기</label>
-                  <input
-                    type="text"
-                    value={coachForm.specialty}
-                    onChange={(e) => setCoachForm({ ...coachForm, specialty: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>효과 능력치</label>
-                  <select
-                    value={coachForm.effect_stat}
-                    onChange={(e) => setCoachForm({ ...coachForm, effect_stat: e.target.value })}
-                  >
-                    <option value="mental">멘탈</option>
-                    <option value="team_fight">한타력</option>
-                    <option value="cs_ability">CS 능력</option>
-                    <option value="vision">시야</option>
-                    <option value="judgment">판단력</option>
-                    <option value="laning">라인전</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>효과 값</label>
-                  <input
-                    type="number"
-                    value={coachForm.effect_value}
-                    onChange={(e) => setCoachForm({ ...coachForm, effect_value: parseInt(e.target.value) })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>코스트</label>
+                  <label>지휘 (1-99)</label>
                   <input
                     type="number"
                     min="1"
-                    max="10"
-                    value={coachForm.cost}
-                    onChange={(e) => setCoachForm({ ...coachForm, cost: parseInt(e.target.value) })}
+                    max="99"
+                    value={coachForm.command}
+                    onChange={(e) => setCoachForm({ ...coachForm, command: parseInt(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>밴픽 (1-99)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    value={coachForm.ban_pick}
+                    onChange={(e) => setCoachForm({ ...coachForm, ban_pick: parseInt(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>메타력 (1-99)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    value={coachForm.meta}
+                    onChange={(e) => setCoachForm({ ...coachForm, meta: parseInt(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>냉정함 (1-99)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    value={coachForm.cold}
+                    onChange={(e) => setCoachForm({ ...coachForm, cold: parseInt(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>따뜻함 (1-99)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    value={coachForm.warm}
+                    onChange={(e) => setCoachForm({ ...coachForm, warm: parseInt(e.target.value) })}
                     required
                   />
                 </div>
@@ -491,7 +537,7 @@ const Admin: React.FC = () => {
                     value={coachForm.rarity}
                     onChange={(e) => setCoachForm({ ...coachForm, rarity: e.target.value })}
                   >
-                    <option value="COMMON">COMMON</option>
+                    <option value="NORMAL">NORMAL</option>
                     <option value="RARE">RARE</option>
                     <option value="EPIC">EPIC</option>
                     <option value="LEGEND">LEGEND</option>
@@ -506,35 +552,35 @@ const Admin: React.FC = () => {
               <h2 className="section-title">작전 카드 정보</h2>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>카드 이름</label>
+                  <label>작전 이름</label>
                   <input
                     type="text"
-                    value={tacticForm.card_name}
-                    onChange={(e) => setTacticForm({ ...tacticForm, card_name: e.target.value })}
+                    value={tacticForm.tactic_name}
+                    onChange={(e) => setTacticForm({ ...tacticForm, tactic_name: e.target.value })}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label>작전 타입</label>
+                  <label>포지션 (선택사항)</label>
                   <select
-                    value={tacticForm.tactic_type}
-                    onChange={(e) => setTacticForm({ ...tacticForm, tactic_type: e.target.value })}
+                    value={tacticForm.position || ''}
+                    onChange={(e) => setTacticForm({ ...tacticForm, position: e.target.value || null })}
                   >
-                    <option value="공격형">공격형</option>
-                    <option value="수비형">수비형</option>
-                    <option value="균형형">균형형</option>
-                    <option value="라인전">라인전</option>
-                    <option value="한타">한타</option>
+                    <option value="">없음 (전체)</option>
+                    <option value="TOP">TOP</option>
+                    <option value="JUNGLE">JUNGLE</option>
+                    <option value="MID">MID</option>
+                    <option value="ADC">ADC</option>
+                    <option value="SUPPORT">SUPPORT</option>
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>적용 페이즈 (1-3)</label>
+                  <label>효과 타입</label>
                   <input
-                    type="number"
-                    min="1"
-                    max="3"
-                    value={tacticForm.phase}
-                    onChange={(e) => setTacticForm({ ...tacticForm, phase: parseInt(e.target.value) })}
+                    type="text"
+                    value={tacticForm.effect_type}
+                    onChange={(e) => setTacticForm({ ...tacticForm, effect_type: e.target.value })}
+                    placeholder="예: POWER_BOOST_VS_STRONGER"
                     required
                   />
                 </div>
@@ -548,23 +594,12 @@ const Admin: React.FC = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>코스트</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={tacticForm.cost}
-                    onChange={(e) => setTacticForm({ ...tacticForm, cost: parseInt(e.target.value) })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
                   <label>레어도</label>
                   <select
                     value={tacticForm.rarity}
                     onChange={(e) => setTacticForm({ ...tacticForm, rarity: e.target.value })}
                   >
-                    <option value="COMMON">COMMON</option>
+                    <option value="NORMAL">NORMAL</option>
                     <option value="RARE">RARE</option>
                     <option value="EPIC">EPIC</option>
                     <option value="LEGEND">LEGEND</option>
@@ -588,26 +623,23 @@ const Admin: React.FC = () => {
               <h2 className="section-title">서포트 카드 정보</h2>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>카드 이름</label>
+                  <label>서포트 이름</label>
                   <input
                     type="text"
-                    value={supportForm.card_name}
-                    onChange={(e) => setSupportForm({ ...supportForm, card_name: e.target.value })}
+                    value={supportForm.support_name}
+                    onChange={(e) => setSupportForm({ ...supportForm, support_name: e.target.value })}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label>서포트 타입</label>
-                  <select
-                    value={supportForm.support_type}
-                    onChange={(e) => setSupportForm({ ...supportForm, support_type: e.target.value })}
-                  >
-                    <option value="컨디션">컨디션</option>
-                    <option value="폼">폼</option>
-                    <option value="멘탈케어">멘탈케어</option>
-                    <option value="훈련">훈련</option>
-                    <option value="회복">회복</option>
-                  </select>
+                  <label>효과 타입</label>
+                  <input
+                    type="text"
+                    value={supportForm.effect_type}
+                    onChange={(e) => setSupportForm({ ...supportForm, effect_type: e.target.value })}
+                    placeholder="예: TEAM_CONDITION_UP_1"
+                    required
+                  />
                 </div>
                 <div className="form-group">
                   <label>효과 값</label>
@@ -619,33 +651,12 @@ const Admin: React.FC = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>지속 기간 (일)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={supportForm.duration_days}
-                    onChange={(e) => setSupportForm({ ...supportForm, duration_days: parseInt(e.target.value) })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>코스트</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={supportForm.cost}
-                    onChange={(e) => setSupportForm({ ...supportForm, cost: parseInt(e.target.value) })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
                   <label>레어도</label>
                   <select
                     value={supportForm.rarity}
                     onChange={(e) => setSupportForm({ ...supportForm, rarity: e.target.value })}
                   >
-                    <option value="COMMON">COMMON</option>
+                    <option value="NORMAL">NORMAL</option>
                     <option value="RARE">RARE</option>
                     <option value="EPIC">EPIC</option>
                     <option value="LEGEND">LEGEND</option>
@@ -668,6 +679,81 @@ const Admin: React.FC = () => {
             🎴 카드 생성
           </button>
         </form>
+
+        <div className="card-list-section">
+          <button className="btn-load-cards" onClick={loadCards}>
+            📋 기존 카드 목록 보기/이미지 업로드
+          </button>
+
+          {showCardList && cardList.length > 0 && (
+            <div className="card-list">
+              <h2 className="section-title">
+                {selectedType === 'player' && '선수'}
+                {selectedType === 'coach' && '감독'}
+                {selectedType === 'tactic' && '작전'}
+                {selectedType === 'support' && '서포트'} 카드 목록 ({cardList.length}개)
+              </h2>
+              <div className="card-grid">
+                {cardList.map((card) => (
+                  <div key={card.id} className="card-item">
+                    <div className="card-image-preview">
+                      {(card.card_image || card.coach_image || card.tactic_image || card.support_image) ? (
+                        <img
+                          src={card.card_image || card.coach_image || card.tactic_image || card.support_image}
+                          alt={card.card_name || card.coach_name || card.tactic_name || card.support_name}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3E이미지 없음%3C/text%3E%3C/svg%3E';
+                          }}
+                        />
+                      ) : (
+                        <div className="no-image">이미지 없음</div>
+                      )}
+                    </div>
+                    <div className="card-info">
+                      <h3>{card.card_name || card.coach_name || card.tactic_name || card.support_name}</h3>
+                      {selectedType === 'player' && (
+                        <p>
+                          {card.position} | 코스트 {card.cost} | 파워 {card.power} | {card.rarity}
+                        </p>
+                      )}
+                      {selectedType === 'coach' && (
+                        <p>
+                          지휘 {card.command} | 밴픽 {card.ban_pick} | 메타 {card.meta} | {card.rarity}
+                        </p>
+                      )}
+                      {selectedType === 'tactic' && (
+                        <p>
+                          {card.position || '전체'} | 효과 {card.effect_value}% | {card.rarity}
+                        </p>
+                      )}
+                      {selectedType === 'support' && (
+                        <p>
+                          효과 {card.effect_value} | {card.rarity}
+                        </p>
+                      )}
+                      <div className="card-actions">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleCardImageUpload(card.id, e)}
+                          id={`upload-${card.id}`}
+                          style={{ display: 'none' }}
+                        />
+                        <label htmlFor={`upload-${card.id}`} className="btn-upload-image">
+                          {uploadingCardId === card.id ? '업로드 중...' : '📷 이미지 업로드'}
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showCardList && cardList.length === 0 && (
+            <p className="no-cards">해당 타입의 카드가 없습니다.</p>
+          )}
+        </div>
       </div>
 
       {showTutorial && (

@@ -22,7 +22,9 @@ const Navbar: React.FC = () => {
             <Link to="/gacha" className="navbar-link">카드 뽑기</Link>
             <Link to="/roster" className="navbar-link">로스터</Link>
             <Link to="/match" className="navbar-link">경기</Link>
-            <Link to="/posting" className="navbar-link">경매장</Link>
+            <Link to="/ranked" className="navbar-link">랭크 리그</Link>
+            <Link to="/solo-rank" className="navbar-link">솔랭</Link>
+            <Link to="/auction" className="navbar-link">경매장</Link>
             <Link to="/guild" className="navbar-link">길드</Link>
           </div>
         )}

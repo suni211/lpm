@@ -1,0 +1,170 @@
+-- 선수 컨디션, 레벨, 경험치 시스템
+-- player_cards 테이블에 추가할 컬럼들
+
+-- player_cards 테이블에 컬럼 추가
+ALTER TABLE player_cards
+ADD COLUMN IF NOT EXISTS player_level INT DEFAULT 1,
+ADD COLUMN IF NOT EXISTS experience BIGINT DEFAULT 0,
+ADD COLUMN IF NOT EXISTS condition_status VARCHAR(20) DEFAULT 'YELLOW', -- RED, ORANGE, YELLOW, BLUE, PURPLE
+ADD COLUMN IF NOT EXISTS condition_value INT DEFAULT 50, -- 0~100 (컨디션 수치)
+ADD COLUMN IF NOT EXISTS is_injured BOOLEAN DEFAULT FALSE, -- 부상 여부
+ADD COLUMN IF NOT EXISTS injury_days INT DEFAULT 0, -- 부상 일수
+ADD COLUMN IF NOT EXISTS chemistry INT DEFAULT 50; -- 팀 케미스트리 (0~100)
+
+-- 레벨별 필요 경험치 테이블
+CREATE TABLE IF NOT EXISTS level_exp_requirements (
+    level INT PRIMARY KEY,
+    required_exp BIGINT NOT NULL,
+    cumulative_exp BIGINT NOT NULL, -- 누적 경험치 (1레벨부터 이 레벨까지)
+    stat_bonus INT DEFAULT 0, -- 레벨업 시 능력치 보너스
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 컨디션 등급 정의 테이블
+CREATE TABLE IF NOT EXISTS condition_grades (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    grade_name VARCHAR(20) NOT NULL UNIQUE, -- RED, ORANGE, YELLOW, BLUE, PURPLE
+    grade_display VARCHAR(20) NOT NULL, -- 빨강, 주황, 노랑, 파랑, 보라
+    min_value INT NOT NULL, -- 최소 컨디션 수치
+    max_value INT NOT NULL, -- 최대 컨디션 수치
+    power_modifier DECIMAL(5,2) DEFAULT 1.00, -- 파워 보정 계수
+    grade_order INT NOT NULL, -- 등급 순서 (1=최상, 5=최하)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 컨디션 등급 데이터 삽입
+INSERT INTO condition_grades (grade_name, grade_display, min_value, max_value, power_modifier, grade_order) VALUES
+('RED', '빨강', 80, 100, 1.15, 1),       -- 최상 (+15% 파워)
+('ORANGE', '주황', 60, 79, 1.08, 2),     -- 좋음 (+8% 파워)
+('YELLOW', '노랑', 40, 59, 1.00, 3),     -- 보통 (기본)
+('BLUE', '파랑', 20, 39, 0.92, 4),       -- 나쁨 (-8% 파워)
+('PURPLE', '보라', 0, 19, 0.85, 5);      -- 최악 (-15% 파워)
+
+-- 레벨별 필요 경험치 데이터 생성 (1~100레벨, 총 135,000,000 경험치)
+-- 레벨이 올라갈수록 필요 경험치가 기하급수적으로 증가
+INSERT INTO level_exp_requirements (level, required_exp, cumulative_exp, stat_bonus) VALUES
+(1, 0, 0, 0),
+(2, 100000, 100000, 1),
+(3, 150000, 250000, 1),
+(4, 200000, 450000, 1),
+(5, 250000, 700000, 1),
+(6, 300000, 1000000, 1),
+(7, 350000, 1350000, 1),
+(8, 400000, 1750000, 1),
+(9, 450000, 2200000, 1),
+(10, 500000, 2700000, 2),
+(11, 550000, 3250000, 1),
+(12, 600000, 3850000, 1),
+(13, 650000, 4500000, 1),
+(14, 700000, 5200000, 1),
+(15, 750000, 5950000, 1),
+(16, 800000, 6750000, 1),
+(17, 850000, 7600000, 1),
+(18, 900000, 8500000, 1),
+(19, 950000, 9450000, 1),
+(20, 1000000, 10450000, 2),
+(21, 1050000, 11500000, 1),
+(22, 1100000, 12600000, 1),
+(23, 1150000, 13750000, 1),
+(24, 1200000, 14950000, 1),
+(25, 1250000, 16200000, 1),
+(26, 1300000, 17500000, 1),
+(27, 1350000, 18850000, 1),
+(28, 1400000, 20250000, 1),
+(29, 1450000, 21700000, 1),
+(30, 1500000, 23200000, 2),
+(31, 1550000, 24750000, 1),
+(32, 1600000, 26350000, 1),
+(33, 1650000, 28000000, 1),
+(34, 1700000, 29700000, 1),
+(35, 1750000, 31450000, 1),
+(36, 1800000, 33250000, 1),
+(37, 1850000, 35100000, 1),
+(38, 1900000, 37000000, 1),
+(39, 1950000, 38950000, 1),
+(40, 2000000, 40950000, 2),
+(41, 2050000, 43000000, 1),
+(42, 2100000, 45100000, 1),
+(43, 2150000, 47250000, 1),
+(44, 2200000, 49450000, 1),
+(45, 2250000, 51700000, 1),
+(46, 2300000, 54000000, 1),
+(47, 2350000, 56350000, 1),
+(48, 2400000, 58750000, 1),
+(49, 2450000, 61200000, 1),
+(50, 2500000, 63700000, 3),
+(51, 2550000, 66250000, 1),
+(52, 2600000, 68850000, 1),
+(53, 2650000, 71500000, 1),
+(54, 2700000, 74200000, 1),
+(55, 2750000, 76950000, 1),
+(56, 2800000, 79750000, 1),
+(57, 2850000, 82600000, 1),
+(58, 2900000, 85500000, 1),
+(59, 2950000, 88450000, 1),
+(60, 3000000, 91450000, 3),
+(61, 3050000, 94500000, 1),
+(62, 3100000, 97600000, 1),
+(63, 3150000, 100750000, 1),
+(64, 3200000, 103950000, 1),
+(65, 3250000, 107200000, 1),
+(66, 3300000, 110500000, 1),
+(67, 3350000, 113850000, 1),
+(68, 3400000, 117250000, 1),
+(69, 3450000, 120700000, 1),
+(70, 3500000, 124200000, 3),
+(71, 3550000, 127750000, 1),
+(72, 3600000, 131350000, 1),
+(73, 3650000, 135000000, 1),
+(74, 3700000, 138700000, 1),
+(75, 3750000, 142450000, 1),
+(76, 3800000, 146250000, 1),
+(77, 3850000, 150100000, 1),
+(78, 3900000, 154000000, 1),
+(79, 3950000, 157950000, 1),
+(80, 4000000, 161950000, 3),
+(81, 4050000, 166000000, 1),
+(82, 4100000, 170100000, 1),
+(83, 4150000, 174250000, 1),
+(84, 4200000, 178450000, 1),
+(85, 4250000, 182700000, 1),
+(86, 4300000, 187000000, 1),
+(87, 4350000, 191350000, 1),
+(88, 4400000, 195750000, 1),
+(89, 4450000, 200200000, 1),
+(90, 4500000, 204700000, 3),
+(91, 4550000, 209250000, 1),
+(92, 4600000, 213850000, 1),
+(93, 4650000, 218500000, 1),
+(94, 4700000, 223200000, 1),
+(95, 4750000, 227950000, 1),
+(96, 4800000, 232750000, 1),
+(97, 4850000, 237600000, 1),
+(98, 4900000, 242500000, 1),
+(99, 4950000, 247450000, 1),
+(100, 5000000, 252450000, 5); -- 최대 레벨
+
+-- 경험치 획득 내역 테이블
+CREATE TABLE IF NOT EXISTS exp_history (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    player_card_id INT NOT NULL,
+    exp_gained BIGINT NOT NULL,
+    exp_source VARCHAR(50) NOT NULL, -- MATCH_WIN, MATCH_LOSE, SOLO_RANK, TRAINING, EVENT
+    description TEXT,
+    gained_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_card_id) REFERENCES player_cards(id) ON DELETE CASCADE,
+    INDEX idx_player_date (player_card_id, gained_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 컨디션 변화 내역 테이블
+CREATE TABLE IF NOT EXISTS condition_history (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    player_card_id INT NOT NULL,
+    previous_value INT NOT NULL,
+    new_value INT NOT NULL,
+    change_reason VARCHAR(100) NOT NULL, -- MATCH, SUPPORT_CARD, FACILITY, REST, INJURY
+    description TEXT,
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_card_id) REFERENCES player_cards(id) ON DELETE CASCADE,
+    INDEX idx_player_date (player_card_id, changed_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -187,6 +187,7 @@ router.post('/cards/player', isAuthenticated, isAdmin, async (req: Request, res:
   try {
     const {
       card_name,
+      card_image,
       position,
       cost,
       mental,
@@ -200,9 +201,9 @@ router.post('/cards/player', isAuthenticated, isAdmin, async (req: Request, res:
 
     const [result]: any = await pool.query(
       `INSERT INTO player_cards
-       (card_name, position, cost, mental, team_fight, cs_ability, vision, judgment, laning, rarity)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [card_name, position, cost, mental, team_fight, cs_ability, vision, judgment, laning, rarity]
+       (card_name, card_image, position, cost, mental, team_fight, cs_ability, vision, judgment, laning, rarity)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [card_name, card_image || null, position, cost, mental, team_fight, cs_ability, vision, judgment, laning, rarity]
     );
 
     const newCard = await query('SELECT * FROM player_cards WHERE id = ?', [result.insertId]);
@@ -217,13 +218,13 @@ router.post('/cards/player', isAuthenticated, isAdmin, async (req: Request, res:
 // 감독 카드 생성 (ADMIN)
 router.post('/cards/coach', isAuthenticated, isAdmin, async (req: Request, res: Response) => {
   try {
-    const { coach_name, command, ban_pick, meta, cold, warm, rarity } = req.body;
+    const { coach_name, coach_image, command, ban_pick, meta, cold, warm, rarity } = req.body;
 
     const [result]: any = await pool.query(
       `INSERT INTO coach_cards
-       (coach_name, command, ban_pick, meta, cold, warm, rarity)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [coach_name, command, ban_pick, meta, cold, warm, rarity]
+       (coach_name, coach_image, command, ban_pick, meta, cold, warm, rarity)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [coach_name, coach_image || null, command, ban_pick, meta, cold, warm, rarity]
     );
 
     const newCard = await query('SELECT * FROM coach_cards WHERE id = ?', [result.insertId]);
@@ -238,14 +239,14 @@ router.post('/cards/coach', isAuthenticated, isAdmin, async (req: Request, res: 
 // 작전 카드 생성 (ADMIN)
 router.post('/cards/tactic', isAuthenticated, isAdmin, async (req: Request, res: Response) => {
   try {
-    const { tactic_name, position, effect_description, effect_type, effect_value, rarity } =
+    const { tactic_name, tactic_image, position, effect_description, effect_type, effect_value, rarity } =
       req.body;
 
     const [result]: any = await pool.query(
       `INSERT INTO tactic_cards
-       (tactic_name, position, effect_description, effect_type, effect_value, rarity)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [tactic_name, position, effect_description, effect_type, effect_value, rarity]
+       (tactic_name, tactic_image, position, effect_description, effect_type, effect_value, rarity)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [tactic_name, tactic_image || null, position, effect_description, effect_type, effect_value, rarity]
     );
 
     const newCard = await query('SELECT * FROM tactic_cards WHERE id = ?', [result.insertId]);
@@ -260,13 +261,13 @@ router.post('/cards/tactic', isAuthenticated, isAdmin, async (req: Request, res:
 // 서포트 카드 생성 (ADMIN)
 router.post('/cards/support', isAuthenticated, isAdmin, async (req: Request, res: Response) => {
   try {
-    const { support_name, effect_description, effect_type, effect_value, rarity } = req.body;
+    const { support_name, support_image, effect_description, effect_type, effect_value, rarity } = req.body;
 
     const [result]: any = await pool.query(
       `INSERT INTO support_cards
-       (support_name, effect_description, effect_type, effect_value, rarity)
-       VALUES (?, ?, ?, ?, ?)`,
-      [support_name, effect_description, effect_type, effect_value, rarity]
+       (support_name, support_image, effect_description, effect_type, effect_value, rarity)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [support_name, support_image || null, effect_description, effect_type, effect_value, rarity]
     );
 
     const newCard = await query('SELECT * FROM support_cards WHERE id = ?', [result.insertId]);

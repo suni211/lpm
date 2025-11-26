@@ -17,6 +17,14 @@ import postingRoutes from './routes/posting';
 import achievementsRoutes from './routes/achievements';
 import sponsorsRoutes from './routes/sponsors';
 import fandomRoutes from './routes/fandom';
+import traitsRoutes from './routes/traits';
+import rankedRoutes from './routes/ranked';
+import soloRankRoutes from './routes/soloRank';
+import auctionRoutes from './routes/auction';
+import trainingRoutes from './routes/training';
+import facilityRoutes from './routes/facility';
+import sponsorRoutes from './routes/sponsors';
+import fusionRoutes from './routes/fusion';
 
 // Load environment variables
 dotenv.config();
@@ -132,6 +140,14 @@ app.use('/api/posting', postingRoutes);
 app.use('/api/achievements', achievementsRoutes);
 app.use('/api/sponsors', sponsorsRoutes);
 app.use('/api/fandom', fandomRoutes);
+app.use('/api/traits', traitsRoutes);
+app.use('/api/ranked', rankedRoutes);
+app.use('/api/solo-rank', soloRankRoutes);
+app.use('/api/auction', auctionRoutes);
+app.use('/api/training', trainingRoutes);
+app.use('/api/facility', facilityRoutes);
+app.use('/api/sponsor', sponsorRoutes);
+app.use('/api/fusion', fusionRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {
@@ -149,7 +165,7 @@ httpServer.listen(PORT, () => {
 ║  🎮 LPM Server Running                ║
 ║  📡 Port: ${PORT}                        ║
 ║  🌍 Environment: ${process.env.NODE_ENV || 'development'}      ║
-║  🗄️  Database: PostgreSQL              ║
+║  🗄️  Database: MariaDB                 ║
 ╚═══════════════════════════════════════╝
   `);
 });
