@@ -8,13 +8,14 @@
 }
 
 .navbar-container {
-  max-width: 1920px;
+  max-width: 100%;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  height: 64px;
+  padding: 0 16px;
+  height: 48px;
+  flex-shrink: 0;
 }
 
 .navbar-logo {
@@ -43,12 +44,13 @@
 
 .navbar-link {
   display: block;
-  padding: 20px 32px;
+  padding: 12px 20px;
   color: #9ca3af;
   text-decoration: none;
   font-weight: 500;
+  font-size: 14px;
   transition: all 0.2s;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
 }
 
 .navbar-link:hover {
