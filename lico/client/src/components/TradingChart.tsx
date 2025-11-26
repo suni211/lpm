@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType } from 'lightweight-charts';
-import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
+import type { ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import type { Candle } from '../types';
 import './TradingChart.css';
 
@@ -13,7 +13,7 @@ type Interval = '1m' | '1h' | '1d';
 
 const TradingChart = ({ coinId }: TradingChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
+  const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const [interval, setInterval] = useState<Interval>('1h');
   const [candles, setCandles] = useState<Candle[]>([]);
