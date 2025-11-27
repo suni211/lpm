@@ -230,9 +230,9 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
     // WebSocket: 주문 취소 알림 전송
     try {
       const { getWebSocketInstance } = await import('../index');
-      const io = getWebSocketInstance();
-      if (io) {
-        io.emit('order:cancelled', {
+      const websocket = getWebSocketInstance();
+      if (websocket && websocket.broadcastOrderCancelled) {
+        websocket.broadcastOrderCancelled({
           order_id: order.id,
           wallet_address: order.wallet_address,
           coin_id: order.coin_id,

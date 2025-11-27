@@ -683,8 +683,8 @@ export class TradingEngine {
       await query('UPDATE orders SET status = "FILLED" WHERE id = ?', [orderId]);
 
       // WebSocket: 주문 체결 알림 전송
-      if (websocketInstance) {
-        websocketInstance.emit('order:filled', {
+      if (websocketInstance && websocketInstance.broadcastOrderFilled) {
+        websocketInstance.broadcastOrderFilled({
           order_id: order.id,
           wallet_address: order.wallet_address,
           coin_id: order.coin_id,

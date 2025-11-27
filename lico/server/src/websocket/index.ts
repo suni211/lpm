@@ -128,6 +128,16 @@ export function initializeWebSocket(httpServer: HTTPServer) {
     io.to(`coin:${coinId}`).emit('candle:update', { interval, ...candleData });
   }
 
+  // 주문 체결 알림 브로드캐스트 (전체 사용자에게)
+  function broadcastOrderFilled(orderData: any) {
+    io.emit('order:filled', orderData);
+  }
+
+  // 주문 취소 알림 브로드캐스트 (전체 사용자에게)
+  function broadcastOrderCancelled(orderData: any) {
+    io.emit('order:cancelled', orderData);
+  }
+
   console.log('🔌 WebSocket server initialized');
 
   return {
@@ -140,6 +150,8 @@ export function initializeWebSocket(httpServer: HTTPServer) {
     broadcastNewBlock,
     broadcastNewTransaction,
     broadcastCandleUpdate,
+    broadcastOrderFilled,
+    broadcastOrderCancelled,
   };
 }
 
