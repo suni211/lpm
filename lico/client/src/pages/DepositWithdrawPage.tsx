@@ -36,6 +36,11 @@ const DepositWithdrawPage = () => {
     e.preventDefault();
     setMessage('');
 
+    // 이미 처리 중이면 무시 (중복 방지)
+    if (loading) {
+      return;
+    }
+
     if (!walletAddress) {
       setMessage('지갑 정보를 불러올 수 없습니다');
       return;
@@ -47,31 +52,43 @@ const DepositWithdrawPage = () => {
       return;
     }
 
+    // 정수만 허용
+    if (amt !== Math.floor(amt)) {
+      setMessage('정수만 입력 가능합니다 (소수점 불가)');
+      return;
+    }
+
+    // 최소 금액 검증
+    if (activeTab === 'withdraw' && amt < 100) {
+      setMessage('최소 출금 금액은 100 Gold입니다');
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (activeTab === 'deposit') {
-        await walletService.deposit(walletAddress, amt);
-        setMessage('입금이 완료되었습니다!');
-        // 잔액 새로고침
-        const response = await api.get('/auth/me');
-        if (response.data.user) {
-          setGoldBalance(response.data.user.gold_balance || 0);
-          setBankBalance(response.data.user.bank_balance || 0);
-        }
+        const result = await walletService.deposit(walletAddress, amt);
+        setMessage('✅ 입금이 완료되었습니다!');
+        console.log('입금 완료:', result);
       } else {
         const result = await walletService.withdraw(walletAddress, amt);
-        setMessage('출금이 완료되었습니다! (수수료: ' + result.fee + ' G)');
-        // 잔액 새로고침
-        const response = await api.get('/auth/me');
-        if (response.data.user) {
-          setGoldBalance(response.data.user.gold_balance || 0);
-          setBankBalance(response.data.user.bank_balance || 0);
-        }
+        setMessage('✅ 출금이 완료되었습니다! (수수료: ' + result.fee + ' G)');
+        console.log('출금 완료:', result);
       }
+
+      // 잔액 새로고침
+      const response = await api.get('/auth/me');
+      if (response.data.user) {
+        setGoldBalance(response.data.user.gold_balance || 0);
+        setBankBalance(response.data.user.bank_balance || 0);
+      }
+
       setAmount('');
     } catch (error: any) {
-      setMessage(error.response?.data?.error || '처리 실패');
+      console.error('입출금 오류:', error);
+      const errorMsg = error.response?.data?.error || '처리 실패';
+      setMessage('❌ ' + errorMsg);
     } finally {
       setLoading(false);
     }
@@ -125,12 +142,15 @@ const DepositWithdrawPage = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label>금액 (GOLD)</label>
+              <label>금액 (GOLD) - 정수만 입력 가능</label>
               <input
                 type="number"
+                step="1"
+                min="1"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="금액을 입력하세요"
+                placeholder="금액을 입력하세요 (정수만)"
+                disabled={loading}
                 required
               />
             </div>

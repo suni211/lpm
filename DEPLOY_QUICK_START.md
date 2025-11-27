@@ -148,32 +148,13 @@ BLOCK_TIME=60000
 EOF
 
 # 데이터베이스 스키마 초기화
-mysql -u lico_user -plico_password_strong_123 lico_db < src/database/schema_mariadb.sql
+mysql -u lico_user -p lico_db < src/database/schema_mariadb.sql
 
 # TypeScript 빌드
 npm run build
 ```
 
-## 8단계: Bank Client 설정
-
-```bash
-cd ~/lpm/bank/client
-
-# 의존성 설치
-npm install
-
-# .env 파일 생성 (API URL 설정)
-cat > .env <<'EOF'
-VITE_API_BASE_URL=https://bank.berrple.com
-EOF
-
-# 프로덕션 빌드
-npm run build
-```
-
-**중요**: Bank Client는 이제 `https://bank.berrple.com`을 기본 API URL로 사용합니다. 환경 변수 `VITE_API_BASE_URL`이 설정되지 않으면 자동으로 `https://bank.berrple.com`을 사용합니다.
-
-## 9단계: Lico Client 설정
+## 8단계: Lico Client 설정
 
 ```bash
 cd ~/lpm/lico/client
@@ -190,7 +171,7 @@ EOF
 npm run build
 ```
 
-## 10단계: PM2 설치 및 애플리케이션 실행
+## 9단계: PM2 설치 및 애플리케이션 실행
 
 ```bash
 # PM2 전역 설치
@@ -252,45 +233,19 @@ pm2 startup
 pm2 save
 ```
 
-## 11단계: Nginx 설치 및 설정
+## 10단계: Nginx 설치 및 설정
 
 ```bash
 # Nginx 설치
 sudo apt-get install -y nginx
 
-# Bank Server & Client용 Nginx 설정
+# Bank Server용 Nginx 설정
 sudo tee /etc/nginx/sites-available/bank > /dev/null <<'EOF'
 server {
     listen 80;
     server_name bank.berrple.com;
 
-    # Client (정적 파일)
     location / {
-        root /var/www/bank;
-        try_files $uri $uri/ /index.html;
-
-        # 캐싱 설정
-        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
-    }
-
-    # API (Bank Server)
-    location /api {
-        proxy_pass http://localhost:5001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    # Auth (Bank Server)
-    location /auth {
         proxy_pass http://localhost:5001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -349,12 +304,6 @@ server {
 }
 EOF
 
-# Bank Client 빌드 파일 복사 (디렉토리 먼저 생성)
-sudo mkdir -p /var/www/bank
-sudo rm -rf /var/www/bank/*  # 기존 파일 삭제 (있는 경우)
-sudo cp -r ~/lpm/bank/client/dist/* /var/www/bank/
-sudo chown -R www-data:www-data /var/www/bank
-
 # Lico Client 빌드 파일 복사
 sudo mkdir -p /var/www/lico
 sudo cp -r ~/lpm/lico/client/dist/* /var/www/lico/
@@ -375,7 +324,7 @@ sudo systemctl restart nginx
 sudo systemctl enable nginx
 ```
 
-## 12단계: 방화벽 설정
+## 11단계: 방화벽 설정
 
 ```bash
 # UFW 방화벽 설치 (없는 경우)
@@ -400,10 +349,10 @@ sudo ufw status
 sudo apt-get install -y certbot python3-certbot-nginx
 
 # SSL 인증서 발급 (Bank)
-sudo certbot --nginx -d bank.berrple.com --non-interactive --agree-tos --email ine158lovely@gmail.com
+sudo certbot --nginx -d bank.berrple.com --non-interactive --agree-tos --email your-email@example.com
 
 # SSL 인증서 발급 (Lico)
-sudo certbot --nginx -d lico.berrple.com --non-interactive --agree-tos --email ine158lovely@gmail.com
+sudo certbot --nginx -d lico.berrple.com --non-interactive --agree-tos --email your-email@example.com
 
 # 자동 갱신 테스트
 sudo certbot renew --dry-run
@@ -465,15 +414,6 @@ cd ~/lpm/bank/server
 npm install
 npm run build
 
-# Bank Client 재빌드
-cd ~/lpm/bank/client
-npm install
-npm run build
-sudo mkdir -p /var/www/bank  # 디렉토리가 없으면 생성
-sudo rm -rf /var/www/bank/*
-sudo cp -r dist/* /var/www/bank/
-sudo chown -R www-data:www-data /var/www/bank
-
 # Lico Server 재빌드
 cd ~/lpm/lico/server
 npm install
@@ -524,50 +464,5 @@ pm2 status
 2. **OAuth 클라이언트 ID와 시크릿을 실제 값으로 교체하세요**
 3. **도메인 DNS 설정이 완료되어야 SSL 인증서 발급이 가능합니다**
 4. **GCP 방화벽 규칙에서 80, 443 포트가 열려 있어야 합니다**
-
-## SSL 인증서 설치 (HTTPS 설정)
-
-### 1단계: Nginx 설정 오류 수정 (필수)
-
-Nginx 설정에 존재하지 않는 SSL 인증서 경로가 있는 경우 먼저 수정해야 합니다:
-
-```bash
-# Nginx 설정 파일에서 SSL 관련 라인 제거
-sudo sed -i '/ssl_certificate/d' /etc/nginx/sites-available/bank
-sudo sed -i '/ssl_certificate_key/d' /etc/nginx/sites-available/bank
-sudo sed -i 's/listen 443 ssl;/listen 80;/g' /etc/nginx/sites-available/bank
-
-sudo sed -i '/ssl_certificate/d' /etc/nginx/sites-available/lico
-sudo sed -i '/ssl_certificate_key/d' /etc/nginx/sites-available/lico
-sudo sed -i 's/listen 443 ssl;/listen 80;/g' /etc/nginx/sites-available/lico
-
-# Nginx 설정 테스트
-sudo nginx -t
-
-# Nginx 재시작
-sudo systemctl restart nginx
-```
-
-### 2단계: SSL 인증서 발급
-
-```bash
-# Certbot 설치
-sudo apt-get update
-sudo apt-get install -y certbot python3-certbot-nginx
-
-# SSL 인증서 발급 (bank.berrple.com)
-sudo certbot --nginx -d bank.berrple.com --non-interactive --agree-tos --email ine158lovely@gmail.com --redirect
-
-# SSL 인증서 발급 (lico.berrple.com)
-sudo certbot --nginx -d lico.berrple.com --non-interactive --agree-tos --email ine158lovely@gmail.com --redirect
-
-# 자동 갱신 테스트
-sudo certbot renew --dry-run
-```
-
-**주의사항:**
-- `your-email@example.com`을 실제 이메일 주소로 변경하세요
-- 도메인 DNS 설정이 완료되어야 SSL 인증서 발급이 가능합니다
-- 인증서는 90일마다 자동으로 갱신됩니다
 
 배포 완료!

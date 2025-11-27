@@ -91,13 +91,25 @@ export const walletService = {
 
   // 입금
   deposit: async (walletAddress: string, amount: number) => {
-    const response = await api.post('/wallets/deposit', { wallet_address: walletAddress, amount });
+    // 고유한 트랜잭션 ID 생성 (타임스탬프 + 랜덤)
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 10);
+    const transaction_id = `TXN-${timestamp}-${random}`;
+
+    const response = await api.post('/wallets/deposit', {
+      wallet_address: walletAddress,
+      amount: Math.floor(amount), // 정수만 전송
+      transaction_id,
+    });
     return response.data;
   },
 
   // 출금
   withdraw: async (walletAddress: string, amount: number) => {
-    const response = await api.post('/wallets/withdraw', { wallet_address: walletAddress, amount });
+    const response = await api.post('/wallets/withdraw', {
+      wallet_address: walletAddress,
+      amount: Math.floor(amount) // 정수만 전송
+    });
     return response.data;
   },
 };
