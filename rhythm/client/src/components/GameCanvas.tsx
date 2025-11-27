@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Howl } from 'howler';
 import {
-  Note,
   Effect,
   Beatmap,
   JudgementType,

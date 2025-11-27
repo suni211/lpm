@@ -1,4 +1,4 @@
-import { Note, JudgementType, NoteType } from '../types';
+import { JudgementType } from '../types';
 
 // 판정 윈도우 (ms)
 export const JUDGEMENT_WINDOWS = {

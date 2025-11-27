@@ -50,7 +50,6 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
 
     const laneWidth = canvas.width / keyCount;
     const lane = Math.floor(x / laneWidth);

@@ -36,7 +36,7 @@ const Admin: React.FC = () => {
     }
   };
 
-  const handleSaveBeatmap = async (notes: Note[], effects: Effect[], bpm: number) => {
+  const handleSaveBeatmap = async (notes: Note[], effects: Effect[], _bpm: number) => {
     if (!songId) return;
 
     try {
