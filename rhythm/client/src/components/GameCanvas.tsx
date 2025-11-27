@@ -447,10 +447,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
 
     const { width, height } = canvas;
 
-    // 배경
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, width, height);
-
     // 이펙트 적용
     applyEffects(ctx, width, height);
 
@@ -458,7 +454,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       // 멀티플레이 모드: 왼쪽(내꺼), 오른쪽(상대방꺼), 중간(점수차이)
       renderMultiplayer(ctx, width, height, currentTime);
     } else {
-      // 솔로 플레이 모드: 중앙에 길고 얇게
+      // 솔로 플레이 모드: 새로운 UI 스타일
       renderSolo(ctx, width, height, currentTime);
     }
 
@@ -467,47 +463,59 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
   };
 
   const renderSolo = (ctx: CanvasRenderingContext2D, width: number, height: number, currentTime: number) => {
-    // 메탈릭 프레임 (은색-회색)
-    ctx.fillStyle = '#c0c0c0';
-    ctx.fillRect(0, 0, width, 10); // 상단
-    ctx.fillRect(0, height - 80, width, 80); // 하단
-    ctx.fillRect(0, 0, 10, height); // 왼쪽
-    ctx.fillRect(width - 50, 0, 50, height); // 오른쪽 (스크롤바 영역)
+    // 전체 배경 (검은색)
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, width, height);
     
-    // 메탈릭 프레임 그라데이션 효과
-    const gradient = ctx.createLinearGradient(0, 0, width, 0);
-    gradient.addColorStop(0, '#e0e0e0');
-    gradient.addColorStop(0.5, '#c0c0c0');
-    gradient.addColorStop(1, '#a0a0a0');
-    ctx.fillStyle = gradient;
+    // 메탈릭 프레임 (은색-회색, 좌우 하단)
+    const frameThickness = 15;
+    const frameGradient = ctx.createLinearGradient(0, 0, width, 0);
+    frameGradient.addColorStop(0, '#e8e8e8');
+    frameGradient.addColorStop(0.5, '#c0c0c0');
+    frameGradient.addColorStop(1, '#a8a8a8');
+    ctx.fillStyle = frameGradient;
+    
+    // 왼쪽 프레임
+    ctx.fillRect(0, 0, frameThickness, height);
+    // 오른쪽 프레임 (스크롤바 영역 포함)
+    ctx.fillRect(width - 50, 0, 50, height);
+    // 하단 프레임
     ctx.fillRect(0, height - 80, width, 80);
     
+    // 하단 프레임 그라데이션 (청록색 계열)
+    const bottomGradient = ctx.createLinearGradient(0, height - 80, 0, height);
+    bottomGradient.addColorStop(0, '#00a0a0');
+    bottomGradient.addColorStop(1, '#008080');
+    ctx.fillStyle = bottomGradient;
+    ctx.fillRect(0, height - 30, width, 30);
+    
     // 플레이 필드 (검은색 중앙 영역)
-    const playAreaX = 10;
-    const playAreaWidth = width - 60; // 오른쪽 스크롤바 제외
-    const playAreaY = 10;
-    const playAreaHeight = height - 90; // 하단 버튼 영역 제외
+    const playAreaX = frameThickness;
+    const playAreaWidth = width - frameThickness - 50; // 오른쪽 스크롤바 제외
+    const playAreaY = 0;
+    const playAreaHeight = height - 80; // 하단 버튼 영역 제외
     
     ctx.fillStyle = '#000';
     ctx.fillRect(playAreaX, playAreaY, playAreaWidth, playAreaHeight);
     
-    // 판정선 (하단 빨간색 그라데이션 영역)
-    const judgementLineY = playAreaY + playAreaHeight - 20;
-    const gradientRed = ctx.createLinearGradient(playAreaX, judgementLineY, playAreaX, playAreaY + playAreaHeight);
-    gradientRed.addColorStop(0, 'rgba(139, 0, 0, 0.8)'); // 진한 빨강
+    // 판정선 영역 (하단 빨간색 그라데이션)
+    const judgementLineY = playAreaHeight - 20;
+    const gradientRed = ctx.createLinearGradient(playAreaX, judgementLineY, playAreaX, playAreaHeight);
+    gradientRed.addColorStop(0, 'rgba(139, 0, 0, 0.9)'); // 진한 빨강
+    gradientRed.addColorStop(0.5, 'rgba(139, 0, 0, 0.5)');
     gradientRed.addColorStop(1, 'rgba(139, 0, 0, 0)'); // 투명
     ctx.fillStyle = gradientRed;
-    ctx.fillRect(playAreaX, judgementLineY, playAreaWidth, playAreaHeight - judgementLineY + playAreaY);
+    ctx.fillRect(playAreaX, judgementLineY, playAreaWidth, playAreaHeight - judgementLineY);
     
-    // 판정선 (얇은 선)
-    ctx.strokeStyle = '#8b0000';
+    // 판정선 (얇은 파란색 선)
+    ctx.strokeStyle = '#00ffff';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(playAreaX, judgementLineY);
     ctx.lineTo(playAreaX + playAreaWidth, judgementLineY);
     ctx.stroke();
 
-    // 레인 그리기 (얇은 흰색 선)
+    // 레인 구분선 (얇은 흰색 선)
     const laneWidth = playAreaWidth / beatmap.key_count;
     const laneStartY = playAreaY;
 
@@ -517,11 +525,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x, laneStartY);
-      ctx.lineTo(x, playAreaY + playAreaHeight);
+      ctx.lineTo(x, playAreaHeight);
       ctx.stroke();
     }
     
-    // 하단 버튼 영역
+    // 하단 버튼 영역 (7개 버튼: 흰색, 파란색, 흰색, 노란색, 흰색, 파란색, 흰색)
     const buttonAreaY = height - 70;
     const buttonHeight = 40;
     const buttonWidth = playAreaWidth / beatmap.key_count;
@@ -531,59 +539,63 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       const buttonX = playAreaX + i * buttonWidth;
       const color = buttonColors[i % buttonColors.length];
       
-      // 버튼 3D 효과
+      // 버튼 배경
       ctx.fillStyle = color;
       ctx.fillRect(buttonX + 2, buttonAreaY + 2, buttonWidth - 4, buttonHeight);
       
-      // 버튼 하이라이트
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.fillRect(buttonX + 2, buttonAreaY + 2, buttonWidth - 4, buttonHeight / 2);
+      // 버튼 3D 효과 (상단 하이라이트)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.fillRect(buttonX + 2, buttonAreaY + 2, buttonWidth - 4, buttonHeight / 3);
       
-      // 버튼 그림자
+      // 버튼 3D 효과 (하단 그림자)
       ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-      ctx.fillRect(buttonX + 2, buttonAreaY + buttonHeight / 2, buttonWidth - 4, buttonHeight / 2);
+      ctx.fillRect(buttonX + 2, buttonAreaY + buttonHeight - buttonHeight / 3, buttonWidth - 4, buttonHeight / 3);
     }
     
-    // "JAM" 레이블
+    // "JAM" 레이블 (하단 중앙)
     ctx.fillStyle = '#00a0a0';
     ctx.fillRect(playAreaX, height - 30, playAreaWidth, 20);
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 16px Arial';
+    ctx.font = 'bold 18px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('JAM', playAreaX + playAreaWidth / 2, height - 20);
     
-    // 오른쪽 스크롤바
+    // 오른쪽 스크롤바 (은색 원통형)
     const scrollbarX = width - 45;
     const scrollbarWidth = 30;
-    const scrollbarY = 10;
+    const scrollbarY = 0;
     const scrollbarHeight = playAreaHeight;
     
-    // 스크롤바 배경 (은색 원통형)
+    // 스크롤바 배경 (은색 그라데이션)
     const scrollbarGradient = ctx.createLinearGradient(scrollbarX, 0, scrollbarX + scrollbarWidth, 0);
-    scrollbarGradient.addColorStop(0, '#d0d0d0');
+    scrollbarGradient.addColorStop(0, '#d8d8d8');
     scrollbarGradient.addColorStop(0.5, '#b0b0b0');
-    scrollbarGradient.addColorStop(1, '#909090');
+    scrollbarGradient.addColorStop(1, '#888888');
     ctx.fillStyle = scrollbarGradient;
+    
     // 둥근 사각형 그리기
     ctx.beginPath();
-    ctx.moveTo(scrollbarX + 15, scrollbarY);
-    ctx.lineTo(scrollbarX + scrollbarWidth - 15, scrollbarY);
-    ctx.quadraticCurveTo(scrollbarX + scrollbarWidth, scrollbarY, scrollbarX + scrollbarWidth, scrollbarY + 15);
-    ctx.lineTo(scrollbarX + scrollbarWidth, scrollbarY + scrollbarHeight - 15);
-    ctx.quadraticCurveTo(scrollbarX + scrollbarWidth, scrollbarY + scrollbarHeight, scrollbarX + scrollbarWidth - 15, scrollbarY + scrollbarHeight);
-    ctx.lineTo(scrollbarX + 15, scrollbarY + scrollbarHeight);
-    ctx.quadraticCurveTo(scrollbarX, scrollbarY + scrollbarHeight, scrollbarX, scrollbarY + scrollbarHeight - 15);
-    ctx.lineTo(scrollbarX, scrollbarY + 15);
-    ctx.quadraticCurveTo(scrollbarX, scrollbarY, scrollbarX + 15, scrollbarY);
+    const radius = 15;
+    ctx.moveTo(scrollbarX + radius, scrollbarY);
+    ctx.lineTo(scrollbarX + scrollbarWidth - radius, scrollbarY);
+    ctx.quadraticCurveTo(scrollbarX + scrollbarWidth, scrollbarY, scrollbarX + scrollbarWidth, scrollbarY + radius);
+    ctx.lineTo(scrollbarX + scrollbarWidth, scrollbarY + scrollbarHeight - radius);
+    ctx.quadraticCurveTo(scrollbarX + scrollbarWidth, scrollbarY + scrollbarHeight, scrollbarX + scrollbarWidth - radius, scrollbarY + scrollbarHeight);
+    ctx.lineTo(scrollbarX + radius, scrollbarY + scrollbarHeight);
+    ctx.quadraticCurveTo(scrollbarX, scrollbarY + scrollbarHeight, scrollbarX, scrollbarY + scrollbarHeight - radius);
+    ctx.lineTo(scrollbarX, scrollbarY + radius);
+    ctx.quadraticCurveTo(scrollbarX, scrollbarY, scrollbarX + radius, scrollbarY);
     ctx.closePath();
     ctx.fill();
     
-    // 스크롤바 인디케이터 (진행률에 따라)
-    const progress = currentTime / ((audioRef.current?.duration() || 1) * 1000);
-    const indicatorY = scrollbarY + (scrollbarHeight - 30) * progress;
+    // 스크롤바 인디케이터 (진행률에 따라, 어두운 회색)
+    const audioDuration = (audioRef.current?.duration() || 1) * 1000;
+    const progress = Math.min(1, Math.max(0, currentTime / audioDuration));
+    const indicatorHeight = 30;
+    const indicatorY = scrollbarY + (scrollbarHeight - indicatorHeight) * progress;
     ctx.fillStyle = '#505050';
-    ctx.fillRect(scrollbarX + 5, indicatorY, scrollbarWidth - 10, 30);
+    ctx.fillRect(scrollbarX + 5, indicatorY, scrollbarWidth - 10, indicatorHeight);
 
     // 노트 그리기 (세로로 길고 얇게)
     // 디버깅: 노트 데이터 확인
