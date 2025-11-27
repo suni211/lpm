@@ -509,59 +509,84 @@ const TradingPage = () => {
         // 전체 데이터 포맷팅
         const formattedData: CandlestickData<UTCTimestamp>[] = [];
         for (const candle of candles) {
+          // null/undefined 체크
+          if (!candle || !candle.open_time) {
+            console.warn('Invalid candle: missing data', candle);
+            continue;
+          }
+
           // 데이터 타입 확인 및 변환
           let o: number;
           let h: number;
           let l: number;
           let c: number;
 
+          if (candle.open_price == null) {
+            console.warn('Invalid candle: open_price is null', candle);
+            continue;
+          }
           if (typeof candle.open_price === 'string') {
             o = parseFloat(candle.open_price);
           } else if (typeof candle.open_price === 'number') {
             o = candle.open_price;
           } else {
-            o = 0;
+            console.warn('Invalid candle: open_price type', candle);
+            continue;
           }
 
+          if (candle.high_price == null) {
+            console.warn('Invalid candle: high_price is null', candle);
+            continue;
+          }
           if (typeof candle.high_price === 'string') {
             h = parseFloat(candle.high_price);
           } else if (typeof candle.high_price === 'number') {
             h = candle.high_price;
           } else {
-            h = 0;
+            console.warn('Invalid candle: high_price type', candle);
+            continue;
           }
 
+          if (candle.low_price == null) {
+            console.warn('Invalid candle: low_price is null', candle);
+            continue;
+          }
           if (typeof candle.low_price === 'string') {
             l = parseFloat(candle.low_price);
           } else if (typeof candle.low_price === 'number') {
             l = candle.low_price;
           } else {
-            l = 0;
+            console.warn('Invalid candle: low_price type', candle);
+            continue;
           }
 
+          if (candle.close_price == null) {
+            console.warn('Invalid candle: close_price is null', candle);
+            continue;
+          }
           if (typeof candle.close_price === 'string') {
             c = parseFloat(candle.close_price);
           } else if (typeof candle.close_price === 'number') {
             c = candle.close_price;
           } else {
-            c = 0;
+            console.warn('Invalid candle: close_price type', candle);
+            continue;
           }
           
-          // 유효성 검사
+          // 유효성 검사 (NaN, 0, null 체크)
           if (isNaN(o) || isNaN(h) || isNaN(l) || isNaN(c) || 
-              o <= 0 || h <= 0 || l <= 0 || c <= 0) {
-            console.warn('Invalid candle data:', candle);
+              o <= 0 || h <= 0 || l <= 0 || c <= 0 ||
+              !isFinite(o) || !isFinite(h) || !isFinite(l) || !isFinite(c)) {
+            console.warn('Invalid candle data (NaN or <= 0):', { o, h, l, c, candle });
             continue;
           }
 
-          // high >= low 검증
-          if (h < l) {
-            console.warn('High < Low, swapping:', { h, l });
-            [h, l] = [l, h];
-          }
+          // high >= low 검증 및 교정
+          const high = Math.max(h, l);
+          const low = Math.min(h, l);
 
           const t = new Date(candle.open_time).getTime() / 1000;
-          if (isNaN(t) || t <= 0) {
+          if (isNaN(t) || t <= 0 || !isFinite(t)) {
             console.warn('Invalid timestamp:', candle.open_time);
             continue;
           }
@@ -569,8 +594,8 @@ const TradingPage = () => {
           formattedData.push({
             time: t as UTCTimestamp,
             open: o,
-            high: h,
-            low: l,
+            high: high,
+            low: low,
             close: c,
           });
         }
@@ -606,30 +631,74 @@ const TradingPage = () => {
         // 실시간 업데이트: 전체 데이터 재설정 (차트가 반응하도록)
         const formattedData: CandlestickData<UTCTimestamp>[] = [];
         for (const candle of candles) {
-          const o = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
-          const h = typeof candle.high_price === 'string' ? parseFloat(candle.high_price) : (candle.high_price || 0);
-          const l = typeof candle.low_price === 'string' ? parseFloat(candle.low_price) : (candle.low_price || 0);
-          const c = typeof candle.close_price === 'string' ? parseFloat(candle.close_price) : (candle.close_price || 0);
-          
-          if (isNaN(o) || isNaN(h) || isNaN(l) || isNaN(c) || 
-              o <= 0 || h <= 0 || l <= 0 || c <= 0) {
+          // null/undefined 체크
+          if (!candle || !candle.open_time) {
             continue;
           }
 
-          // high >= low 검증
+          // 데이터 타입 확인 및 변환
+          let o: number;
+          let h: number;
+          let l: number;
+          let c: number;
+
+          if (candle.open_price == null) continue;
+          if (typeof candle.open_price === 'string') {
+            o = parseFloat(candle.open_price);
+          } else if (typeof candle.open_price === 'number') {
+            o = candle.open_price;
+          } else {
+            continue;
+          }
+
+          if (candle.high_price == null) continue;
+          if (typeof candle.high_price === 'string') {
+            h = parseFloat(candle.high_price);
+          } else if (typeof candle.high_price === 'number') {
+            h = candle.high_price;
+          } else {
+            continue;
+          }
+
+          if (candle.low_price == null) continue;
+          if (typeof candle.low_price === 'string') {
+            l = parseFloat(candle.low_price);
+          } else if (typeof candle.low_price === 'number') {
+            l = candle.low_price;
+          } else {
+            continue;
+          }
+
+          if (candle.close_price == null) continue;
+          if (typeof candle.close_price === 'string') {
+            c = parseFloat(candle.close_price);
+          } else if (typeof candle.close_price === 'number') {
+            c = candle.close_price;
+          } else {
+            continue;
+          }
+          
+          // 유효성 검사 (NaN, 0, null, Infinity 체크)
+          if (isNaN(o) || isNaN(h) || isNaN(l) || isNaN(c) || 
+              o <= 0 || h <= 0 || l <= 0 || c <= 0 ||
+              !isFinite(o) || !isFinite(h) || !isFinite(l) || !isFinite(c)) {
+            continue;
+          }
+
+          // high >= low 검증 및 교정
           const high = Math.max(h, l);
           const low = Math.min(h, l);
 
           const t = new Date(candle.open_time).getTime() / 1000;
-          if (isNaN(t) || t <= 0) {
+          if (isNaN(t) || t <= 0 || !isFinite(t)) {
             continue;
           }
 
           formattedData.push({
             time: t as UTCTimestamp,
             open: o,
-            high,
-            low,
+            high: high,
+            low: low,
             close: c,
           });
         }
