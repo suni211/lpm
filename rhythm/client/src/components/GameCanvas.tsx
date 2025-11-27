@@ -626,9 +626,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       const laneHeight = playAreaHeight;
       const y = calculateNoteYPosition(note.timestamp, currentTime, settings.noteSpeed, laneHeight, laneStartY, judgementLineY);
 
-      // 노트가 화면 범위 내에 있는지 확인
-      if (y > judgementLineY + 50) return; // 판정선을 많이 지나간 노트는 표시하지 않음
-      if (y < laneStartY - 100) return; // 아직 보이지 않는 위치의 노트는 표시하지 않음
+      // 노트가 화면 범위 내에 있는지 확인 (더 관대하게)
+      // 노트가 위쪽에서 아래쪽으로 내려오므로, laneStartY(위) ~ judgementLineY(아래) 사이에 있으면 표시
+      if (y > judgementLineY + 100) return; // 판정선을 많이 지나간 노트는 표시하지 않음
+      if (y < laneStartY - 500) return; // 아직 보이지 않는 위치의 노트는 표시하지 않음 (더 위쪽까지 허용)
       
       // 노트가 보이는 범위 내에 있으면 렌더링
       visibleNotesCount++;
