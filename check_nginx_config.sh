@@ -38,3 +38,4 @@ echo ""
 echo "=== 포트 확인 ==="
 sudo netstat -tulpn | grep -E ':(5001|5002)' || echo "포트가 열려있지 않습니다."
 
+
