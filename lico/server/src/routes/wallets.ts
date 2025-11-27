@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import walletAddressService from '../services/walletAddressService';
 import recoveryWordsService from '../services/recoveryWords';
 import { isAuthenticated } from '../middleware/auth';
+import { strictRateLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 
@@ -157,20 +158,32 @@ router.get('/:wallet_address/balances', isAuthenticated, async (req: Request, re
   }
 });
 
-// Bank에서 LICO로 입금 (보안 강화)
-router.post('/deposit', async (req: Request, res: Response) => {
+// Bank에서 LICO로 입금 (최강 보안 - 절대 복사 불가)
+router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) => {
+  const connection = await query('SELECT 1'); // 연결 테스트
+
   try {
     const { wallet_address, amount, transaction_id, bank_signature } = req.body;
 
-    // 입력 검증
+    // ========== 1단계: 입력 검증 ==========
     if (!wallet_address || !amount || !transaction_id) {
       return res.status(400).json({ error: '필수 입력 항목이 누락되었습니다' });
     }
 
-    // Amount 타입 및 범위 검증
-    const depositAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    // Transaction ID 형식 검증 (최소 8자, 영숫자+하이픈만)
+    if (typeof transaction_id !== 'string' || !/^[A-Za-z0-9-]{8,}$/.test(transaction_id)) {
+      return res.status(400).json({ error: '유효하지 않은 Transaction ID 형식입니다' });
+    }
+
+    // Amount 타입 및 범위 검증 (정수만 허용)
+    const depositAmount = typeof amount === 'string' ? parseInt(amount, 10) : Math.floor(amount);
     if (isNaN(depositAmount) || !isFinite(depositAmount) || depositAmount <= 0) {
       return res.status(400).json({ error: '유효하지 않은 입금 금액입니다' });
+    }
+
+    // 소수점 금액 차단
+    if (typeof amount === 'number' && amount !== Math.floor(amount)) {
+      return res.status(400).json({ error: '소수점 금액은 입금할 수 없습니다' });
     }
 
     // 최대 입금 금액 제한 (1회 최대 1억 Gold)
@@ -178,76 +191,106 @@ router.post('/deposit', async (req: Request, res: Response) => {
       return res.status(400).json({ error: '1회 최대 입금 금액은 1억 Gold입니다' });
     }
 
-    // 트랜잭션 ID 중복 확인 (같은 입금을 여러 번 처리하지 않도록)
-    const existingDeposit = await query(
-      'SELECT * FROM deposit_logs WHERE transaction_id = ?',
-      [transaction_id]
-    );
+    // ========== 2단계: 트랜잭션 시작 (FOR UPDATE로 락 걸기) ==========
+    await query('START TRANSACTION');
 
-    if (existingDeposit.length > 0) {
-      return res.status(400).json({
-        error: '이미 처리된 입금 거래입니다',
-        transaction_id: transaction_id
+    try {
+      // 트랜잭션 ID 중복 확인 (FOR UPDATE로 락)
+      const existingDeposit = await query(
+        'SELECT * FROM deposit_logs WHERE transaction_id = ? FOR UPDATE',
+        [transaction_id]
+      );
+
+      if (existingDeposit.length > 0) {
+        await query('ROLLBACK');
+        return res.status(400).json({
+          error: '이미 처리된 입금 거래입니다',
+          transaction_id: transaction_id
+        });
+      }
+
+      // 지갑 조회 및 락 (FOR UPDATE)
+      const wallets = await query(
+        'SELECT * FROM user_wallets WHERE wallet_address = ? FOR UPDATE',
+        [wallet_address]
+      );
+
+      if (wallets.length === 0) {
+        await query('ROLLBACK');
+        return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+      }
+
+      const wallet = wallets[0];
+
+      // 지갑 상태 확인
+      if (wallet.status !== 'ACTIVE') {
+        await query('ROLLBACK');
+        return res.status(403).json({ error: '비활성화된 지갑입니다' });
+      }
+
+      // ========== 3단계: 입금 로그 먼저 기록 (중복 방지) ==========
+      const depositLogId = uuidv4();
+      await query(
+        `INSERT INTO deposit_logs (id, wallet_id, wallet_address, amount, transaction_id, bank_signature, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'COMPLETED', NOW())`,
+        [depositLogId, wallet.id, wallet_address, depositAmount, transaction_id, bank_signature || null]
+      );
+
+      // ========== 4단계: 잔액 업데이트 (정확한 금액만) ==========
+      const updateResult = await query(
+        'UPDATE user_wallets SET gold_balance = gold_balance + ?, total_deposit = total_deposit + ? WHERE id = ? AND status = "ACTIVE"',
+        [depositAmount, depositAmount, wallet.id]
+      );
+
+      // 업데이트 실패 시 롤백
+      if (!updateResult || updateResult.affectedRows === 0) {
+        await query('ROLLBACK');
+        return res.status(500).json({ error: '잔액 업데이트 실패' });
+      }
+
+      // ========== 5단계: 트랜잭션 커밋 ==========
+      await query('COMMIT');
+
+      console.log(`✅ 입금 완료: ${wallet.minecraft_username} - ${depositAmount} Gold (Transaction: ${transaction_id})`);
+
+      res.json({
+        success: true,
+        message: `${depositAmount} Gold가 입금되었습니다`,
+        transaction_id: transaction_id,
+        amount: depositAmount
       });
+
+    } catch (txError) {
+      // 트랜잭션 오류 시 롤백
+      await query('ROLLBACK');
+      throw txError;
     }
 
-    // 지갑 조회
-    const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
-      wallet_address,
-    ]);
-
-    if (wallets.length === 0) {
-      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
-    }
-
-    const wallet = wallets[0];
-
-    // 지갑 상태 확인
-    if (wallet.status !== 'ACTIVE') {
-      return res.status(403).json({ error: '비활성화된 지갑입니다' });
-    }
-
-    // 입금 로그 기록 (중복 방지용)
-    const depositLogId = uuidv4();
-    await query(
-      `INSERT INTO deposit_logs (id, wallet_id, wallet_address, amount, transaction_id, bank_signature, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'COMPLETED')`,
-      [depositLogId, wallet.id, wallet_address, depositAmount, transaction_id, bank_signature || null]
-    );
-
-    // Gold 잔액 증가
-    await query(
-      'UPDATE user_wallets SET gold_balance = gold_balance + ?, total_deposit = total_deposit + ? WHERE wallet_address = ?',
-      [depositAmount, depositAmount, wallet_address]
-    );
-
-    console.log(`✅ 입금 완료: ${wallet.minecraft_username} - ${depositAmount} Gold (Transaction: ${transaction_id})`);
-
-    res.json({
-      success: true,
-      message: `${depositAmount} Gold가 입금되었습니다`,
-      transaction_id: transaction_id,
-    });
   } catch (error) {
     console.error('입금 오류:', error);
     res.status(500).json({ error: '입금 실패' });
   }
 });
 
-// LICO에서 Bank로 출금 (5% 수수료) - 보안 강화
-router.post('/withdraw', async (req: Request, res: Response) => {
+// LICO에서 Bank로 출금 (5% 수수료) - 최강 보안
+router.post('/withdraw', strictRateLimiter, async (req: Request, res: Response) => {
   try {
     const { wallet_address, amount } = req.body;
 
-    // 입력 검증
+    // ========== 1단계: 입력 검증 ==========
     if (!wallet_address || !amount) {
       return res.status(400).json({ error: '필수 입력 항목이 누락되었습니다' });
     }
 
-    // Amount 타입 및 범위 검증
-    const withdrawAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    // Amount 타입 및 범위 검증 (정수만 허용)
+    const withdrawAmount = typeof amount === 'string' ? parseInt(amount, 10) : Math.floor(amount);
     if (isNaN(withdrawAmount) || !isFinite(withdrawAmount) || withdrawAmount <= 0) {
       return res.status(400).json({ error: '유효하지 않은 출금 금액입니다' });
+    }
+
+    // 소수점 금액 차단
+    if (typeof amount === 'number' && amount !== Math.floor(amount)) {
+      return res.status(400).json({ error: '소수점 금액은 출금할 수 없습니다' });
     }
 
     // 최소 출금 금액 (100 Gold)
@@ -260,66 +303,90 @@ router.post('/withdraw', async (req: Request, res: Response) => {
       return res.status(400).json({ error: '1회 최대 출금 금액은 1억 Gold입니다' });
     }
 
-    // 지갑 조회
-    const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
-      wallet_address,
-    ]);
+    // ========== 2단계: 트랜잭션 시작 (FOR UPDATE로 락 걸기) ==========
+    await query('START TRANSACTION');
 
-    if (wallets.length === 0) {
-      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
-    }
+    try {
+      // 지갑 조회 및 락 (FOR UPDATE)
+      const wallets = await query(
+        'SELECT * FROM user_wallets WHERE wallet_address = ? FOR UPDATE',
+        [wallet_address]
+      );
 
-    const wallet = wallets[0];
+      if (wallets.length === 0) {
+        await query('ROLLBACK');
+        return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+      }
 
-    // 지갑 상태 확인
-    if (wallet.status !== 'ACTIVE') {
-      return res.status(403).json({ error: '비활성화된 지갑입니다' });
-    }
+      const wallet = wallets[0];
 
-    // 5% 출금 수수료
-    const fee = Math.floor(withdrawAmount * 0.05);
-    const totalDeduction = withdrawAmount + fee;
+      // 지갑 상태 확인
+      if (wallet.status !== 'ACTIVE') {
+        await query('ROLLBACK');
+        return res.status(403).json({ error: '비활성화된 지갑입니다' });
+      }
 
-    // 잔액 확인
-    const currentBalance = typeof wallet.gold_balance === 'string'
-      ? parseFloat(wallet.gold_balance)
-      : (wallet.gold_balance || 0);
+      // 5% 출금 수수료 (정수로)
+      const fee = Math.floor(withdrawAmount * 0.05);
+      const totalDeduction = withdrawAmount + fee;
 
-    if (currentBalance < totalDeduction) {
-      return res.status(400).json({
-        error: '잔액이 부족합니다',
-        required: totalDeduction,
-        available: currentBalance,
+      // 잔액 확인 (정확한 타입 변환)
+      const currentBalance = typeof wallet.gold_balance === 'string'
+        ? parseInt(wallet.gold_balance, 10)
+        : Math.floor(wallet.gold_balance || 0);
+
+      if (currentBalance < totalDeduction) {
+        await query('ROLLBACK');
+        return res.status(400).json({
+          error: '잔액이 부족합니다',
+          required: totalDeduction,
+          available: currentBalance,
+          fee,
+        });
+      }
+
+      // ========== 3단계: 출금 로그 기록 ==========
+      const withdrawalLogId = uuidv4();
+      const transactionId = `WD-${Date.now()}-${uuidv4().substring(0, 8)}`;
+
+      await query(
+        `INSERT INTO withdrawal_logs (id, wallet_id, wallet_address, amount, fee, total_deduction, transaction_id, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'COMPLETED', NOW())`,
+        [withdrawalLogId, wallet.id, wallet_address, withdrawAmount, fee, totalDeduction, transactionId]
+      );
+
+      // ========== 4단계: 잔액 차감 (조건부 - 잔액 재확인) ==========
+      const updateResult = await query(
+        'UPDATE user_wallets SET gold_balance = gold_balance - ?, total_withdrawal = total_withdrawal + ? WHERE id = ? AND status = "ACTIVE" AND gold_balance >= ?',
+        [totalDeduction, withdrawAmount, wallet.id, totalDeduction]
+      );
+
+      // 업데이트 실패 시 롤백 (잔액 부족 등)
+      if (!updateResult || updateResult.affectedRows === 0) {
+        await query('ROLLBACK');
+        return res.status(400).json({ error: '출금 처리 실패 (잔액 부족 또는 지갑 상태 변경)' });
+      }
+
+      // ========== 5단계: 트랜잭션 커밋 ==========
+      await query('COMMIT');
+
+      console.log(`✅ 출금 완료: ${wallet.minecraft_username} - ${withdrawAmount} Gold (수수료: ${fee} Gold, Transaction: ${transactionId})`);
+
+      res.json({
+        success: true,
+        amount: withdrawAmount,
         fee,
+        total: totalDeduction,
+        transaction_id: transactionId,
+        message: `${withdrawAmount} Gold가 출금되었습니다 (수수료: ${fee} Gold)`,
       });
+
+    } catch (txError) {
+      // 트랜잭션 오류 시 롤백
+      await query('ROLLBACK');
+      throw txError;
     }
 
-    // 출금 로그 기록
-    const withdrawalLogId = uuidv4();
-    const transactionId = `WD-${Date.now()}-${uuidv4().substring(0, 8)}`;
-
-    await query(
-      `INSERT INTO withdrawal_logs (id, wallet_id, wallet_address, amount, fee, total_deduction, transaction_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'COMPLETED')`,
-      [withdrawalLogId, wallet.id, wallet_address, withdrawAmount, fee, totalDeduction, transactionId]
-    );
-
-    // Gold 잔액 차감
-    await query(
-      'UPDATE user_wallets SET gold_balance = gold_balance - ?, total_withdrawal = total_withdrawal + ? WHERE wallet_address = ?',
-      [totalDeduction, withdrawAmount, wallet_address]
-    );
-
-    console.log(`✅ 출금 완료: ${wallet.minecraft_username} - ${withdrawAmount} Gold (수수료: ${fee} Gold, Transaction: ${transactionId})`);
-
-    res.json({
-      success: true,
-      amount: withdrawAmount,
-      fee,
-      total: totalDeduction,
-      transaction_id: transactionId,
-      message: `${withdrawAmount} Gold가 출금되었습니다 (수수료: ${fee} Gold)`,
-    });
   } catch (error) {
     console.error('출금 오류:', error);
     res.status(500).json({ error: '출금 실패' });
