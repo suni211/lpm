@@ -106,13 +106,14 @@ export const calculateNoteYPosition = (
   noteTimestamp: number,
   currentTime: number,
   noteSpeed: number,
-  canvasHeight: number
+  canvasHeight: number,
+  offsetY: number = 0
 ): number => {
   const timeUntilHit = noteTimestamp - currentTime;
   const fallDistance = canvasHeight * 0.8;
   const fallTime = 2000 / noteSpeed;
   const progress = 1 - (timeUntilHit / fallTime);
-  return progress * fallDistance;
+  return offsetY + progress * fallDistance;
 };
 
 // 롱노트 길이 계산

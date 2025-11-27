@@ -143,47 +143,44 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     const longNote = activeLongNotesRef.current[e.code];
     
     if (longNote) {
-      // 이전 노트와의 간격 확인 (슬라이드 판단)
-      const previousNoteTime = keyPressStartTimeRef.current[`${e.code}_prev`] || 0;
-      const slideThreshold = 300; // 300ms 이내면 슬라이드
-      const timeSincePreviousNote = pressStartTime - previousNoteTime;
-      const isSlide = previousNoteTime > 0 && 
-                      timeSincePreviousNote > 30 && 
-                      timeSincePreviousNote < slideThreshold;
+    // 이전 노트와의 간격 확인 (슬라이드 판단)
+    const previousNoteTime = keyPressStartTimeRef.current[`${e.code}_prev`] || 0;
+    const slideThreshold = 300; // 300ms 이내면 슬라이드
+    const timeSincePreviousNote = pressStartTime - previousNoteTime;
+    const isSlide = previousNoteTime > 0 && 
+                    timeSincePreviousNote > 30 && 
+                    timeSincePreviousNote < slideThreshold;
 
-      if (holdDuration < 200) {
-        // 200ms 미만이면 일반 노트 또는 슬라이드 노트
-        setNotes(prev => {
-          const updatedNotes: Note[] = prev.map(note => {
-            if (note.id === longNote.id) {
-              if (isSlide) {
-                // 슬라이드 노트로 변경
-                return { ...note, type: NoteType.SLIDE, slideDirection: 'right' as const, duration: undefined };
-              } else {
-                // 일반 노트로 변경
-                return { ...note, type: NoteType.NORMAL, duration: undefined, slideDirection: undefined };
-              }
+    // 같은 레인에서의 이전 노트 찾기 (슬라이드 체크용)
+    setNotes(prev => {
+      const updatedNotes: Note[] = prev.map(note => {
+        if (note.id === longNote.id) {
+          if (holdDuration < 200) {
+            // 200ms 미만이면 일반 노트 또는 슬라이드 노트
+            if (isSlide) {
+              // 슬라이드 노트로 변경
+              return { ...note, type: NoteType.SLIDE, slideDirection: 'right' as const, duration: undefined };
+            } else {
+              // 일반 노트로 변경
+              return { ...note, type: NoteType.NORMAL, duration: undefined, slideDirection: undefined };
             }
-            // 이전 노트도 슬라이드로 변경 (연속 입력인 경우)
-            if (isSlide && 
-                note.lane === lane && 
-                Math.abs(note.timestamp - previousNoteTime) < 50 &&
-                note.id !== longNote.id &&
-                note.type === NoteType.NORMAL) {
-              return { ...note, type: NoteType.SLIDE, slideDirection: 'right' as const };
-            }
-            return note;
-          });
-          return updatedNotes;
-        });
-      } else {
-        // 200ms 이상이면 롱노트 (duration 업데이트)
-        setNotes(prev => prev.map(note => 
-          note.id === longNote.id 
-            ? { ...note, type: NoteType.LONG, duration: holdDuration }
-            : note
-        ));
-      }
+          } else {
+            // 200ms 이상이면 롱노트 (duration 업데이트)
+            return { ...note, type: NoteType.LONG, duration: holdDuration };
+          }
+        }
+        // 이전 노트도 슬라이드로 변경 (연속 입력인 경우)
+        if (isSlide && 
+            note.lane === lane && 
+            Math.abs(note.timestamp - previousNoteTime) < 50 &&
+            note.id !== longNote.id &&
+            note.type === NoteType.NORMAL) {
+          return { ...note, type: NoteType.SLIDE, slideDirection: 'right' as const };
+        }
+        return note;
+      });
+      return updatedNotes;
+    });
       delete activeLongNotesRef.current[e.code];
     }
 
