@@ -169,12 +169,12 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
     const { order_id } = req.params;
     const { wallet_address } = req.body;
 
-    // 주문 조회
+    // 주문 조회 (PENDING 또는 PARTIAL 상태만 취소 가능)
     const orders = await query(
       `SELECT o.*, w.wallet_address
        FROM orders o
        JOIN user_wallets w ON o.wallet_id = w.id
-       WHERE o.id = ? AND o.status = 'PENDING'`,
+       WHERE o.id = ? AND o.status IN ('PENDING', 'PARTIAL')`,
       [order_id]
     );
 
@@ -189,19 +189,29 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
       return res.status(403).json({ error: '권한이 없습니다' });
     }
 
+    // 남은 수량 계산 (부분 체결 고려)
+    const remainingQty = typeof order.remaining_quantity === 'string' 
+      ? parseFloat(order.remaining_quantity) 
+      : (order.remaining_quantity || 0);
+
+    if (remainingQty <= 0) {
+      return res.status(400).json({ error: '취소할 수량이 없습니다' });
+    }
+
     // 주문 취소 처리
     if (order.order_type === 'BUY') {
-      // 매수 취소: Gold 환불
-      const refundAmount = order.price * order.quantity + order.fee;
+      // 매수 취소: Gold 환불 (남은 수량 기준)
+      const refundAmount = order.price * remainingQty;
+      const refundFee = Math.floor(refundAmount * 0.05); // 수수료도 환불
       await query('UPDATE user_wallets SET gold_balance = gold_balance + ? WHERE id = ?', [
-        refundAmount,
+        refundAmount + refundFee,
         order.wallet_id,
       ]);
     } else if (order.order_type === 'SELL') {
-      // 매도 취소: 코인 잠금 해제
+      // 매도 취소: 코인 잠금 해제 (남은 수량 기준)
       await query(
         'UPDATE user_coin_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND coin_id = ?',
-        [order.quantity, order.quantity, order.wallet_id, order.coin_id]
+        [remainingQty, remainingQty, order.wallet_id, order.coin_id]
       );
     }
 

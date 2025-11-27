@@ -12,6 +12,7 @@ const InvestmentHistoryPage = () => {
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [userLoading, setUserLoading] = useState(true);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -67,6 +68,38 @@ const InvestmentHistoryPage = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('ko-KR');
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!walletAddress) {
+      alert('지갑 주소를 찾을 수 없습니다');
+      return;
+    }
+
+    if (!confirm('정말로 이 주문을 취소하시겠습니까?')) {
+      return;
+    }
+
+    setCancellingOrderId(orderId);
+    try {
+      const result = await tradingService.cancelOrder(orderId, walletAddress);
+      
+      if (result.success) {
+        alert('주문이 취소되었습니다');
+        
+        // 주문 목록 다시 조회
+        const data = await tradingService.getMyOrders(walletAddress);
+        setOrders(data || []);
+      } else {
+        alert(result.message || '주문 취소 실패');
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || '주문 취소 실패';
+      alert(errorMessage);
+      console.error('Failed to cancel order:', error);
+    } finally {
+      setCancellingOrderId(null);
+    }
   };
 
   return (
@@ -155,7 +188,11 @@ const InvestmentHistoryPage = () => {
               {orders.length === 0 ? (
                 <div className="empty-state">주문 내역이 없습니다</div>
               ) : (
-                <table>
+                <>
+                  <div style={{ marginBottom: '16px', padding: '12px', background: '#2a2e3e', borderRadius: '6px', fontSize: '13px', color: '#9ca3af' }}>
+                    💡 <strong style={{ color: '#fff' }}>주문 취소 안내:</strong> 상태가 "대기중" 또는 "부분체결"인 주문만 취소할 수 있습니다. 오른쪽 "주문 취소" 버튼을 클릭하면 주문이 취소됩니다.
+                  </div>
+                  <table>
                   <thead>
                     <tr>
                       <th>시간</th>
@@ -165,28 +202,51 @@ const InvestmentHistoryPage = () => {
                       <th>수량</th>
                       <th>체결량</th>
                       <th>상태</th>
+                      <th>작업</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order) => (
-                      <tr key={order.id}>
-                        <td>{formatDate(order.created_at)}</td>
-                        <td>{order.symbol}</td>
-                        <td className={order.order_type === 'BUY' ? 'buy-text' : 'sell-text'}>
-                          {order.order_type === 'BUY' ? '매수' : '매도'}
-                        </td>
-                        <td>{formatNumber(order.price || 0)} G</td>
-                        <td>{formatNumber(order.quantity)}</td>
-                        <td>{formatNumber(order.filled_quantity)}</td>
-                        <td>
-                          <span className={'status-badge ' + order.status.toLowerCase()}>
-                            {order.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {orders.map((order) => {
+                      const canCancel = order.status === 'PENDING' || order.status === 'PARTIAL';
+                      return (
+                        <tr key={order.id}>
+                          <td>{formatDate(order.created_at)}</td>
+                          <td>{order.symbol}</td>
+                          <td className={order.order_type === 'BUY' ? 'buy-text' : 'sell-text'}>
+                            {order.order_type === 'BUY' ? '매수' : '매도'}
+                          </td>
+                          <td>{formatNumber(order.price || 0)} G</td>
+                          <td>{formatNumber(order.quantity)}</td>
+                          <td>{formatNumber(order.filled_quantity)}</td>
+                          <td>
+                            <span className={'status-badge ' + order.status.toLowerCase()}>
+                              {order.status === 'PENDING' ? '대기중' : 
+                               order.status === 'PARTIAL' ? '부분체결' :
+                               order.status === 'FILLED' ? '체결완료' :
+                               order.status === 'CANCELLED' ? '취소됨' :
+                               order.status === 'EXPIRED' ? '만료됨' : order.status}
+                            </span>
+                          </td>
+                          <td>
+                            {canCancel ? (
+                              <button
+                                className="cancel-order-btn"
+                                onClick={() => handleCancelOrder(order.id)}
+                                disabled={cancellingOrderId === order.id}
+                                title="주문 취소"
+                              >
+                                {cancellingOrderId === order.id ? '취소 중...' : '주문 취소'}
+                              </button>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontSize: '12px' }}>-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
+                </>
               )}
             </div>
           ) : (
