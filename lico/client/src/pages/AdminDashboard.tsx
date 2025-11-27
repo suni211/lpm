@@ -178,8 +178,8 @@ const AdminDashboard = () => {
       description: coin.description || '',
       circulating_supply: coin.circulating_supply.toString(),
       current_price: coin.current_price.toString(),
-      min_volatility: coin.min_volatility ? (coin.min_volatility * 100).toFixed(2) : '0.1',
-      max_volatility: coin.max_volatility ? (coin.max_volatility * 100).toFixed(2) : '10.0',
+      min_volatility: coin.min_volatility ? (coin.min_volatility * 100).toFixed(3) : '0.001',
+      max_volatility: coin.max_volatility ? (coin.max_volatility * 100).toFixed(3) : '0.1',
     });
   };
 
@@ -191,8 +191,8 @@ const AdminDashboard = () => {
       description: '',
       circulating_supply: '',
       current_price: '',
-      min_volatility: '0.1',
-      max_volatility: '10.0',
+      min_volatility: '0.001',
+      max_volatility: '0.1',
     });
   };
 
@@ -319,7 +319,7 @@ const AdminDashboard = () => {
                     <td>{formatNumber(coin.market_cap)} G</td>
                     <td>
                       <span style={{ fontSize: '12px', color: '#9ca3af' }}>
-                        {coin.min_volatility ? (parseFloat(coin.min_volatility.toString()) * 100).toFixed(2) : '0.1'}% ~ {coin.max_volatility ? (parseFloat(coin.max_volatility.toString()) * 100).toFixed(2) : '10.0'}%
+                        {coin.min_volatility ? (parseFloat(coin.min_volatility.toString()) * 100).toFixed(3) : '0.001'}% ~ {coin.max_volatility ? (parseFloat(coin.max_volatility.toString()) * 100).toFixed(3) : '0.1'}%
                       </span>
                     </td>
                     <td>
@@ -558,12 +558,12 @@ const AdminDashboard = () => {
                   type="number"
                   value={formData.min_volatility}
                   onChange={(e) => setFormData({ ...formData, min_volatility: e.target.value })}
-                  min="0.1"
-                  max="99.9"
-                  step="0.1"
-                  placeholder="0.1"
+                  min="0.001"
+                  max="0.999"
+                  step="0.001"
+                  placeholder="0.001"
                 />
-                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.1% ~ 99.9% (기본값: 0.1%)</small>
+                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.001% ~ 0.999% (기본값: 0.001%)</small>
               </div>
               <div className="form-group">
                 <label>최대 변동성 (%)</label>
@@ -571,12 +571,12 @@ const AdminDashboard = () => {
                   type="number"
                   value={formData.max_volatility}
                   onChange={(e) => setFormData({ ...formData, max_volatility: e.target.value })}
-                  min="0.1"
-                  max="99.9"
-                  step="0.1"
-                  placeholder="10.0"
+                  min="0.001"
+                  max="0.999"
+                  step="0.001"
+                  placeholder="0.1"
                 />
-                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.1% ~ 99.9% (기본값: 10.0%)</small>
+                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.001% ~ 0.999% (기본값: 0.1%)</small>
               </div>
               <div className="modal-actions">
                 <button type="button" onClick={() => setShowCreateModal(false)}>
@@ -652,12 +652,12 @@ const AdminDashboard = () => {
                   value={formData.min_volatility}
                   onChange={(e) => setFormData({ ...formData, min_volatility: e.target.value })}
                   required
-                  min="0.1"
-                  max="99.9"
-                  step="0.1"
-                  placeholder="0.1"
+                  min="0.001"
+                  max="0.999"
+                  step="0.001"
+                  placeholder="0.001"
                 />
-                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.1% ~ 99.9%</small>
+                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.001% ~ 0.999%</small>
               </div>
               <div className="form-group">
                 <label>최대 변동성 (%) *</label>
@@ -666,12 +666,12 @@ const AdminDashboard = () => {
                   value={formData.max_volatility}
                   onChange={(e) => setFormData({ ...formData, max_volatility: e.target.value })}
                   required
-                  min="0.1"
-                  max="99.9"
-                  step="0.1"
-                  placeholder="10.0"
+                  min="0.001"
+                  max="0.999"
+                  step="0.001"
+                  placeholder="0.1"
                 />
-                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.1% ~ 99.9%</small>
+                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.001% ~ 0.999%</small>
               </div>
               <div className="modal-actions">
                 <button type="button" onClick={() => setEditingCoin(null)}>

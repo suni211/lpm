@@ -264,15 +264,15 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
     // 변동성 검증
     if (min_volatility !== undefined) {
       const minVol = parseFloat(min_volatility);
-      if (isNaN(minVol) || minVol < 0.001 || minVol > 0.999) {
-        return res.status(400).json({ error: '최소 변동성은 0.001~0.999 사이의 값이어야 합니다 (0.1%~99.9%)' });
+      if (isNaN(minVol) || minVol < 0.00001 || minVol > 0.00999) {
+        return res.status(400).json({ error: '최소 변동성은 0.00001~0.00999 사이의 값이어야 합니다 (0.001%~0.999%)' });
       }
     }
 
     if (max_volatility !== undefined) {
       const maxVol = parseFloat(max_volatility);
-      if (isNaN(maxVol) || maxVol < 0.001 || maxVol > 0.999) {
-        return res.status(400).json({ error: '최대 변동성은 0.001~0.999 사이의 값이어야 합니다 (0.1%~99.9%)' });
+      if (isNaN(maxVol) || maxVol < 0.00001 || maxVol > 0.00999) {
+        return res.status(400).json({ error: '최대 변동성은 0.00001~0.00999 사이의 값이어야 합니다 (0.001%~0.999%)' });
       }
     }
 
@@ -416,16 +416,16 @@ router.patch('/:id', isAdmin, async (req: Request, res: Response) => {
     }
     if (req.body.min_volatility !== undefined) {
       const minVol = parseFloat(req.body.min_volatility);
-      if (isNaN(minVol) || minVol < 0.001 || minVol > 0.999) {
-        return res.status(400).json({ error: '최소 변동성은 0.001~0.999 사이의 값이어야 합니다 (0.1%~99.9%)' });
+      if (isNaN(minVol) || minVol < 0.00001 || minVol > 0.00999) {
+        return res.status(400).json({ error: '최소 변동성은 0.00001~0.00999 사이의 값이어야 합니다 (0.001%~0.999%)' });
       }
       updates.push('min_volatility = ?');
       params.push(minVol);
     }
     if (req.body.max_volatility !== undefined) {
       const maxVol = parseFloat(req.body.max_volatility);
-      if (isNaN(maxVol) || maxVol < 0.001 || maxVol > 0.999) {
-        return res.status(400).json({ error: '최대 변동성은 0.001~0.999 사이의 값이어야 합니다 (0.1%~99.9%)' });
+      if (isNaN(maxVol) || maxVol < 0.00001 || maxVol > 0.00999) {
+        return res.status(400).json({ error: '최대 변동성은 0.00001~0.00999 사이의 값이어야 합니다 (0.001%~0.999%)' });
       }
       updates.push('max_volatility = ?');
       params.push(maxVol);
