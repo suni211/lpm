@@ -673,16 +673,27 @@ const TradingPage = () => {
           }
 
           // 최종 검증: 모든 값이 유효한지 확인
-          if (o != null && h != null && l != null && c != null && 
+          if (o != null && h != null && l != null && c != null &&
               isFinite(o) && isFinite(h) && isFinite(l) && isFinite(c) &&
-              o > 0 && h > 0 && l > 0 && c > 0 && isFinite(t) && t > 0) {
-            formattedData.push({
+              o > 0 && h > 0 && l > 0 && c > 0 && isFinite(t) && t > 0 &&
+              typeof o === 'number' && typeof h === 'number' &&
+              typeof l === 'number' && typeof c === 'number' && typeof t === 'number') {
+
+            const candleData = {
               time: t as UTCTimestamp,
               open: o,
               high: high,
               low: low,
               close: c,
-            });
+            };
+
+            // 데이터 객체 자체 검증
+            if (candleData.time && candleData.open && candleData.high &&
+                candleData.low && candleData.close) {
+              formattedData.push(candleData);
+            } else {
+              console.warn('Candle data object has null properties:', candleData);
+            }
           } else {
             console.warn('Skipping invalid candle after final validation:', { o, h, l, c, t, candle });
           }
@@ -845,16 +856,25 @@ const TradingPage = () => {
           }
 
           // 최종 검증: 모든 값이 유효한지 확인
-          if (o != null && h != null && l != null && c != null && 
+          if (o != null && h != null && l != null && c != null &&
               isFinite(o) && isFinite(h) && isFinite(l) && isFinite(c) &&
-              o > 0 && h > 0 && l > 0 && c > 0 && isFinite(t) && t > 0) {
-            formattedData.push({
+              o > 0 && h > 0 && l > 0 && c > 0 && isFinite(t) && t > 0 &&
+              typeof o === 'number' && typeof h === 'number' &&
+              typeof l === 'number' && typeof c === 'number' && typeof t === 'number') {
+
+            const candleData = {
               time: t as UTCTimestamp,
               open: o,
               high: high,
               low: low,
               close: c,
-            });
+            };
+
+            // 데이터 객체 자체 검증
+            if (candleData.time && candleData.open && candleData.high &&
+                candleData.low && candleData.close) {
+              formattedData.push(candleData);
+            }
           }
         }
 

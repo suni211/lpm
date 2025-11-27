@@ -194,18 +194,36 @@ router.get('/:coin_id/candles/:interval', async (req: Request, res: Response) =>
 
     // 최적화: 필요한 컬럼만 선택하고, 시간순으로 정렬 (reverse 불필요)
     const candles = await query(
-      `SELECT 
-         id, coin_id, open_time, close_time, 
-         open_price, high_price, low_price, close_price, 
+      `SELECT
+         id, coin_id, open_time, close_time,
+         open_price, high_price, low_price, close_price,
          volume, trade_count
        FROM ${tableName}
        WHERE coin_id = ?
+         AND open_price IS NOT NULL
+         AND high_price IS NOT NULL
+         AND low_price IS NOT NULL
+         AND close_price IS NOT NULL
+         AND open_time IS NOT NULL
        ORDER BY open_time ASC
        LIMIT ?`,
       [coin_id, Number(limit)]
     );
 
-    res.json({ candles });
+    // 추가 필터링: null 값이 있는 캔들 제거
+    const validCandles = candles.filter((candle: any) =>
+      candle.open_price != null &&
+      candle.high_price != null &&
+      candle.low_price != null &&
+      candle.close_price != null &&
+      candle.open_time != null &&
+      parseFloat(candle.open_price) > 0 &&
+      parseFloat(candle.high_price) > 0 &&
+      parseFloat(candle.low_price) > 0 &&
+      parseFloat(candle.close_price) > 0
+    );
+
+    res.json({ candles: validCandles });
   } catch (error) {
     console.error('캔들 데이터 조회 오류:', error);
     res.status(500).json({ error: '캔들 데이터 조회 실패' });
