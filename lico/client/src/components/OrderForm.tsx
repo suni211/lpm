@@ -37,25 +37,35 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
         } else {
           // 잔액이 없을 때도 기본 구조로 설정하여 항상 표시되도록
           setCoinBalance({
+            id: '',
+            wallet_id: walletAddress,
             coin_id: coin.id,
-            coin_symbol: coin.symbol,
-            coin_name: coin.name,
             total_amount: 0,
             available_amount: 0,
             locked_amount: 0,
-          } as CoinBalance);
+            average_buy_price: 0,
+            total_profit_loss: 0,
+            updated_at: new Date().toISOString(),
+            symbol: coin.symbol,
+            name: coin.name,
+          });
         }
       } catch (error) {
         console.error('Failed to fetch coin balance:', error);
         // 조회 실패 시에도 기본값 설정
         setCoinBalance({
+          id: '',
+          wallet_id: walletAddress,
           coin_id: coin.id,
-          coin_symbol: coin.symbol,
-          coin_name: coin.name,
           total_amount: 0,
           available_amount: 0,
           locked_amount: 0,
-        } as CoinBalance);
+          average_buy_price: 0,
+          total_profit_loss: 0,
+          updated_at: new Date().toISOString(),
+          symbol: coin.symbol,
+          name: coin.name,
+        });
       }
     };
 
