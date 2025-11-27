@@ -247,18 +247,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     }
   };
 
-  const updateLongNoteDurations = (currentTime: number) => {
-    // 롱노트를 누르고 있는 동안 지속적으로 체크
-    // 매 프레임마다 정확하게 업데이트되어야 함
-    longNotesHeld.current.forEach((isHeld, noteId) => {
-      if (isHeld) {
-        const note = beatmap.note_data.find(n => n.id === noteId);
-        if (note && note.type === NoteType.LONG) {
-          // 롱노트를 누르고 있는 동안 duration이 계속 증가해야 함
-          // 렌더링 시 실시간으로 계산되므로 여기서는 상태만 확인
-        }
-      }
-    });
+  const updateLongNoteDurations = (_currentTime: number) => {
+    // 롱노트 duration은 렌더링 시 실시간으로 계산됨
+    // 매 프레임마다 정확하게 업데이트됨
   };
 
   const checkMissedNotes = (currentTime: number) => {

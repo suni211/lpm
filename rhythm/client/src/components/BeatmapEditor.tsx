@@ -88,7 +88,9 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     // 그리드 스냅
     if (gridSnap) {
       const beatDuration = (60 / bpm) * 1000;
-      // 1ms 단위로 정확하게 저장 (반올림 제거)
+      timestamp = Math.round(currentTime / beatDuration) * beatDuration;
+    } else {
+      // 1ms 단위로 정확하게 저장 (반올림 없음)
       timestamp = currentTime;
     }
 
@@ -218,7 +220,9 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     let timestamp = currentTime;
     if (gridSnap) {
       const beatDuration = (60 / bpm) * 1000;
-      // 1ms 단위로 정확하게 저장 (반올림 제거)
+      timestamp = Math.round(currentTime / beatDuration) * beatDuration;
+    } else {
+      // 1ms 단위로 정확하게 저장 (반올림 없음)
       timestamp = currentTime;
     }
 
