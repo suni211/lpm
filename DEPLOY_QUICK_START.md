@@ -478,6 +478,7 @@ sudo chown -R www-data:www-data /var/www/bank
 cd ~/lpm/lico/server
 npm install
 npm run build
+pm2 restart all
 
 # Lico Client 재빌드
 cd ~/lpm/lico/client

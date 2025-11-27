@@ -74,7 +74,8 @@ function RegisterPage() {
           <div className="auth-code-display">
             <label className="form-label">인증 코드 (로그인 시 필요)</label>
             <div className="auth-code-value">{authCode}</div>
-            <p style={{ marginTop: '12px', fontSize: '14px', color: '#fff' }}>
+            <p style={{ marginTop: '12px', fontSize: '14px', color: '
+              fff' }}>
               ⚠️ 이 코드는 다시 확인할 수 없습니다. 반드시 복사하여 안전한 곳에 보관하세요!
             </p>
           </div>
@@ -169,7 +170,7 @@ function RegisterPage() {
             />
           </div>
 
-          <div style={{ background: '#2a2e3e', border: '1px solid #3a3e4e', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
+          <div style={{ background: '#2a2e3e', border: '1px solid #fff', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
             <h3 style={{ marginBottom: '12px', fontSize: '16px', color: '#fff' }}>보안 질문 (인증 코드 복구용)</h3>
 
             <div className="form-group">
