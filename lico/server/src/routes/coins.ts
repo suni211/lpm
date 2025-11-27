@@ -210,18 +210,73 @@ router.get('/:coin_id/candles/:interval', async (req: Request, res: Response) =>
       [coin_id, Number(limit)]
     );
 
-    // 추가 필터링: null 값이 있는 캔들 제거
-    const validCandles = candles.filter((candle: any) =>
-      candle.open_price != null &&
-      candle.high_price != null &&
-      candle.low_price != null &&
-      candle.close_price != null &&
-      candle.open_time != null &&
-      parseFloat(candle.open_price) > 0 &&
-      parseFloat(candle.high_price) > 0 &&
-      parseFloat(candle.low_price) > 0 &&
-      parseFloat(candle.close_price) > 0
-    );
+    // 추가 필터링: null 값이 있는 캔들 제거 및 타임스탬프 검증
+    const validCandles = candles
+      .filter((candle: any) => {
+        // 기본 null 체크
+        if (
+          candle.open_price == null ||
+          candle.high_price == null ||
+          candle.low_price == null ||
+          candle.close_price == null ||
+          candle.open_time == null
+        ) {
+          return false;
+        }
+
+        // 가격 유효성 검증
+        const openPrice = parseFloat(candle.open_price);
+        const highPrice = parseFloat(candle.high_price);
+        const lowPrice = parseFloat(candle.low_price);
+        const closePrice = parseFloat(candle.close_price);
+
+        if (
+          isNaN(openPrice) || isNaN(highPrice) || isNaN(lowPrice) || isNaN(closePrice) ||
+          openPrice <= 0 || highPrice <= 0 || lowPrice <= 0 || closePrice <= 0
+        ) {
+          return false;
+        }
+
+        // 타임스탬프 유효성 검증
+        try {
+          const openTime = new Date(candle.open_time);
+          const timeValue = openTime.getTime();
+
+          // 유효한 날짜인지 확인 (2020년 ~ 2030년 사이)
+          if (isNaN(timeValue) || !isFinite(timeValue)) {
+            console.warn('Invalid timestamp in database:', candle.open_time);
+            return false;
+          }
+
+          const minTimestamp = new Date('2020-01-01').getTime();
+          const maxTimestamp = new Date('2030-12-31').getTime();
+
+          if (timeValue < minTimestamp || timeValue > maxTimestamp) {
+            console.warn('Timestamp out of valid range:', {
+              open_time: candle.open_time,
+              timestamp: timeValue,
+              date: openTime.toISOString()
+            });
+            return false;
+          }
+        } catch (error) {
+          console.warn('Error parsing timestamp:', candle.open_time, error);
+          return false;
+        }
+
+        return true;
+      })
+      .map((candle: any) => {
+        // 타임스탬프를 ISO 문자열로 변환
+        const openTime = new Date(candle.open_time);
+        const closeTime = new Date(candle.close_time);
+
+        return {
+          ...candle,
+          open_time: openTime.toISOString(),
+          close_time: closeTime.toISOString(),
+        };
+      });
 
     // 프론트엔드에서 정렬하므로 역순으로 전송 (오래된 순 → 최신 순)
     res.json({ candles: validCandles.reverse() });

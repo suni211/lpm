@@ -382,9 +382,21 @@ const TradingPage = () => {
       }
     });
 
+    // 연결 성공
+    socket.on('connect', () => {
+      console.log('WebSocket connected');
+    });
+
     // 연결 오류 처리
     socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
+      console.warn('WebSocket connection error (will retry):', error.message);
+      // WebSocket 연결 실패는 차트 렌더링을 방해하지 않음
+      // 실시간 업데이트만 일시적으로 중단됨
+    });
+
+    // 연결 끊김 처리
+    socket.on('disconnect', (reason) => {
+      console.warn('WebSocket disconnected:', reason);
     });
 
     // 정리 함수
@@ -748,21 +760,42 @@ const TradingPage = () => {
 
           // 타임스탬프 변환 (초 단위로)
           let t: number;
-          const timeValue = new Date(candle.open_time).getTime();
+          
+          // open_time이 유효한 문자열인지 확인
+          if (!candle.open_time || typeof candle.open_time !== 'string') {
+            console.warn('Invalid open_time type:', candle.open_time);
+            continue;
+          }
 
-          // 밀리초를 초로 변환
-          t = Math.floor(timeValue / 1000);
+          try {
+            const timeValue = new Date(candle.open_time).getTime();
 
-          // 타임스탬프 유효성 검증 (2020년 ~ 2030년 사이)
-          const minTimestamp = new Date('2020-01-01').getTime() / 1000; // 1577836800
-          const maxTimestamp = new Date('2030-12-31').getTime() / 1000; // 1924905600
+            // Date 파싱 실패 체크
+            if (isNaN(timeValue) || !isFinite(timeValue)) {
+              console.warn('Invalid timestamp value:', {
+                open_time: candle.open_time,
+                parsed: timeValue
+              });
+              continue;
+            }
 
-          if (isNaN(t) || !isFinite(t) || t < minTimestamp || t > maxTimestamp) {
-            console.warn('Invalid or out-of-range timestamp:', {
-              open_time: candle.open_time,
-              timestamp: t,
-              date: new Date(t * 1000).toISOString()
-            });
+            // 밀리초를 초로 변환
+            t = Math.floor(timeValue / 1000);
+
+            // 타임스탬프 유효성 검증 (2020년 ~ 2030년 사이)
+            const minTimestamp = new Date('2020-01-01').getTime() / 1000; // 1577836800
+            const maxTimestamp = new Date('2030-12-31').getTime() / 1000; // 1924905600
+
+            if (isNaN(t) || !isFinite(t) || t < minTimestamp || t > maxTimestamp) {
+              console.warn('Invalid or out-of-range timestamp:', {
+                open_time: candle.open_time,
+                timestamp: t,
+                date: new Date(t * 1000).toISOString()
+              });
+              continue;
+            }
+          } catch (error) {
+            console.warn('Error parsing timestamp:', candle.open_time, error);
             continue;
           }
 
@@ -954,16 +987,32 @@ const TradingPage = () => {
 
           // 타임스탬프 변환 (초 단위로)
           let t: number;
-          const timeValue = new Date(candle.open_time).getTime();
+          
+          // open_time이 유효한 문자열인지 확인
+          if (!candle.open_time || typeof candle.open_time !== 'string') {
+            continue;
+          }
 
-          // 밀리초를 초로 변환
-          t = Math.floor(timeValue / 1000);
+          try {
+            const timeValue = new Date(candle.open_time).getTime();
 
-          // 타임스탬프 유효성 검증 (2020년 ~ 2030년 사이)
-          const minTimestamp = new Date('2020-01-01').getTime() / 1000;
-          const maxTimestamp = new Date('2030-12-31').getTime() / 1000;
+            // Date 파싱 실패 체크
+            if (isNaN(timeValue) || !isFinite(timeValue)) {
+              continue;
+            }
 
-          if (isNaN(t) || !isFinite(t) || t < minTimestamp || t > maxTimestamp) {
+            // 밀리초를 초로 변환
+            t = Math.floor(timeValue / 1000);
+
+            // 타임스탬프 유효성 검증 (2020년 ~ 2030년 사이)
+            const minTimestamp = new Date('2020-01-01').getTime() / 1000;
+            const maxTimestamp = new Date('2030-12-31').getTime() / 1000;
+
+            if (isNaN(t) || !isFinite(t) || t < minTimestamp || t > maxTimestamp) {
+              continue;
+            }
+          } catch (error) {
+            // 타임스탬프 파싱 실패 시 스킵
             continue;
           }
 
