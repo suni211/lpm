@@ -568,8 +568,11 @@ export class TradingEngine {
       if (websocketInstance && websocketInstance.broadcastPriceUpdate) {
         const updatedCoin = (await query('SELECT * FROM coins WHERE id = ?', [coinId]))[0];
         websocketInstance.broadcastPriceUpdate(coinId, {
+          coin_id: coinId,
           current_price: updatedCoin.current_price,
           price_change_24h: updatedCoin.price_change_24h,
+          volume_24h: updatedCoin.volume_24h,
+          market_cap: updatedCoin.market_cap,
           updated_at: new Date().toISOString(),
         });
       }

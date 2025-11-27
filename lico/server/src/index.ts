@@ -121,6 +121,10 @@ export { websocket };
 import { setWebSocketInstance } from './services/tradingEngine';
 setWebSocketInstance(websocket);
 
+// AITradingBot에 WebSocket 인스턴스 전달
+import { setWebSocketInstance as setAITradingBotWebSocket } from './services/aiTradingBot';
+setAITradingBotWebSocket(websocket);
+
 // Start server
 httpServer.listen(PORT, async () => {
   console.log(`

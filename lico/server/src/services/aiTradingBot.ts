@@ -2,6 +2,13 @@ import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import cron from 'node-cron';
 
+// WebSocket 인스턴스를 가져오기 위한 타입
+let websocketInstance: any = null;
+
+export function setWebSocketInstance(ws: any) {
+  websocketInstance = ws;
+}
+
 export class AITradingBot {
   private isRunning = false;
   private volatilityFactor: number;
@@ -105,6 +112,19 @@ export class AITradingBot {
       'UPDATE coins SET current_price = ?, price_change_24h = ? WHERE id = ?',
       [newPrice, priceChange24h, coin.id]
     );
+
+    // WebSocket으로 가격 업데이트 브로드캐스트
+    if (websocketInstance && websocketInstance.broadcastPriceUpdate) {
+      const updatedCoin = (await query('SELECT * FROM coins WHERE id = ?', [coin.id]))[0];
+      websocketInstance.broadcastPriceUpdate(coin.id, {
+        coin_id: coin.id,
+        current_price: updatedCoin.current_price,
+        price_change_24h: updatedCoin.price_change_24h,
+        volume_24h: updatedCoin.volume_24h,
+        market_cap: updatedCoin.market_cap,
+        updated_at: new Date().toISOString(),
+      });
+    }
 
     // AI 로그 기록
     await query(
