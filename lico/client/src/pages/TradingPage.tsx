@@ -142,12 +142,20 @@ const TradingPage = () => {
     }
   }, [selectedCoin, chartInterval]);
 
-  // 차트 초기화 (한 번만)
+  // 차트 초기화 (selectedCoin이 있을 때만)
   useEffect(() => {
-    if (!chartContainerRef.current || chartInitializedRef.current) return;
+    if (!selectedCoin || !chartContainerRef.current) return;
+
+    // 기존 차트가 있으면 제거
+    if (chartRef.current) {
+      chartRef.current.remove();
+      chartRef.current = null;
+      candlestickSeriesRef.current = null;
+      chartInitializedRef.current = false;
+    }
 
     function initializeChart() {
-      if (!chartContainerRef.current || chartInitializedRef.current) return;
+      if (!chartContainerRef.current || !selectedCoin) return;
 
       try {
         const chart = createChart(chartContainerRef.current, {
@@ -189,7 +197,7 @@ const TradingPage = () => {
     const containerWidth = chartContainerRef.current.clientWidth;
     if (containerWidth === 0) {
       const timeoutId = setTimeout(() => {
-        if (chartContainerRef.current && chartContainerRef.current.clientWidth > 0) {
+        if (chartContainerRef.current && chartContainerRef.current.clientWidth > 0 && selectedCoin) {
           initializeChart();
         }
       }, 100);
@@ -216,8 +224,14 @@ const TradingPage = () => {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+        candlestickSeriesRef.current = null;
+        chartInitializedRef.current = false;
+      }
     };
-  }, []); // 빈 의존성 배열로 한 번만 실행
+  }, [selectedCoin?.id]); // selectedCoin이 변경될 때 차트 재초기화
 
   // 차트 데이터 업데이트 (최적화: 데이터만 업데이트)
   useEffect(() => {

@@ -31,9 +31,31 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
       try {
         const balances = await walletService.getMyBalances(walletAddress);
         const balance = balances.balances?.find((b: CoinBalance) => b.coin_id === coin.id);
-        setCoinBalance(balance || null);
+        // 잔액이 없어도 기본값으로 설정 (표시를 위해)
+        if (balance) {
+          setCoinBalance(balance);
+        } else {
+          // 잔액이 없을 때도 기본 구조로 설정하여 항상 표시되도록
+          setCoinBalance({
+            coin_id: coin.id,
+            coin_symbol: coin.symbol,
+            coin_name: coin.name,
+            total_amount: 0,
+            available_amount: 0,
+            locked_amount: 0,
+          } as CoinBalance);
+        }
       } catch (error) {
         console.error('Failed to fetch coin balance:', error);
+        // 조회 실패 시에도 기본값 설정
+        setCoinBalance({
+          coin_id: coin.id,
+          coin_symbol: coin.symbol,
+          coin_name: coin.name,
+          total_amount: 0,
+          available_amount: 0,
+          locked_amount: 0,
+        } as CoinBalance);
       }
     };
 
@@ -499,34 +521,45 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
             <span>보유 골드</span>
             <span className="balance-amount">{formatNumber(goldBalance)} G</span>
           </div>
-          {coinBalance && (() => {
-            const totalAmount = typeof coinBalance.total_amount === 'string' ? parseFloat(coinBalance.total_amount) : (coinBalance.total_amount || 0);
-            const availableAmount = typeof coinBalance.available_amount === 'string' ? parseFloat(coinBalance.available_amount) : (coinBalance.available_amount || 0);
-            const lockedAmount = typeof coinBalance.locked_amount === 'string' ? parseFloat(coinBalance.locked_amount) : (coinBalance.locked_amount || 0);
+          {(() => {
+            // coinBalance가 없으면 기본값 0으로 표시
+            const totalAmount = coinBalance 
+              ? (typeof coinBalance.total_amount === 'string' ? parseFloat(coinBalance.total_amount) : (coinBalance.total_amount || 0))
+              : 0;
+            const availableAmount = coinBalance
+              ? (typeof coinBalance.available_amount === 'string' ? parseFloat(coinBalance.available_amount) : (coinBalance.available_amount || 0))
+              : 0;
+            const lockedAmount = coinBalance
+              ? (typeof coinBalance.locked_amount === 'string' ? parseFloat(coinBalance.locked_amount) : (coinBalance.locked_amount || 0))
+              : 0;
             
-            if (totalAmount > 0) {
-              return (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>보유 {coin.symbol}</span>
-                    <span className="balance-amount">{formatNumber(totalAmount)} {coin.symbol}</span>
+            // 항상 코인 잔액 표시 (0이어도 표시)
+            return (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>보유 {coin.symbol}</span>
+                  <span className="balance-amount">{formatNumber(totalAmount)} {coin.symbol}</span>
+                </div>
+                {availableAmount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#9ca3af' }}>
+                    <span>사용 가능</span>
+                    <span>{formatNumber(availableAmount)} {coin.symbol}</span>
                   </div>
-                  {availableAmount > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#9ca3af' }}>
-                      <span>사용 가능</span>
-                      <span>{formatNumber(availableAmount)} {coin.symbol}</span>
-                    </div>
-                  )}
-                  {lockedAmount > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f59e0b' }}>
-                      <span>주문 중</span>
-                      <span>{formatNumber(lockedAmount)} {coin.symbol}</span>
-                    </div>
-                  )}
-                </>
-              );
-            }
-            return null;
+                )}
+                {lockedAmount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f59e0b' }}>
+                    <span>주문 중</span>
+                    <span>{formatNumber(lockedAmount)} {coin.symbol}</span>
+                  </div>
+                )}
+                {totalAmount === 0 && availableAmount === 0 && lockedAmount === 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#9ca3af' }}>
+                    <span>보유 코인 없음</span>
+                    <span>0 {coin.symbol}</span>
+                  </div>
+                )}
+              </>
+            );
           })()}
         </div>
 
