@@ -184,6 +184,11 @@ const TradingPage = () => {
           params: { limit: 100 }
         });
         const newCandles = response.data.candles || [];
+        console.log('Fetched candles:', newCandles.length);
+        if (newCandles.length > 0) {
+          console.log('First candle from API:', newCandles[0]);
+          console.log('Last candle from API:', newCandles[newCandles.length - 1]);
+        }
         setCandles(newCandles);
         
         // 마지막 캔들 시간 저장
@@ -250,7 +255,21 @@ const TradingPage = () => {
           borderDownColor: '#ef4444',
           wickUpColor: '#22c55e',
           wickDownColor: '#ef4444',
+          priceFormat: {
+            type: 'price',
+            precision: 8,
+            minMove: 0.00000001,
+          },
         }) as ISeriesApi<'Candlestick'>;
+
+        // 가격 스케일 자동 조정 활성화
+        candlestickSeries.priceScale().applyOptions({
+          autoScale: true,
+          scaleMargins: {
+            top: 0.1,
+            bottom: 0.1,
+          },
+        });
 
         candlestickSeriesRef.current = candlestickSeries;
         chartInitializedRef.current = true;
@@ -357,10 +376,18 @@ const TradingPage = () => {
         }
 
         if (formattedData.length > 0) {
+          // 데이터 검증 및 로그
+          console.log('Chart data loaded:', formattedData.length, 'candles');
+          console.log('First candle:', formattedData[0]);
+          console.log('Last candle:', formattedData[formattedData.length - 1]);
+          console.log('Price range:', {
+            min: Math.min(...formattedData.map(d => d.low)),
+            max: Math.max(...formattedData.map(d => d.high)),
+          });
+          
           candlestickSeriesRef.current.setData(formattedData);
           chartRef.current.timeScale().fitContent();
           isInitialDataLoadRef.current = false; // 초기 로드 완료
-          console.log('Chart data loaded:', formattedData.length, 'candles');
         }
       } else {
         // 실시간 업데이트: 마지막 캔들만 업데이트 (줌 상태 유지)
