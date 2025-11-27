@@ -103,14 +103,23 @@ export class AITradingBot {
       : parseFloat(coin.initial_price || currentPrice);
     
     // 24시간 변동률 계산 (%)
-    const priceChange24h = price24hAgo > 0 
-      ? ((newPrice - price24hAgo) / price24hAgo) * 100 
+    const priceChange24h = price24hAgo > 0
+      ? ((newPrice - price24hAgo) / price24hAgo) * 100
       : 0;
 
-    // 가격 및 24시간 변동률 업데이트
+    // 24시간 거래량 계산 (최근 24시간 동안의 총 거래량)
+    const volume24hResult = await query(
+      `SELECT COALESCE(SUM(quantity * price), 0) as total_volume
+       FROM trades
+       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+      [coin.id]
+    );
+    const volume24h = parseFloat(volume24hResult[0]?.total_volume || '0');
+
+    // 가격, 24시간 변동률, 24시간 거래량 업데이트
     await query(
-      'UPDATE coins SET current_price = ?, price_change_24h = ? WHERE id = ?',
-      [newPrice, priceChange24h, coin.id]
+      'UPDATE coins SET current_price = ?, price_change_24h = ?, volume_24h = ? WHERE id = ?',
+      [newPrice, priceChange24h, volume24h, coin.id]
     );
 
     // WebSocket으로 가격 업데이트 브로드캐스트

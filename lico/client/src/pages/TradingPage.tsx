@@ -1099,7 +1099,7 @@ const TradingPage = () => {
             </div>
             <div className="stat-item">
               <span className="stat-label">거래량(24H)</span>
-              <span className="stat-value">{formatPrice(selectedCoin.volume_24h)}</span>
+              <span className="stat-value">{formatPrice(selectedCoin.volume_24h || 0)} G</span>
             </div>
             <div className="stat-item">
               <span className="stat-label">시가총액</span>

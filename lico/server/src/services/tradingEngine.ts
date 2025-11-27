@@ -550,12 +550,21 @@ export class TradingEngine {
     const finalPrice = price * (1 - marketReactionWeight) + adjustedPrice * marketReactionWeight;
     
     // 24시간 변동률 재계산
-    const finalPriceChange24h = price24hAgo > 0 
-      ? ((finalPrice - price24hAgo) / price24hAgo) * 100 
+    const finalPriceChange24h = price24hAgo > 0
+      ? ((finalPrice - price24hAgo) / price24hAgo) * 100
       : 0;
 
-    // 코인 현재가 및 24시간 변동률 업데이트
-    await query('UPDATE coins SET current_price = ?, price_change_24h = ? WHERE id = ?', [finalPrice, finalPriceChange24h, coinId]);
+    // 24시간 거래량 계산 (최근 24시간 동안의 총 거래량)
+    const volume24hResult = await query(
+      `SELECT COALESCE(SUM(quantity * price), 0) as total_volume
+       FROM trades
+       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+      [coinId]
+    );
+    const volume24h = parseFloat(volume24hResult[0]?.total_volume || '0');
+
+    // 코인 현재가, 24시간 변동률, 24시간 거래량 업데이트
+    await query('UPDATE coins SET current_price = ?, price_change_24h = ?, volume_24h = ? WHERE id = ?', [finalPrice, finalPriceChange24h, volume24h, coinId]);
 
     // 캔들스틱 데이터 업데이트
     await this.updateCandlestick(coinId, finalPrice, quantity);
