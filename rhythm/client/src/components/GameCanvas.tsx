@@ -140,16 +140,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
 
       if (!gameState.isPlaying || !isGameStarted) return;
 
-      // 롱노트는 키를 떼도 계속 유지됨 (끊기지 않음)
-      // 롱노트가 끝날 때까지 (duration 만큼) 계속 누르고 있어야 함
-      // 키를 떼는 것은 롱노트를 끊는 것이 아니라, 롱노트가 끝날 때까지 유지
-      // checkLongNoteRelease는 롱노트가 duration 만큼 지났는지만 확인
+      // 롱노트는 키를 떼면 끝남 (비트맵 녹음과 동일)
       const keyBinding = settings.keyBindings[`key${beatmap.key_count}` as keyof typeof settings.keyBindings];
       const lane = keyBinding.indexOf(e.code);
 
       if (lane !== -1) {
-        // 롱노트는 키를 떼도 계속 유지되므로, 여기서는 아무것도 하지 않음
-        // 롱노트가 duration 만큼 지났는지는 게임 루프에서 확인
+        // 롱노트를 키를 떼면 끝남
+        checkLongNoteRelease(lane);
       }
     };
 
@@ -342,25 +339,63 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
   };
 
   const checkLongNoteRelease = (lane: number) => {
-    // 롱노트는 키를 떼도 계속 유지됨 (끊기지 않음)
-    // 롱노트가 끝날 때까지 (duration 만큼) 계속 누르고 있어야 함
+    // 롱노트는 키를 떼면 끝남 (비트맵 녹음과 동일)
+    // 현재 누르고 있는 롱노트를 찾아서 처리
     beatmap.note_data
-      .filter(note => note.lane === lane && note.type === NoteType.LONG)
+      .filter(note => 
+        note.lane === lane && 
+        note.type === NoteType.LONG && 
+        longNotesHeld.current.get(note.id) &&
+        !processedNotes.current.has(note.id)
+      )
       .forEach(note => {
         const currentTime = (audioRef.current?.seek() as number || 0) * 1000;
         const holdTime = currentTime - note.timestamp;
 
-        // 롱노트가 시작되었는지 확인 (timestamp에 도달했는지)
-        if (holdTime >= 0 && holdTime < note.duration! + 200) {
-          // 롱노트가 시작되었으면 longNotesHeld에 추가 (이미 있으면 유지)
-          if (!longNotesHeld.current.get(note.id)) {
-            longNotesHeld.current.set(note.id, true);
+        // 롱노트가 시작되었고 아직 끝나지 않았는지 확인
+        if (holdTime >= 0 && holdTime < note.duration!) {
+          // 롱노트를 키를 떼면 끝남
+          // holdTime이 duration의 80% 이상이면 성공, 아니면 실패
+          if (holdTime >= note.duration * 0.8) {
+            // 롱노트 성공 (80% 이상 누름)
+            const combo = calculateLongNoteCombo(note.duration);
+            processedNotes.current.add(note.id);
+            longNotesHeld.current.delete(note.id);
+            setGameState(s => ({
+              ...s,
+              combo: s.combo + combo,
+              maxCombo: Math.max(s.maxCombo, s.combo + combo)
+            }));
+          } else {
+            // 롱노트 실패 (80% 미만)
+            processedNotes.current.add(note.id);
+            longNotesHeld.current.delete(note.id);
+            setGameState(s => {
+              const newJudgements = { ...s.judgements };
+              newJudgements.fuck++;
+              
+              // 정확도 계산 후 판정 표시
+              const tempTotal = newJudgements.yas + newJudgements.oh + newJudgements.ah + newJudgements.fuck;
+              const tempAccuracy = tempTotal > 0
+                ? Math.round(((newJudgements.yas * 100 + newJudgements.oh * 70 + newJudgements.ah * 40) / tempTotal) * 100) / 100
+                : 0;
+              
+              const finalJudgement = tempAccuracy >= 100 ? JudgementType.YAS
+                : tempAccuracy >= 70 ? JudgementType.OH
+                : tempAccuracy >= 30 ? JudgementType.AH
+                : JudgementType.FUCK;
+              
+              const now = Date.now();
+              setRecentJudgements(prev => [...prev, { type: finalJudgement, timestamp: now, accuracy: tempAccuracy }]);
+              setTimeout(() => {
+                setRecentJudgements(prev => prev.filter(j => j.timestamp !== now));
+              }, 1500);
+              
+              return { ...s, combo: 0, judgements: newJudgements };
+            });
           }
-        }
-
-        // 롱노트가 끝났는지 확인 (duration 만큼 지났는지)
-        if (note.duration && holdTime >= note.duration) {
-          // 롱노트 완료
+        } else if (note.duration && holdTime >= note.duration) {
+          // 롱노트가 이미 끝났으면 완료 처리
           if (longNotesHeld.current.get(note.id)) {
             const combo = calculateLongNoteCombo(note.duration);
             processedNotes.current.add(note.id);
@@ -372,7 +407,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
             }));
           }
         }
-        // 롱노트가 아직 끝나지 않았으면 계속 유지 (키를 떼도 삭제하지 않음)
       });
   };
 
@@ -433,34 +467,123 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
   };
 
   const renderSolo = (ctx: CanvasRenderingContext2D, width: number, height: number, currentTime: number) => {
-    // DJMAX 스타일: 중앙에 얇고 작은 레인 영역, 양 옆에 여백
-    const margin = width * 0.2; // 양 옆 20% 여백
-    const playAreaWidth = width - margin * 2; // 중앙 60% 영역
-    const playAreaX = margin; // 왼쪽 여백 시작점
+    // 메탈릭 프레임 (은색-회색)
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(0, 0, width, 10); // 상단
+    ctx.fillRect(0, height - 80, width, 80); // 하단
+    ctx.fillRect(0, 0, 10, height); // 왼쪽
+    ctx.fillRect(width - 50, 0, 50, height); // 오른쪽 (스크롤바 영역)
     
-    // 판정선 (중앙, 얇고 짧게)
-    const judgementLineY = height * 0.9; // 90% 위치
-    ctx.strokeStyle = '#00ffff';
-    ctx.lineWidth = 3;
+    // 메탈릭 프레임 그라데이션 효과
+    const gradient = ctx.createLinearGradient(0, 0, width, 0);
+    gradient.addColorStop(0, '#e0e0e0');
+    gradient.addColorStop(0.5, '#c0c0c0');
+    gradient.addColorStop(1, '#a0a0a0');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, height - 80, width, 80);
+    
+    // 플레이 필드 (검은색 중앙 영역)
+    const playAreaX = 10;
+    const playAreaWidth = width - 60; // 오른쪽 스크롤바 제외
+    const playAreaY = 10;
+    const playAreaHeight = height - 90; // 하단 버튼 영역 제외
+    
+    ctx.fillStyle = '#000';
+    ctx.fillRect(playAreaX, playAreaY, playAreaWidth, playAreaHeight);
+    
+    // 판정선 (하단 빨간색 그라데이션 영역)
+    const judgementLineY = playAreaY + playAreaHeight - 20;
+    const gradientRed = ctx.createLinearGradient(playAreaX, judgementLineY, playAreaX, playAreaY + playAreaHeight);
+    gradientRed.addColorStop(0, 'rgba(139, 0, 0, 0.8)'); // 진한 빨강
+    gradientRed.addColorStop(1, 'rgba(139, 0, 0, 0)'); // 투명
+    ctx.fillStyle = gradientRed;
+    ctx.fillRect(playAreaX, judgementLineY, playAreaWidth, playAreaHeight - judgementLineY + playAreaY);
+    
+    // 판정선 (얇은 선)
+    ctx.strokeStyle = '#8b0000';
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(playAreaX, judgementLineY);
     ctx.lineTo(playAreaX + playAreaWidth, judgementLineY);
     ctx.stroke();
 
-    // 레인 그리기 (DJMAX 스타일: 얇고 작게)
+    // 레인 그리기 (얇은 흰색 선)
     const laneWidth = playAreaWidth / beatmap.key_count;
-    const laneHeight = height * 0.8; // 화면의 80% 높이
-    const laneStartY = height * 0.1; // 상단 10% 여백
+    const laneStartY = playAreaY;
 
     for (let i = 0; i <= beatmap.key_count; i++) {
       const x = playAreaX + i * laneWidth;
-      ctx.strokeStyle = '#444';
+      ctx.strokeStyle = '#fff';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x, laneStartY);
-      ctx.lineTo(x, laneStartY + laneHeight);
+      ctx.lineTo(x, playAreaY + playAreaHeight);
       ctx.stroke();
     }
+    
+    // 하단 버튼 영역
+    const buttonAreaY = height - 70;
+    const buttonHeight = 40;
+    const buttonWidth = playAreaWidth / beatmap.key_count;
+    const buttonColors = ['#fff', '#0066ff', '#fff', '#ffd700', '#fff', '#0066ff', '#fff'];
+    
+    for (let i = 0; i < beatmap.key_count; i++) {
+      const buttonX = playAreaX + i * buttonWidth;
+      const color = buttonColors[i % buttonColors.length];
+      
+      // 버튼 3D 효과
+      ctx.fillStyle = color;
+      ctx.fillRect(buttonX + 2, buttonAreaY + 2, buttonWidth - 4, buttonHeight);
+      
+      // 버튼 하이라이트
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillRect(buttonX + 2, buttonAreaY + 2, buttonWidth - 4, buttonHeight / 2);
+      
+      // 버튼 그림자
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(buttonX + 2, buttonAreaY + buttonHeight / 2, buttonWidth - 4, buttonHeight / 2);
+    }
+    
+    // "JAM" 레이블
+    ctx.fillStyle = '#00a0a0';
+    ctx.fillRect(playAreaX, height - 30, playAreaWidth, 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('JAM', playAreaX + playAreaWidth / 2, height - 20);
+    
+    // 오른쪽 스크롤바
+    const scrollbarX = width - 45;
+    const scrollbarWidth = 30;
+    const scrollbarY = 10;
+    const scrollbarHeight = playAreaHeight;
+    
+    // 스크롤바 배경 (은색 원통형)
+    const scrollbarGradient = ctx.createLinearGradient(scrollbarX, 0, scrollbarX + scrollbarWidth, 0);
+    scrollbarGradient.addColorStop(0, '#d0d0d0');
+    scrollbarGradient.addColorStop(0.5, '#b0b0b0');
+    scrollbarGradient.addColorStop(1, '#909090');
+    ctx.fillStyle = scrollbarGradient;
+    // 둥근 사각형 그리기
+    ctx.beginPath();
+    ctx.moveTo(scrollbarX + 15, scrollbarY);
+    ctx.lineTo(scrollbarX + scrollbarWidth - 15, scrollbarY);
+    ctx.quadraticCurveTo(scrollbarX + scrollbarWidth, scrollbarY, scrollbarX + scrollbarWidth, scrollbarY + 15);
+    ctx.lineTo(scrollbarX + scrollbarWidth, scrollbarY + scrollbarHeight - 15);
+    ctx.quadraticCurveTo(scrollbarX + scrollbarWidth, scrollbarY + scrollbarHeight, scrollbarX + scrollbarWidth - 15, scrollbarY + scrollbarHeight);
+    ctx.lineTo(scrollbarX + 15, scrollbarY + scrollbarHeight);
+    ctx.quadraticCurveTo(scrollbarX, scrollbarY + scrollbarHeight, scrollbarX, scrollbarY + scrollbarHeight - 15);
+    ctx.lineTo(scrollbarX, scrollbarY + 15);
+    ctx.quadraticCurveTo(scrollbarX, scrollbarY, scrollbarX + 15, scrollbarY);
+    ctx.closePath();
+    ctx.fill();
+    
+    // 스크롤바 인디케이터 (진행률에 따라)
+    const progress = currentTime / ((audioRef.current?.duration() || 1) * 1000);
+    const indicatorY = scrollbarY + (scrollbarHeight - 30) * progress;
+    ctx.fillStyle = '#505050';
+    ctx.fillRect(scrollbarX + 5, indicatorY, scrollbarWidth - 10, 30);
 
     // 노트 그리기 (세로로 길고 얇게)
     // 디버깅: 노트 데이터 확인
@@ -487,53 +610,55 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       if (processedNotes.current.has(note.id)) return;
       
       const x = playAreaX + note.lane * laneWidth;
+      const laneStartY = playAreaY;
+      const laneHeight = playAreaHeight;
       const y = calculateNoteYPosition(note.timestamp, currentTime, settings.noteSpeed, laneHeight, laneStartY, judgementLineY);
 
-      // 노트가 화면 범위 내에 있는지 확인 (더 관대하게)
-      // 노트가 판정선 위쪽에 있으면 표시 (y가 laneStartY보다 크고 judgementLineY보다 작으면 표시)
+      // 노트가 화면 범위 내에 있는지 확인
       if (y > judgementLineY + 50) return; // 판정선을 많이 지나간 노트는 표시하지 않음
-      if (y < laneStartY - 200) return; // 아직 보이지 않는 위치의 노트는 표시하지 않음
+      if (y < laneStartY - 100) return; // 아직 보이지 않는 위치의 노트는 표시하지 않음
       
       // 노트가 보이는 범위 내에 있으면 렌더링
       visibleNotesCount++;
 
       if (note.type === NoteType.LONG) {
-        // 롱노트는 항상 표시되어야 함 (키를 떼도 끊기지 않음)
+        // 롱노트: 위에서 아래로 내려오는 긴 노트
         const holdTime = currentTime - note.timestamp;
+        const isHeld = longNotesHeld.current.get(note.id);
         
-        // 롱노트가 시작되었는지 확인
+        // 롱노트가 보이는 범위 내에 있는지 확인
         if (holdTime >= -200 && holdTime < (note.duration || 200) + 200) {
-          // 롱노트가 시작되었으면 longNotesHeld에 추가 (이미 있으면 유지)
-          if (!longNotesHeld.current.get(note.id) && holdTime >= 0) {
-            longNotesHeld.current.set(note.id, true);
-          }
-          
-          // 롱노트 duration 사용 (키를 떼도 계속 유지)
           let actualDuration = note.duration || 200;
           
-          // 롱노트가 아직 진행 중이면 현재 시간까지의 duration 계산
-          if (holdTime > 0 && holdTime < actualDuration) {
-            // 롱노트가 진행 중이면 현재 시간까지의 길이로 표시
+          // 키를 누르고 있으면 현재 시간까지의 duration 계산
+          if (isHeld && holdTime > 0 && holdTime < actualDuration) {
             actualDuration = Math.floor(holdTime);
           }
           
-          // 롱노트 길이 계산 (위로 올라가도록, 길이 제한 없음)
+          // 롱노트 길이 계산 (위에서 아래로)
           const noteLength = calculateLongNoteLength(actualDuration, settings.noteSpeed, laneHeight);
           
+          // 롱노트 시작 위치 (y는 노트의 상단)
+          const noteTopY = y;
+          const noteBottomY = y + noteLength;
+          
           // 롱노트가 보이는 범위 내에 있으면 렌더링
-          if (judgementLineY - noteLength < judgementLineY + 50) {
-            ctx.fillStyle = 'rgba(255, 200, 0, 0.7)';
-            // 롱노트는 판정선에서 위로 올라감
-            ctx.fillRect(x + 1, judgementLineY - noteLength, laneWidth - 2, noteLength);
+          if (noteBottomY >= laneStartY - 100 && noteTopY <= judgementLineY + 50) {
+            // 롱노트 본체 (노란색)
+            ctx.fillStyle = 'rgba(255, 200, 0, 0.8)';
+            ctx.fillRect(x + 1, noteTopY, laneWidth - 2, noteLength);
             
-            // 롱노트 시작 부분 (두껍게)
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
-            const noteSize = Math.min(laneWidth * 0.9, 25);
-            ctx.fillRect(x + (laneWidth - noteSize) / 2, judgementLineY - noteLength - noteSize / 2, noteSize, noteSize);
+            // 롱노트 시작 부분 (두껍게, 밝은 노란색)
+            const noteSize = Math.min(laneWidth * 0.9, 30);
+            ctx.fillStyle = 'rgba(255, 255, 0, 1)';
+            ctx.fillRect(x + (laneWidth - noteSize) / 2, noteTopY - noteSize / 2, noteSize, noteSize);
+            
+            // 롱노트 테두리
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 1, noteTopY, laneWidth - 2, noteLength);
           }
         }
-        
-        // 롱노트는 별도로 렌더링하므로 일반 노트 렌더링 건너뛰기
         return;
       }
 
