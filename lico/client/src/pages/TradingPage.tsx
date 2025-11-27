@@ -206,7 +206,7 @@ const TradingPage = () => {
     }
 
     // 컨테이너가 준비될 때까지 대기 (최대 1초)
-    let timeoutId: NodeJS.Timeout | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let attempts = 0;
     const maxAttempts = 10;
 
