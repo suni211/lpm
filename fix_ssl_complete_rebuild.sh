@@ -77,3 +77,4 @@ sudo certbot install --cert-name lico.berrple.com --nginx
 echo "✅ 완료!"
 
 
+
