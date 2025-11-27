@@ -83,6 +83,8 @@ import coinsRoutes from './routes/coins';
 import tradingRoutes from './routes/trading';
 import blockchainRoutes from './routes/blockchain';
 import adminRoutes from './routes/admin';
+import newsRoutes from './routes/news';
+import newsCommentsRoutes from './routes/newsComments';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questionnaire', questionnaireRoutes);
@@ -91,6 +93,8 @@ app.use('/api/coins', coinsRoutes);
 app.use('/api/trading', tradingRoutes);
 app.use('/api/blockchain', blockchainRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/news', newsRoutes);
+app.use('/api/news-comments', newsCommentsRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {
