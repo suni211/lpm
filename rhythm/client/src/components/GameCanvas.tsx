@@ -142,8 +142,24 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd }) => {
     if (audioRef.current) {
       audioRef.current.play();
       audioRef.current.rate(settings.playbackSpeed);
-      setGameState(s => ({ ...s, isPlaying: true }));
-      animationFrameRef.current = requestAnimationFrame(gameLoop);
+      setGameState(s => ({ ...s, isPlaying: true, isPaused: false }));
+      // 게임 루프 시작
+      const loop = () => {
+        if (audioRef.current && gameState.isPlaying && !gameState.isPaused) {
+          const currentTime = (audioRef.current.seek() as number) * 1000 + settings.displaySync;
+          setGameState(s => ({ ...s, currentTime }));
+
+          // 이펙트 업데이트
+          const activeEffs = beatmap.effect_data.filter(
+            eff => currentTime >= eff.timestamp && currentTime <= eff.timestamp + eff.duration
+          );
+          setActiveEffects(activeEffs);
+
+          render(currentTime);
+          animationFrameRef.current = requestAnimationFrame(loop);
+        }
+      };
+      animationFrameRef.current = requestAnimationFrame(loop);
     }
   };
 
@@ -161,18 +177,21 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd }) => {
   };
 
   const gameLoop = () => {
-    if (audioRef.current && !gameState.isPaused) {
-      const currentTime = (audioRef.current.seek() as number) * 1000 + settings.displaySync;
-      setGameState(s => ({ ...s, currentTime }));
+    if (audioRef.current) {
+      const playing = !audioRef.current.paused();
+      if (playing && gameState.isPlaying && !gameState.isPaused) {
+        const currentTime = (audioRef.current.seek() as number) * 1000 + settings.displaySync;
+        setGameState(s => ({ ...s, currentTime }));
 
-      // 이펙트 업데이트
-      const activeEffs = beatmap.effect_data.filter(
-        eff => currentTime >= eff.timestamp && currentTime <= eff.timestamp + eff.duration
-      );
-      setActiveEffects(activeEffs);
+        // 이펙트 업데이트
+        const activeEffs = beatmap.effect_data.filter(
+          eff => currentTime >= eff.timestamp && currentTime <= eff.timestamp + eff.duration
+        );
+        setActiveEffects(activeEffs);
 
-      render(currentTime);
-      animationFrameRef.current = requestAnimationFrame(gameLoop);
+        render(currentTime);
+        animationFrameRef.current = requestAnimationFrame(gameLoop);
+      }
     }
   };
 

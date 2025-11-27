@@ -6,7 +6,11 @@ class WebSocketService {
 
   connect(userId: number) {
     this.userId = userId;
-    this.socket = io('http://localhost:5003', {
+    // 프로덕션에서는 상대 경로 사용, 개발 환경에서는 환경 변수 사용
+    const socketUrl = process.env.NODE_ENV === 'production' 
+      ? window.location.origin 
+      : (process.env.VITE_SOCKET_URL || 'http://localhost:5003');
+    this.socket = io(socketUrl, {
       withCredentials: true
     });
 

@@ -243,34 +243,50 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     }
   };
 
+  // 시간 업데이트 루프
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    let animationFrameId: number;
+    const updateLoop = () => {
+      if (audioRef.current && isPlaying) {
+        const time = (audioRef.current.seek() as number) * 1000;
+        setCurrentTime(time);
+        animationFrameId = requestAnimationFrame(updateLoop);
+      }
+    };
+    animationFrameId = requestAnimationFrame(updateLoop);
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [isPlaying]);
+
   const togglePlayback = () => {
     if (isPlaying) {
       audioRef.current?.pause();
       setIsRecording(false);
+      setIsPlaying(false);
     } else {
-      audioRef.current?.play();
-      updateCurrentTime();
+      if (audioRef.current) {
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
     }
-    setIsPlaying(!isPlaying);
   };
 
   const toggleRecording = () => {
     if (!isPlaying) {
       // 녹음 시작 시 재생도 함께 시작
-      audioRef.current?.play();
-      setIsPlaying(true);
-      updateCurrentTime();
+      if (audioRef.current) {
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
     }
     setIsRecording(!isRecording);
     pressedKeysRef.current.clear();
-  };
-
-  const updateCurrentTime = () => {
-    if (audioRef.current && isPlaying) {
-      const time = (audioRef.current.seek() as number) * 1000;
-      setCurrentTime(time);
-      requestAnimationFrame(updateCurrentTime);
-    }
   };
 
   const handleSave = () => {

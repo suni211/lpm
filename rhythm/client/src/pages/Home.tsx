@@ -192,7 +192,7 @@ const Home: React.FC = () => {
                     >
                       {song.cover_image && (
                         <img 
-                          src={`/uploads/${song.cover_image}`} 
+                          src={song.cover_image?.startsWith('/') ? song.cover_image : `/uploads/${song.cover_image}`} 
                           alt={song.title}
                           className="song-cover"
                         />

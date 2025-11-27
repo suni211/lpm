@@ -338,7 +338,7 @@ const Admin: React.FC = () => {
                   <div key={song.id} className="song-item-admin">
                     {song.cover_image && (
                       <img 
-                        src={`/uploads/${song.cover_image}`} 
+                        src={song.cover_image?.startsWith('/') ? song.cover_image : `/uploads/${song.cover_image}`} 
                         alt={song.title}
                         className="song-cover-admin"
                       />

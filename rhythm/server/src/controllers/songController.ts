@@ -47,8 +47,9 @@ export const createSong = async (req: Request, res: Response) => {
       return res.status(400).json({ error: '필수 필드가 누락되었습니다.' });
     }
 
-    const audioFile = files.audio[0].path;
-    const coverImage = files.cover ? files.cover[0].path : null;
+    // 상대 경로로 저장 (클라이언트에서 /uploads/...로 접근)
+    const audioFile = `/uploads/audio/${files.audio[0].filename}`;
+    const coverImage = files.cover ? `/uploads/covers/${files.cover[0].filename}` : null;
 
     const result = await query(
       `INSERT INTO songs (title, artist, audio_file, cover_image, duration, bpm, creator_id)
