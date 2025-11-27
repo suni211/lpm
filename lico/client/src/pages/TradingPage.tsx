@@ -336,19 +336,19 @@ const TradingPage = () => {
             <div className="orderbook-section">
               <Orderbook coinId={selectedCoin.id} />
             </div>
-            <div className="order-form-section">
-              <OrderForm
-                coin={selectedCoin}
-                walletAddress={walletAddress}
-                goldBalance={goldBalance}
-                onOrderSuccess={handleOrderSuccess}
-              />
+            <div className="coin-sidebar-section">
+              <CoinSidebar selectedCoinId={selectedCoin.id} />
             </div>
           </div>
         </div>
 
         <div className="sidebar-content">
-          <CoinSidebar selectedCoinId={selectedCoin.id} />
+          <OrderForm
+            coin={selectedCoin}
+            walletAddress={walletAddress}
+            goldBalance={goldBalance}
+            onOrderSuccess={handleOrderSuccess}
+          />
         </div>
       </div>
     </div>

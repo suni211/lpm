@@ -40,7 +40,8 @@
 }
 
 .holdings-table,
-.orders-table {
+.orders-table,
+.trades-table {
   overflow-x: auto;
 }
 

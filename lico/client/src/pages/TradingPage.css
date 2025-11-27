@@ -217,6 +217,13 @@
   flex-direction: column;
 }
 
+.coin-sidebar-section {
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
 .sidebar-content {
   position: relative;
   overflow: hidden;

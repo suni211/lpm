@@ -66,6 +66,10 @@ export interface Trade {
   created_at: string;
   buyer_username?: string;
   seller_username?: string;
+  trade_type?: 'BUY' | 'SELL';
+  my_fee?: number;
+  symbol?: string;
+  name?: string;
 }
 
 export interface OrderbookEntry {

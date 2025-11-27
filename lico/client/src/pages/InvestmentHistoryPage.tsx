@@ -1,18 +1,40 @@
 import { useState, useEffect } from 'react';
 import { tradingService, walletService } from '../services/coinService';
-import type { Order, CoinBalance } from '../types';
+import api from '../services/api';
+import type { Order, CoinBalance, Trade } from '../types';
 import './InvestmentHistoryPage.css';
 
 const InvestmentHistoryPage = () => {
   const [activeTab, setActiveTab] = useState<'holdings' | 'orders' | 'trades'>('holdings');
   const [holdings, setHoldings] = useState<CoinBalance[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [walletAddress, setWalletAddress] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true);
 
-  const walletAddress = '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb8';
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await api.get('/auth/me');
+        if (response.data.user && response.data.user.wallet_address) {
+          setWalletAddress(response.data.user.wallet_address);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user info:', error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!walletAddress || userLoading) return;
+
+      setLoading(true);
       try {
         if (activeTab === 'holdings') {
           const data = await walletService.getMyBalances(walletAddress);
@@ -20,6 +42,9 @@ const InvestmentHistoryPage = () => {
         } else if (activeTab === 'orders') {
           const data = await tradingService.getMyOrders(walletAddress);
           setOrders(data || []);
+        } else if (activeTab === 'trades') {
+          const data = await tradingService.getMyTrades(walletAddress);
+          setTrades(data || []);
         }
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -29,7 +54,7 @@ const InvestmentHistoryPage = () => {
     };
 
     fetchData();
-  }, [activeTab, walletAddress]);
+  }, [activeTab, walletAddress, userLoading]);
 
   const formatNumber = (num: number | string | null | undefined) => {
     const numValue = typeof num === 'string' ? parseFloat(num) : (num || 0);
@@ -165,7 +190,45 @@ const InvestmentHistoryPage = () => {
               )}
             </div>
           ) : (
-            <div className="empty-state">거래 내역 기능 준비 중...</div>
+            <div className="trades-table">
+              {trades.length === 0 ? (
+                <div className="empty-state">거래 내역이 없습니다</div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>시간</th>
+                      <th>코인</th>
+                      <th>유형</th>
+                      <th>가격</th>
+                      <th>수량</th>
+                      <th>총액</th>
+                      <th>수수료</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trades.map((trade) => (
+                      <tr key={trade.id}>
+                        <td>{formatDate(trade.created_at)}</td>
+                        <td>
+                          <div className="coin-cell">
+                            <span className="coin-symbol">{trade.symbol || 'N/A'}</span>
+                            <span className="coin-name">{trade.name || ''}</span>
+                          </div>
+                        </td>
+                        <td className={trade.trade_type === 'BUY' ? 'buy-text' : 'sell-text'}>
+                          {trade.trade_type === 'BUY' ? '매수' : '매도'}
+                        </td>
+                        <td>{formatNumber(trade.price)} G</td>
+                        <td>{formatNumber(trade.quantity)}</td>
+                        <td>{formatNumber(trade.total_amount)} G</td>
+                        <td>{formatNumber(trade.my_fee || 0)} G</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           )}
         </div>
       </div>
