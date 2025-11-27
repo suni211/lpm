@@ -95,23 +95,15 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
       timestamp = currentTime;
     }
 
-    // 1ms 단위로 정확하게 타임스탬프 정규화
+    // 1ms 단위로 정확하게 타임스탬프 정규화 (소수점 제거)
     timestamp = Math.floor(timestamp);
     
-    // 최소 간격 체크 (같은 레인에서 너무 빠르게 입력 방지)
-    const minInterval = 10; // 10ms (더 엄격하게)
-    if (lastNoteTimeRef.current[lane] !== undefined) {
-      const timeSinceLastNote = timestamp - lastNoteTimeRef.current[lane];
-      if (timeSinceLastNote < minInterval) {
-        return; // 같은 레인에서 너무 빠르게 입력 방지
-      }
-    }
-    
-    // 정확히 같은 타임스탬프에 같은 레인에 노트가 있는지 체크
+    // 정확히 같은 타임스탬프에 같은 레인에 노트가 있는지만 체크 (1ms 차이는 완전히 허용)
+    // 각 노트는 1ms 단위로 변동이 있어야 하므로, 정확히 같은 타임스탬프만 방지
     const lanesAtTimestamp = allNoteTimestampsRef.current.get(timestamp);
     if (lanesAtTimestamp && lanesAtTimestamp.has(lane)) {
-      // 정확히 같은 타임스탬프, 같은 레인에 노트가 이미 있으면 생성하지 않음
-      return;
+      // 정확히 같은 타임스탬프, 같은 레인에 노트가 이미 있으면 1ms 추가
+      timestamp = timestamp + 1;
     }
 
     // 이전 노트 시간 저장 (슬라이드 판단용)
@@ -247,12 +239,15 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
       timestamp = Math.round(timestamp / beatDuration) * beatDuration;
     }
     
-    // 정확히 같은 타임스탬프에 같은 레인에 노트가 있는지 체크
-    const lanesAtTimestamp = allNoteTimestampsRef.current.get(timestamp);
-    if (lanesAtTimestamp && lanesAtTimestamp.has(lane)) {
-      // 정확히 같은 타임스탬프, 같은 레인에 노트가 이미 있으면 생성하지 않음
-      return;
-    }
+      // 정확히 같은 타임스탬프에 같은 레인에 노트가 있는지 체크
+      // 1ms 차이는 완전히 허용하므로, 정확히 같은 타임스탬프만 조정
+      let finalTimestamp = timestamp;
+      const lanesAtTimestamp = allNoteTimestampsRef.current.get(finalTimestamp);
+      if (lanesAtTimestamp && lanesAtTimestamp.has(lane)) {
+        // 정확히 같은 타임스탬프, 같은 레인에 노트가 이미 있으면 1ms 추가
+        finalTimestamp = finalTimestamp + 1;
+      }
+      timestamp = finalTimestamp;
 
     if (selectedTool === 'note' || selectedTool === 'long' || selectedTool === 'slide') {
       const newNote: Note = {

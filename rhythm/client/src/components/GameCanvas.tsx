@@ -409,12 +409,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
   };
 
   const renderSolo = (ctx: CanvasRenderingContext2D, width: number, height: number, currentTime: number) => {
-    // DJMAX 스타일: 중앙에 얇고 작은 레인 영역
-    const playAreaWidth = Math.min(width * 0.15, 200); // 최대 200px, 화면의 15%
-    const playAreaX = (width - playAreaWidth) / 2; // 중앙 정렬
+    // DJMAX 스타일: 중앙에 얇고 작은 레인 영역, 양 옆에 여백
+    const margin = width * 0.2; // 양 옆 20% 여백
+    const playAreaWidth = width - margin * 2; // 중앙 60% 영역
+    const playAreaX = margin; // 왼쪽 여백 시작점
     
     // 판정선 (중앙, 얇고 짧게)
-    const judgementLineY = height * 0.85;
+    const judgementLineY = height * 0.9; // 90% 위치
     ctx.strokeStyle = '#00ffff';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -424,8 +425,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
 
     // 레인 그리기 (DJMAX 스타일: 얇고 작게)
     const laneWidth = playAreaWidth / beatmap.key_count;
-    const laneHeight = height * 0.7; // 화면의 70% 높이
-    const laneStartY = height * 0.15; // 상단 15% 여백
+    const laneHeight = height * 0.8; // 화면의 80% 높이
+    const laneStartY = height * 0.1; // 상단 10% 여백
 
     for (let i = 0; i <= beatmap.key_count; i++) {
       const x = playAreaX + i * laneWidth;
@@ -445,8 +446,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       const x = playAreaX + note.lane * laneWidth;
       const y = calculateNoteYPosition(note.timestamp, currentTime, settings.noteSpeed, laneHeight, laneStartY, judgementLineY);
 
-      // 노트가 판정선을 지나갔으면 표시하지 않음
-      if (y > judgementLineY + 10) return;
+      // 노트가 판정선을 지나갔거나 아직 보이지 않는 위치면 표시하지 않음
+      if (y > judgementLineY + 10 || y < laneStartY - 50) return;
 
       if (note.type === NoteType.LONG) {
         // 롱노트를 누르고 있는지 확인
