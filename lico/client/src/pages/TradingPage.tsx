@@ -109,7 +109,7 @@ const TradingPage = () => {
         });
         
         // 현재 가격을 실시간으로 캔들에 반영 (1분봉은 실시간 계산)
-        if (priceNum > 0) {
+        if (priceNum > 0 && isFinite(priceNum) && !isNaN(priceNum)) {
           setCandles((prevCandles) => {
             const now = new Date();
             
@@ -143,7 +143,14 @@ const TradingPage = () => {
             }
             
             const lastCandle = prevCandles[prevCandles.length - 1];
+            if (!lastCandle || !lastCandle.open_time) {
+              return prevCandles;
+            }
+
             const lastCandleTime = Math.floor(new Date(lastCandle.open_time).getTime() / 1000);
+            if (isNaN(lastCandleTime) || !isFinite(lastCandleTime) || lastCandleTime <= 0) {
+              return prevCandles;
+            }
             
             // 마지막 캔들의 시간대 계산
             let lastCandleTimeFloor: number;
@@ -162,24 +169,59 @@ const TradingPage = () => {
               const lastHigh = typeof lastCandle.high_price === 'string' ? parseFloat(lastCandle.high_price) : (lastCandle.high_price || 0);
               const lastLow = typeof lastCandle.low_price === 'string' ? parseFloat(lastCandle.low_price) : (lastCandle.low_price || 0);
               
+              // 유효성 검사
+              if (isNaN(lastHigh) || isNaN(lastLow) || !isFinite(lastHigh) || !isFinite(lastLow) || lastHigh <= 0 || lastLow <= 0) {
+                console.warn('Invalid last candle prices:', { lastHigh, lastLow, lastCandle });
+                return prevCandles;
+              }
+
+              const finalHigh = Math.max(lastHigh, priceNum);
+              const finalLow = Math.min(lastLow, priceNum);
+              const finalClose = priceNum;
+
+              if (isNaN(finalHigh) || isNaN(finalLow) || isNaN(finalClose) ||
+                  !isFinite(finalHigh) || !isFinite(finalLow) || !isFinite(finalClose) ||
+                  finalHigh <= 0 || finalLow <= 0 || finalClose <= 0 || finalHigh < finalLow) {
+                console.warn('Invalid updated candle prices:', { finalHigh, finalLow, finalClose });
+                return prevCandles;
+              }
+              
               newCandles[newCandles.length - 1] = {
                 ...lastCandle,
-                close_price: priceNum,
-                high_price: Math.max(lastHigh, priceNum),
-                low_price: Math.min(lastLow, priceNum),
+                close_price: finalClose,
+                high_price: finalHigh,
+                low_price: finalLow,
                 close_time: now.toISOString(), // 실시간으로 close_time 업데이트
               };
             } else {
               // 새 시간대면 새 캔들 추가
               const lastClose = typeof lastCandle.close_price === 'string' ? parseFloat(lastCandle.close_price) : (lastCandle.close_price || 0);
+              
+              // 유효성 검사
+              if (isNaN(lastClose) || !isFinite(lastClose) || lastClose <= 0) {
+                console.warn('Invalid last close price:', lastClose);
+                return prevCandles;
+              }
+
+              const openPrice = lastClose > 0 ? lastClose : priceNum;
+              const highPrice = Math.max(lastClose, priceNum);
+              const lowPrice = Math.min(lastClose, priceNum);
+
+              if (isNaN(openPrice) || isNaN(highPrice) || isNaN(lowPrice) ||
+                  !isFinite(openPrice) || !isFinite(highPrice) || !isFinite(lowPrice) ||
+                  openPrice <= 0 || highPrice <= 0 || lowPrice <= 0 || highPrice < lowPrice) {
+                console.warn('Invalid new candle prices:', { openPrice, highPrice, lowPrice, priceNum });
+                return prevCandles;
+              }
+
               newCandles.push({
                 id: `realtime-${Date.now()}`,
                 coin_id: selectedCoin.id,
                 open_time: new Date(currentCandleTime * 1000).toISOString(),
                 close_time: now.toISOString(),
-                open_price: lastClose > 0 ? lastClose : priceNum,
-                high_price: Math.max(lastClose, priceNum),
-                low_price: Math.min(lastClose, priceNum),
+                open_price: openPrice,
+                high_price: highPrice,
+                low_price: lowPrice,
                 close_price: priceNum,
                 volume: 0,
                 trade_count: 0,
@@ -199,8 +241,32 @@ const TradingPage = () => {
 
     // 캔들 업데이트 수신 (실시간)
     socket.on('candle:update', (candleData: any) => {
+      if (!candleData || !candleData.coin_id || !candleData.open_time) {
+        console.warn('Invalid candle update data:', candleData);
+        return;
+      }
+
       if (candleData.coin_id === selectedCoin.id && candleData.interval === chartInterval) {
+        // 데이터 유효성 검사
+        const openPrice = candleData.open_price != null ? (typeof candleData.open_price === 'string' ? parseFloat(candleData.open_price) : candleData.open_price) : null;
+        const highPrice = candleData.high_price != null ? (typeof candleData.high_price === 'string' ? parseFloat(candleData.high_price) : candleData.high_price) : null;
+        const lowPrice = candleData.low_price != null ? (typeof candleData.low_price === 'string' ? parseFloat(candleData.low_price) : candleData.low_price) : null;
+        const closePrice = candleData.close_price != null ? (typeof candleData.close_price === 'string' ? parseFloat(candleData.close_price) : candleData.close_price) : null;
+
+        // 모든 가격이 유효한지 확인
+        if (openPrice == null || highPrice == null || lowPrice == null || closePrice == null ||
+            isNaN(openPrice) || isNaN(highPrice) || isNaN(lowPrice) || isNaN(closePrice) ||
+            !isFinite(openPrice) || !isFinite(highPrice) || !isFinite(lowPrice) || !isFinite(closePrice) ||
+            openPrice <= 0 || highPrice <= 0 || lowPrice <= 0 || closePrice <= 0) {
+          console.warn('Invalid candle update prices:', { openPrice, highPrice, lowPrice, closePrice, candleData });
+          return;
+        }
+
         const candleTime = new Date(candleData.open_time).getTime() / 1000;
+        if (isNaN(candleTime) || !isFinite(candleTime) || candleTime <= 0) {
+          console.warn('Invalid candle timestamp:', candleData.open_time);
+          return;
+        }
         
         setCandles((prevCandles) => {
           const newCandles = [...prevCandles];
@@ -210,28 +276,43 @@ const TradingPage = () => {
           
           if (lastCandleTime === currentCandleTime && lastCandle) {
             // 같은 시간대 캔들 업데이트 (실시간)
+            // 기존 값과 새 값을 안전하게 병합
+            const finalOpen = openPrice;
+            const finalHigh = Math.max(highPrice, typeof lastCandle.high_price === 'string' ? parseFloat(lastCandle.high_price) : (lastCandle.high_price || 0));
+            const finalLow = Math.min(lowPrice, typeof lastCandle.low_price === 'string' ? parseFloat(lastCandle.low_price) : (lastCandle.low_price || Infinity));
+            const finalClose = closePrice;
+
+            if (isNaN(finalOpen) || isNaN(finalHigh) || isNaN(finalLow) || isNaN(finalClose) ||
+                !isFinite(finalOpen) || !isFinite(finalHigh) || !isFinite(finalLow) || !isFinite(finalClose) ||
+                finalOpen <= 0 || finalHigh <= 0 || finalLow <= 0 || finalClose <= 0) {
+              console.warn('Invalid merged candle data:', { finalOpen, finalHigh, finalLow, finalClose });
+              return prevCandles;
+            }
+
             newCandles[newCandles.length - 1] = {
               ...lastCandle,
-              open_price: candleData.open_price ?? lastCandle.open_price,
-              high_price: candleData.high_price ?? lastCandle.high_price,
-              low_price: candleData.low_price ?? lastCandle.low_price,
-              close_price: candleData.close_price ?? lastCandle.close_price,
-              volume: candleData.volume ?? lastCandle.volume,
+              open_price: finalOpen,
+              high_price: finalHigh,
+              low_price: finalLow,
+              close_price: finalClose,
+              volume: candleData.volume != null ? candleData.volume : lastCandle.volume,
             };
           } else {
             // 새 캔들 추가
-            newCandles.push({
+            const newCandle = {
               id: candleData.id || `candle-${Date.now()}-${Math.random()}`,
               coin_id: candleData.coin_id || selectedCoin.id,
               open_time: candleData.open_time || new Date().toISOString(),
               close_time: candleData.close_time || candleData.open_time || new Date().toISOString(),
-              open_price: candleData.open_price || 0,
-              high_price: candleData.high_price || 0,
-              low_price: candleData.low_price || 0,
-              close_price: candleData.close_price || 0,
-              volume: candleData.volume || 0,
-              trade_count: candleData.trade_count || 0,
-            });
+              open_price: openPrice,
+              high_price: highPrice,
+              low_price: lowPrice,
+              close_price: closePrice,
+              volume: candleData.volume != null ? candleData.volume : 0,
+              trade_count: candleData.trade_count != null ? candleData.trade_count : 0,
+            };
+            
+            newCandles.push(newCandle);
             
             // 최대 100개만 유지
             if (newCandles.length > 100) {
@@ -591,28 +672,55 @@ const TradingPage = () => {
             continue;
           }
 
-          formattedData.push({
-            time: t as UTCTimestamp,
-            open: o,
-            high: high,
-            low: low,
-            close: c,
-          });
+          // 최종 검증: 모든 값이 유효한지 확인
+          if (o != null && h != null && l != null && c != null && 
+              isFinite(o) && isFinite(h) && isFinite(l) && isFinite(c) &&
+              o > 0 && h > 0 && l > 0 && c > 0 && isFinite(t) && t > 0) {
+            formattedData.push({
+              time: t as UTCTimestamp,
+              open: o,
+              high: high,
+              low: low,
+              close: c,
+            });
+          } else {
+            console.warn('Skipping invalid candle after final validation:', { o, h, l, c, t, candle });
+          }
         }
 
         if (formattedData.length > 0) {
+          // 최종 배열 검증: 모든 항목이 유효한지 확인
+          const validData = formattedData.filter(d => 
+            d != null &&
+            d.time != null && isFinite(d.time as number) && (d.time as number) > 0 &&
+            d.open != null && isFinite(d.open) && d.open > 0 &&
+            d.high != null && isFinite(d.high) && d.high > 0 &&
+            d.low != null && isFinite(d.low) && d.low > 0 &&
+            d.close != null && isFinite(d.close) && d.close > 0 &&
+            d.high >= d.low
+          );
+
+          if (validData.length === 0) {
+            console.error('No valid candle data after filtering');
+            return;
+          }
+
           // 데이터 검증 및 로그
-          const priceMin = Math.min(...formattedData.map(d => d.low));
-          const priceMax = Math.max(...formattedData.map(d => d.high));
+          const priceMin = Math.min(...validData.map(d => d.low));
+          const priceMax = Math.max(...validData.map(d => d.high));
           
-          console.log('Chart data loaded:', formattedData.length, 'candles');
-          console.log('First candle:', formattedData[0]);
-          console.log('Last candle:', formattedData[formattedData.length - 1]);
+          console.log('Chart data loaded:', validData.length, 'candles (filtered from', formattedData.length, ')');
+          console.log('First candle:', validData[0]);
+          console.log('Last candle:', validData[validData.length - 1]);
           console.log('Price range:', { min: priceMin, max: priceMax });
           console.log('Current coin price:', selectedCoin?.current_price);
           
-          // 차트에 데이터 설정
-          candlestickSeriesRef.current.setData(formattedData);
+          // 차트에 데이터 설정 (try-catch로 안전하게)
+          try {
+            candlestickSeriesRef.current.setData(validData);
+          } catch (error) {
+            console.error('Error setting chart data:', error, 'Data:', validData);
+          }
           
           // 가격 스케일 강제 업데이트
           setTimeout(() => {
@@ -694,19 +802,44 @@ const TradingPage = () => {
             continue;
           }
 
-          formattedData.push({
-            time: t as UTCTimestamp,
-            open: o,
-            high: high,
-            low: low,
-            close: c,
-          });
+          // 최종 검증: 모든 값이 유효한지 확인
+          if (o != null && h != null && l != null && c != null && 
+              isFinite(o) && isFinite(h) && isFinite(l) && isFinite(c) &&
+              o > 0 && h > 0 && l > 0 && c > 0 && isFinite(t) && t > 0) {
+            formattedData.push({
+              time: t as UTCTimestamp,
+              open: o,
+              high: high,
+              low: low,
+              close: c,
+            });
+          }
         }
 
         if (formattedData.length > 0) {
+          // 최종 배열 검증: 모든 항목이 유효한지 확인
+          const validData = formattedData.filter(d => 
+            d != null &&
+            d.time != null && isFinite(d.time as number) && (d.time as number) > 0 &&
+            d.open != null && isFinite(d.open) && d.open > 0 &&
+            d.high != null && isFinite(d.high) && d.high > 0 &&
+            d.low != null && isFinite(d.low) && d.low > 0 &&
+            d.close != null && isFinite(d.close) && d.close > 0 &&
+            d.high >= d.low
+          );
+
+          if (validData.length === 0) {
+            console.error('No valid candle data after filtering (realtime update)');
+            return;
+          }
+
           // 실시간 업데이트: 전체 데이터 재설정
           // lightweight-charts는 setData를 호출해도 줌 상태를 유지함
-          candlestickSeriesRef.current.setData(formattedData);
+          try {
+            candlestickSeriesRef.current.setData(validData);
+          } catch (error) {
+            console.error('Error updating chart data:', error, 'Data:', validData);
+          }
         }
       }
     } catch (error) {
