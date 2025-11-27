@@ -203,13 +203,12 @@ const TradingPage = () => {
     }
   }, [selectedCoin?.id, chartInterval]); // 코인 또는 간격 변경 시에만 초기 로드
 
-  // 차트 초기화 (한 번만)
+  // 차트 초기화 (selectedCoin이 있을 때만, 한 번만)
   useEffect(() => {
     if (!selectedCoin || chartInitializedRef.current) return;
 
     const initializeChart = () => {
       if (!chartContainerRef.current || !selectedCoin) {
-        console.warn('Chart container or selectedCoin not available');
         return false;
       }
 
@@ -219,11 +218,8 @@ const TradingPage = () => {
       const width = rect.width || container.clientWidth || 800;
       const height = rect.height || container.clientHeight || 350;
 
-      console.log('Initializing chart with size:', width, height, 'container:', container);
-
       // 최소 크기 보장
       if (width < 100 || height < 100) {
-        console.warn('Container too small, using default size');
         return false;
       }
 
@@ -269,14 +265,30 @@ const TradingPage = () => {
     // 즉시 초기화 시도
     let initialized = initializeChart();
     
-    // 실패하면 짧은 지연 후 재시도
+    // 실패하면 재시도 (최대 10번)
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
+    const maxAttempts = 10;
+
     if (!initialized) {
-      timeoutId = setTimeout(() => {
-        if (chartContainerRef.current && !chartRef.current) {
-          initializeChart();
+      const tryInit = () => {
+        attempts++;
+        if (attempts > maxAttempts) {
+          console.error('Failed to initialize chart after multiple attempts');
+          return;
         }
-      }, 200);
+        
+        if (chartContainerRef.current && !chartRef.current && selectedCoin) {
+          if (initializeChart()) {
+            return; // 성공
+          }
+        }
+        
+        // 재시도
+        timeoutId = setTimeout(tryInit, 200);
+      };
+      
+      timeoutId = setTimeout(tryInit, 200);
     }
 
     // 리사이즈 핸들러
@@ -302,11 +314,11 @@ const TradingPage = () => {
       window.removeEventListener('resize', handleResize);
       // 차트는 한 번만 초기화하므로 cleanup에서 제거하지 않음
     };
-  }, []); // 한 번만 실행
+  }, [selectedCoin?.id]); // selectedCoin이 변경될 때만 확인 (이미 초기화되었으면 실행 안 함)
 
   // 차트 데이터 업데이트 (실시간)
   useEffect(() => {
-    if (!candlestickSeriesRef.current) {
+    if (!candlestickSeriesRef.current || !chartRef.current) {
       return;
     }
 
@@ -314,80 +326,74 @@ const TradingPage = () => {
       return;
     }
 
-    // 마지막 캔들만 포맷팅 (실시간 업데이트용)
-    const lastCandle = candles[candles.length - 1];
-    const open = typeof lastCandle.open_price === 'string' ? parseFloat(lastCandle.open_price) : (lastCandle.open_price || 0);
-    const high = typeof lastCandle.high_price === 'string' ? parseFloat(lastCandle.high_price) : (lastCandle.high_price || 0);
-    const low = typeof lastCandle.low_price === 'string' ? parseFloat(lastCandle.low_price) : (lastCandle.low_price || 0);
-    const close = typeof lastCandle.close_price === 'string' ? parseFloat(lastCandle.close_price) : (lastCandle.close_price || 0);
-    
-    if (isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close) || 
-        open <= 0 || high <= 0 || low <= 0 || close <= 0) {
-      return;
-    }
-
-    const timestamp = new Date(lastCandle.open_time).getTime() / 1000;
-    if (isNaN(timestamp) || timestamp <= 0) {
-      return;
-    }
-
-    const lastFormattedCandle: CandlestickData<UTCTimestamp> = {
-      time: timestamp as UTCTimestamp,
-      open,
-      high,
-      low,
-      close,
-    };
-
     try {
-      if (candlestickSeriesRef.current && chartRef.current) {
-        // 초기 데이터 로드 시에만 전체 데이터 설정 및 fitContent
-        if (isInitialDataLoadRef.current) {
-          // 전체 데이터 포맷팅
-          const formattedData: CandlestickData<UTCTimestamp>[] = [];
-          for (const candle of candles) {
-            const o = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
-            const h = typeof candle.high_price === 'string' ? parseFloat(candle.high_price) : (candle.high_price || 0);
-            const l = typeof candle.low_price === 'string' ? parseFloat(candle.low_price) : (candle.low_price || 0);
-            const c = typeof candle.close_price === 'string' ? parseFloat(candle.close_price) : (candle.close_price || 0);
-            
-            if (isNaN(o) || isNaN(h) || isNaN(l) || isNaN(c) || 
-                o <= 0 || h <= 0 || l <= 0 || c <= 0) {
-              continue;
-            }
-
-            const t = new Date(candle.open_time).getTime() / 1000;
-            if (isNaN(t) || t <= 0) {
-              continue;
-            }
-
-            formattedData.push({
-              time: t as UTCTimestamp,
-              open: o,
-              high: h,
-              low: l,
-              close: c,
-            });
-          }
-
-          if (formattedData.length > 0) {
-            candlestickSeriesRef.current.setData(formattedData);
-            chartRef.current.timeScale().fitContent();
-            isInitialDataLoadRef.current = false; // 초기 로드 완료
-          }
-        } else {
-          // 실시간 업데이트: 마지막 캔들만 업데이트 (줌 상태 유지)
-          const existingData = candlestickSeriesRef.current.data();
-          const lastExistingTime = existingData && existingData.length > 0 
-            ? existingData[existingData.length - 1].time 
-            : null;
+      // 초기 데이터 로드 시에만 전체 데이터 설정 및 fitContent
+      if (isInitialDataLoadRef.current) {
+        // 전체 데이터 포맷팅
+        const formattedData: CandlestickData<UTCTimestamp>[] = [];
+        for (const candle of candles) {
+          const o = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
+          const h = typeof candle.high_price === 'string' ? parseFloat(candle.high_price) : (candle.high_price || 0);
+          const l = typeof candle.low_price === 'string' ? parseFloat(candle.low_price) : (candle.low_price || 0);
+          const c = typeof candle.close_price === 'string' ? parseFloat(candle.close_price) : (candle.close_price || 0);
           
-          if (lastExistingTime === lastFormattedCandle.time) {
-            // 같은 시간대면 업데이트
-            candlestickSeriesRef.current.update(lastFormattedCandle);
-          } else {
-            // 새 캔들 추가
-            candlestickSeriesRef.current.update(lastFormattedCandle);
+          if (isNaN(o) || isNaN(h) || isNaN(l) || isNaN(c) || 
+              o <= 0 || h <= 0 || l <= 0 || c <= 0) {
+            continue;
+          }
+
+          const t = new Date(candle.open_time).getTime() / 1000;
+          if (isNaN(t) || t <= 0) {
+            continue;
+          }
+
+          formattedData.push({
+            time: t as UTCTimestamp,
+            open: o,
+            high: h,
+            low: l,
+            close: c,
+          });
+        }
+
+        if (formattedData.length > 0) {
+          candlestickSeriesRef.current.setData(formattedData);
+          chartRef.current.timeScale().fitContent();
+          isInitialDataLoadRef.current = false; // 초기 로드 완료
+          console.log('Chart data loaded:', formattedData.length, 'candles');
+        }
+      } else {
+        // 실시간 업데이트: 마지막 캔들만 업데이트 (줌 상태 유지)
+        const lastCandle = candles[candles.length - 1];
+        const open = typeof lastCandle.open_price === 'string' ? parseFloat(lastCandle.open_price) : (lastCandle.open_price || 0);
+        const high = typeof lastCandle.high_price === 'string' ? parseFloat(lastCandle.high_price) : (lastCandle.high_price || 0);
+        const low = typeof lastCandle.low_price === 'string' ? parseFloat(lastCandle.low_price) : (lastCandle.low_price || 0);
+        const close = typeof lastCandle.close_price === 'string' ? parseFloat(lastCandle.close_price) : (lastCandle.close_price || 0);
+        
+        if (!isNaN(open) && !isNaN(high) && !isNaN(low) && !isNaN(close) && 
+            open > 0 && high > 0 && low > 0 && close > 0) {
+          const timestamp = new Date(lastCandle.open_time).getTime() / 1000;
+          if (!isNaN(timestamp) && timestamp > 0) {
+            const lastFormattedCandle: CandlestickData<UTCTimestamp> = {
+              time: timestamp as UTCTimestamp,
+              open,
+              high,
+              low,
+              close,
+            };
+
+            const existingData = candlestickSeriesRef.current.data();
+            const lastExistingTime = existingData && existingData.length > 0 
+              ? existingData[existingData.length - 1].time 
+              : null;
+            
+            if (lastExistingTime === lastFormattedCandle.time) {
+              // 같은 시간대면 업데이트
+              candlestickSeriesRef.current.update(lastFormattedCandle);
+            } else {
+              // 새 캔들 추가
+              candlestickSeriesRef.current.update(lastFormattedCandle);
+            }
           }
         }
       }
