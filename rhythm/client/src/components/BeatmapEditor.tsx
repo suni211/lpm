@@ -241,7 +241,7 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     }
   };
 
-  // 시간 업데이트 루프
+  // 시간 업데이트 루프 및 롱노트 실시간 업데이트
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -250,6 +250,34 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
       if (audioRef.current && isPlaying) {
         const time = (audioRef.current.seek() as number) * 1000;
         setCurrentTime(time);
+        
+        // 활성 롱노트들의 duration 실시간 업데이트
+        if (isRecording) {
+          const activeKeys = Array.from(activeLongNotesRef.current.keys());
+          if (activeKeys.length > 0) {
+            setNotes(prev => {
+              const updatedNotes = prev.map(note => {
+                const activeKey = activeKeys.find(key => {
+                  const longNote = activeLongNotesRef.current[key];
+                  return longNote && longNote.id === note.id;
+                });
+                
+                if (activeKey) {
+                  const longNote = activeLongNotesRef.current[activeKey];
+                  const pressStartTime = keyPressStartTimeRef.current[activeKey];
+                  if (pressStartTime !== undefined) {
+                    const holdDuration = time - pressStartTime;
+                    // 실시간으로 duration 업데이트
+                    return { ...note, duration: Math.max(100, holdDuration) };
+                  }
+                }
+                return note;
+              });
+              return updatedNotes;
+            });
+          }
+        }
+        
         animationFrameId = requestAnimationFrame(updateLoop);
       }
     };
@@ -260,7 +288,7 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [isPlaying]);
+  }, [isPlaying, isRecording]);
 
   const togglePlayback = () => {
     if (isPlaying) {
@@ -393,8 +421,12 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
         ctx.fillRect(x + 2, noteY - length, laneWidth - 4, length);
       }
 
+      // 노트를 작고 두껍게 (너비는 레인의 80%, 높이는 30px)
+      const noteWidth = laneWidth * 0.8;
+      const noteHeight = 30;
+      const noteX = x + (laneWidth - noteWidth) / 2;
       ctx.fillStyle = note.type === NoteType.SLIDE ? '#ff00ff' : note.type === NoteType.LONG ? '#ffaa00' : '#00ff00';
-      ctx.fillRect(x + 5, noteY - 10, laneWidth - 10, 20);
+      ctx.fillRect(noteX, noteY - noteHeight / 2, noteWidth, noteHeight);
       
       // 노트 테두리
       ctx.strokeStyle = '#fff';

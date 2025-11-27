@@ -177,6 +177,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
             // 판정선을 지나친 노트 자동 처리
             checkMissedNotes(currentTime);
             
+            // 롱노트 실시간 duration 업데이트
+            updateLongNoteDurations(currentTime);
+            
             render(currentTime);
             animationFrameRef.current = requestAnimationFrame(loop);
           } else {
@@ -270,6 +273,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
         };
       });
     }
+  };
+
+  const updateLongNoteDurations = (_currentTime: number) => {
+    // 롱노트 duration은 렌더링 시 실시간으로 계산됨
   };
 
   const checkMissedNotes = (currentTime: number) => {
@@ -416,16 +423,33 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       // 노트가 판정선을 지나갔으면 표시하지 않음
       if (y > judgementLineY + 10) return;
 
-      if (note.type === NoteType.LONG && note.duration) {
-        const noteLength = calculateLongNoteLength(note.duration, settings.noteSpeed, laneHeight);
+      if (note.type === NoteType.LONG) {
+        // 롱노트를 누르고 있는지 확인
+        const isHeld = longNotesHeld.current.get(note.id);
+        let actualDuration = note.duration || 100;
+        
+        // 누르고 있으면 실시간 duration 계산
+        if (isHeld) {
+          const holdDuration = currentTime - note.timestamp;
+          actualDuration = Math.max(actualDuration, holdDuration);
+        }
+        
+        const noteLength = calculateLongNoteLength(actualDuration, settings.noteSpeed, laneHeight);
         ctx.fillStyle = 'rgba(255, 255, 0, 0.6)';
         ctx.fillRect(x + 2, y - noteLength, laneWidth - 4, noteLength);
       }
 
-      // 노트를 세로로 길고 얇게
-      const noteHeight = 20;
+      // 노트를 작고 두껍게 (너비는 레인의 80%, 높이는 30px)
+      const noteWidth = laneWidth * 0.8;
+      const noteHeight = 30;
+      const noteX = x + (laneWidth - noteWidth) / 2;
       ctx.fillStyle = note.type === NoteType.SLIDE ? '#ff00ff' : '#00ff00';
-      ctx.fillRect(x + 2, y, laneWidth - 4, noteHeight);
+      ctx.fillRect(noteX, y - noteHeight / 2, noteWidth, noteHeight);
+      
+      // 노트 테두리
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(noteX, y - noteHeight / 2, noteWidth, noteHeight);
     });
   };
 
@@ -512,17 +536,35 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       // 노트가 판정선을 지나갔으면 표시하지 않음
       if (noteY > judgementLineY + 10) return;
 
-      if (note.type === NoteType.LONG && note.duration) {
-        const noteLength = calculateLongNoteLength(note.duration, settings.noteSpeed, laneHeight);
+      if (note.type === NoteType.LONG) {
+        // 롱노트를 누르고 있는지 확인
+        const isHeld = isMyArea && longNotesHeld.current.get(note.id);
+        let actualDuration = note.duration || 100;
+        
+        // 누르고 있으면 실시간 duration 계산
+        if (isHeld) {
+          const holdDuration = currentTime - note.timestamp;
+          actualDuration = Math.max(actualDuration, holdDuration);
+        }
+        
+        const noteLength = calculateLongNoteLength(actualDuration, settings.noteSpeed, laneHeight);
         ctx.fillStyle = isMyArea ? 'rgba(255, 255, 0, 0.6)' : 'rgba(255, 0, 255, 0.6)';
         ctx.fillRect(noteX + 2, noteY - noteLength, laneWidth - 4, noteLength);
       }
 
-      const noteHeight = 20;
+      // 노트를 작고 두껍게 (너비는 레인의 80%, 높이는 30px)
+      const noteWidth = laneWidth * 0.8;
+      const noteHeight = 30;
+      const adjustedNoteX = noteX + (laneWidth - noteWidth) / 2;
       ctx.fillStyle = note.type === NoteType.SLIDE 
         ? (isMyArea ? '#ff00ff' : '#00ffff')
         : (isMyArea ? '#00ff00' : '#ff0000');
-      ctx.fillRect(noteX + 2, noteY, laneWidth - 4, noteHeight);
+      ctx.fillRect(adjustedNoteX, noteY - noteHeight / 2, noteWidth, noteHeight);
+      
+      // 노트 테두리
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(adjustedNoteX, noteY - noteHeight / 2, noteWidth, noteHeight);
     });
   };
 
