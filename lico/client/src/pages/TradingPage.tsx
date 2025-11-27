@@ -444,9 +444,9 @@ const TradingPage = () => {
             // 마지막 캔들 가격과 현재 가격 차이가 20% 이상이면 현재 가격으로 보정
             if (lastCandleClose > 0 && Math.abs((currentPrice - lastCandleClose) / lastCandleClose) > 0.2) {
               console.warn('Candle price mismatch detected. Last candle:', lastCandleClose, 'Current price:', currentPrice);
-              
+
               // 현재 시간의 캔들 생성 또는 업데이트
-              const currentCandleTime = Math.floor(now.getTime() / (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400)) * (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400);
+              const currentCandleTime = Math.floor(now.getTime() / 1000 / (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400)) * (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400);
               
               if (lastCandleTime && Math.floor(lastCandleTime) === currentCandleTime) {
                 // 같은 시간대면 마지막 캔들 업데이트
@@ -474,7 +474,7 @@ const TradingPage = () => {
             }
           } else {
             // 캔들 데이터가 없으면 현재 가격으로 초기 캔들 생성
-            const currentCandleTime = Math.floor(now.getTime() / (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400)) * (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400);
+            const currentCandleTime = Math.floor(now.getTime() / 1000 / (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400)) * (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400);
             newCandles = [{
               id: `current-${Date.now()}`,
               coin_id: selectedCoin.id,
