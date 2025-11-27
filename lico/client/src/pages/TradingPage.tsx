@@ -10,7 +10,15 @@ import Orderbook from '../components/Orderbook';
 import OrderForm from '../components/OrderForm';
 import CoinSidebar from '../components/CoinSidebar';
 import TopRankingsTicker from '../components/TopRankingsTicker';
+import Toast from '../components/Toast';
+import soundPlayer from '../utils/soundPlayer';
 import './TradingPage.css';
+
+interface ToastNotification {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
 
 const TradingPage = () => {
   const { coinSymbol } = useParams<{ coinSymbol?: string }>();
@@ -29,6 +37,18 @@ const TradingPage = () => {
   const chartInitializedRef = useRef(false);
   const isInitialDataLoadRef = useRef(true); // 초기 데이터 로드 여부
   const lastCandleTimeRef = useRef<number | null>(null); // 마지막 캔들 시간 추적
+  const [toasts, setToasts] = useState<ToastNotification[]>([]); // Toast 알림 목록
+
+  // Toast 알림 추가 함수
+  const addToast = (message: string, type: 'success' | 'error' | 'info') => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+  };
+
+  // Toast 알림 제거 함수
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -328,6 +348,40 @@ const TradingPage = () => {
       }
     });
 
+    // 주문 체결 이벤트 수신 (내 주문만)
+    socket.on('order:filled', (orderData: any) => {
+      // 내 주문인지 확인
+      if (orderData.wallet_address === walletAddress) {
+        const orderType = orderData.order_type === 'BUY' ? '매수' : '매도';
+        const message = `${orderType} 주문이 체결되었습니다! 가격: ${Number(orderData.price).toLocaleString()} G, 수량: ${orderData.quantity}`;
+
+        // 팝업 표시
+        addToast(message, 'success');
+
+        // 사운드 재생
+        soundPlayer.play('order-filled', 0.6);
+
+        console.log('Order filled:', orderData);
+      }
+    });
+
+    // 주문 취소 이벤트 수신 (내 주문만)
+    socket.on('order:cancelled', (orderData: any) => {
+      // 내 주문인지 확인
+      if (orderData.wallet_address === walletAddress) {
+        const orderType = orderData.order_type === 'BUY' ? '매수' : '매도';
+        const message = `${orderType} 주문이 취소되었습니다. 가격: ${Number(orderData.price).toLocaleString()} G`;
+
+        // 팝업 표시
+        addToast(message, 'info');
+
+        // 사운드 재생
+        soundPlayer.play('order-cancelled', 0.5);
+
+        console.log('Order cancelled:', orderData);
+      }
+    });
+
     // 연결 오류 처리
     socket.on('connect_error', (error) => {
       console.error('WebSocket connection error:', error);
@@ -341,7 +395,7 @@ const TradingPage = () => {
         socketRef.current = null;
       }
     };
-  }, [selectedCoin?.id, chartInterval]);
+  }, [selectedCoin?.id, chartInterval, walletAddress]);
 
   // 캔들 데이터 가져오기 (초기 로드 및 간격 변경 시)
   useEffect(() => {
@@ -1161,6 +1215,16 @@ const TradingPage = () => {
           />
         </div>
       </div>
+
+      {/* Toast 알림 */}
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
     </div>
   );
 };

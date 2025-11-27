@@ -681,6 +681,20 @@ export class TradingEngine {
 
     if (order.filled_quantity >= order.quantity) {
       await query('UPDATE orders SET status = "FILLED" WHERE id = ?', [orderId]);
+
+      // WebSocket: 주문 체결 알림 전송
+      if (websocketInstance) {
+        websocketInstance.emit('order:filled', {
+          order_id: order.id,
+          wallet_address: order.wallet_address,
+          coin_id: order.coin_id,
+          order_type: order.order_type,
+          price: order.price,
+          quantity: order.quantity,
+          filled_quantity: order.filled_quantity,
+        });
+        console.log(`📢 주문 체결 알림 전송: ${order.id}`);
+      }
     } else if (order.filled_quantity > 0) {
       await query('UPDATE orders SET status = "PARTIAL" WHERE id = ?', [orderId]);
     }

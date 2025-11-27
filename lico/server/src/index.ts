@@ -117,6 +117,11 @@ const websocket = initializeWebSocket(httpServer);
 // Export websocket for use in other modules
 export { websocket };
 
+// WebSocket instance getter
+export function getWebSocketInstance() {
+  return websocket;
+}
+
 // TradingEngine에 WebSocket 인스턴스 전달
 import { setWebSocketInstance } from './services/tradingEngine';
 setWebSocketInstance(websocket);

@@ -227,6 +227,27 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
     // 주문 상태 변경
     await query('UPDATE orders SET status = "CANCELLED" WHERE id = ?', [order_id]);
 
+    // WebSocket: 주문 취소 알림 전송
+    try {
+      const { getWebSocketInstance } = await import('../index');
+      const io = getWebSocketInstance();
+      if (io) {
+        io.emit('order:cancelled', {
+          order_id: order.id,
+          wallet_address: order.wallet_address,
+          coin_id: order.coin_id,
+          order_type: order.order_type,
+          price: order.price,
+          quantity: order.quantity,
+          filled_quantity: order.filled_quantity,
+        });
+        console.log(`📢 주문 취소 알림 전송: ${order.id}`);
+      }
+    } catch (wsError) {
+      console.error('WebSocket 알림 전송 실패:', wsError);
+      // WebSocket 실패해도 주문 취소는 성공
+    }
+
     res.json({
       success: true,
       message: '주문이 취소되었습니다',
