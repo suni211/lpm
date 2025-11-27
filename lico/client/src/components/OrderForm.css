@@ -1,7 +1,7 @@
 .order-form {
   background: #1a1d29;
   border-radius: 8px;
-  padding: 10px;
+  padding: 8px;
   height: 100%;
   overflow: hidden;
   display: flex;
@@ -10,8 +10,8 @@
 
 .order-type-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 6px;
+  margin-bottom: 8px;
   flex-shrink: 0;
 }
 
@@ -20,10 +20,10 @@
 }
 
 .tab-button {
-  padding: 10px;
+  padding: 8px;
   border: none;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -42,15 +42,15 @@
 }
 
 .form-group {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .form-group label {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
-  font-size: 13px;
+  margin-bottom: 6px;
+  font-size: 12px;
   color: #9ca3af;
   font-weight: 500;
 }
@@ -72,12 +72,12 @@
 
 .form-group input {
   width: 100%;
-  padding: 10px;
+  padding: 8px;
   background: #2a2e3e;
   border: 1px solid #3a3e4e;
   border-radius: 6px;
   color: #fff;
-  font-size: 13px;
+  font-size: 12px;
   outline: none;
   transition: border-color 0.2s;
 }
@@ -89,16 +89,16 @@
 .order-summary {
   background: #2a2e3e;
   border-radius: 6px;
-  padding: 10px;
-  margin-bottom: 10px;
+  padding: 8px;
+  margin-bottom: 8px;
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
-  font-size: 13px;
+  padding: 4px 0;
+  font-size: 12px;
 }
 
 .summary-row span:first-child {
@@ -116,26 +116,26 @@
 
 .total-row {
   border-top: 1px solid #3a3e4e;
-  margin-top: 6px;
-  padding-top: 12px;
+  margin-top: 4px;
+  padding-top: 8px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .total-row span:last-child {
   color: #3b82f6;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .balance-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px;
+  gap: 4px;
+  padding: 8px;
   background: #2a2e3e;
   border-radius: 6px;
-  margin-bottom: 10px;
-  font-size: 12px;
+  margin-bottom: 8px;
+  font-size: 11px;
 }
 
 .balance-info span:first-child {
@@ -148,21 +148,21 @@
 }
 
 .error-message {
-  padding: 8px 10px;
+  padding: 6px 8px;
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid #ef4444;
   border-radius: 6px;
   color: #ef4444;
-  font-size: 12px;
-  margin-bottom: 10px;
+  font-size: 11px;
+  margin-bottom: 8px;
 }
 
 .submit-button {
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   border: none;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -194,15 +194,15 @@
 .input-mode-selector {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .mode-button {
-  padding: 6px;
+  padding: 5px;
   border: none;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -224,8 +224,8 @@
 }
 
 .calculated-info {
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: 4px;
+  font-size: 11px;
   color: #9ca3af;
   font-style: italic;
 }
