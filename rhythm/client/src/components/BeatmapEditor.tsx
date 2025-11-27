@@ -84,19 +84,9 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     e.preventDefault();
 
     const lane = keyIndex;
-    let timestamp = currentTime;
-
-    // 그리드 스냅
-    if (gridSnap) {
-      const beatDuration = (60 / bpm) * 1000;
-      timestamp = Math.round(currentTime / beatDuration) * beatDuration;
-    } else {
-      // 1ms 단위로 정확하게 저장 (반올림 없음)
-      timestamp = currentTime;
-    }
-
-    // 1ms 단위로 정확하게 타임스탬프 정규화 (소수점 제거)
-    timestamp = Math.floor(timestamp);
+    // 녹음 시에는 그리드 스냅을 사용하지 않고, 정확한 키 입력 순간의 타임스탬프를 저장
+    // 1ms 단위로 정확하게 저장 (반올림 없음, 정렬화 없음)
+    let timestamp = Math.floor(currentTime);
     
     // 정확히 같은 타임스탬프에 같은 레인에 노트가 있는지만 체크 (1ms 차이는 완전히 허용)
     // 각 노트는 1ms 단위로 변동이 있어야 하므로, 정확히 같은 타임스탬프만 방지
@@ -232,9 +222,10 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     const laneWidth = canvas.width / keyCount;
     const lane = Math.floor(x / laneWidth);
 
-    // 1ms 단위로 정확하게 타임스탬프 계산
+    // 녹음 모드가 아닐 때만 그리드 스냅 사용 (수동 배치 시)
+    // 녹음 시에는 정확한 타임스탬프 사용
     let timestamp = Math.floor(currentTime);
-    if (gridSnap) {
+    if (!isRecording && gridSnap) {
       const beatDuration = (60 / bpm) * 1000;
       timestamp = Math.round(timestamp / beatDuration) * beatDuration;
     }

@@ -120,11 +120,13 @@ export const calculateNoteYPosition = (
   // 진행률 계산 (0 = 시작 위치, 1 = 판정선)
   // timeUntilHit이 음수면 이미 지나간 노트
   if (timeUntilHit < 0) {
-    // 이미 지나간 노트는 판정선 아래로
+    // 이미 지나간 노트는 판정선 아래로 (표시하지 않음)
     return judgementLineY + 10;
   }
   
-  const progress = 1 - (timeUntilHit / fallTime);
+  // 진행률 계산: timeUntilHit이 fallTime이면 progress = 0 (시작 위치)
+  // timeUntilHit이 0이면 progress = 1 (판정선)
+  const progress = Math.max(0, Math.min(1, 1 - (timeUntilHit / fallTime)));
   
   // 노트 위치 = 시작 위치 + (판정선까지 거리 * 진행률)
   const y = offsetY + progress * fallDistance;

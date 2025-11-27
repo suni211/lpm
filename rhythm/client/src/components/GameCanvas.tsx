@@ -439,15 +439,23 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     }
 
     // 노트 그리기 (세로로 길고 얇게)
+    // 디버깅: 노트 데이터 확인
+    if (beatmap.note_data.length === 0) {
+      console.warn('비트맵에 노트가 없습니다:', beatmap);
+    }
+    
     beatmap.note_data.forEach(note => {
       if (processedNotes.current.has(note.id)) return;
-      if (!isNoteVisible(note.timestamp, currentTime, settings.noteSpeed)) return;
+      const isVisible = isNoteVisible(note.timestamp, currentTime, settings.noteSpeed);
+      if (!isVisible) return;
 
       const x = playAreaX + note.lane * laneWidth;
       const y = calculateNoteYPosition(note.timestamp, currentTime, settings.noteSpeed, laneHeight, laneStartY, judgementLineY);
 
       // 노트가 판정선을 지나갔거나 아직 보이지 않는 위치면 표시하지 않음
-      if (y > judgementLineY + 10 || y < laneStartY - 50) return;
+      // 하지만 노트가 보이는 범위 내에 있으면 표시
+      if (y > judgementLineY + 10) return; // 판정선을 지나간 노트는 표시하지 않음
+      if (y < laneStartY - 50) return; // 아직 보이지 않는 위치의 노트는 표시하지 않음
 
       if (note.type === NoteType.LONG) {
         // 롱노트를 누르고 있는지 확인
@@ -673,9 +681,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     }
   }, []);
 
-  // 게임 상태 변경 시 렌더링
+  // 게임 상태 변경 시 렌더링 (게임 루프가 아닐 때만)
   useEffect(() => {
-    if (gameState.isPlaying) {
+    if (gameState.isPlaying && animationFrameRef.current === 0) {
       render(gameState.currentTime);
     }
   }, [gameState.currentTime, gameState.isPlaying, activeEffects, settings.noteSpeed]);
