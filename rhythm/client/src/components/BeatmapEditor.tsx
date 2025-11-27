@@ -154,14 +154,14 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
       if (holdDuration < 200) {
         // 200ms 미만이면 일반 노트 또는 슬라이드 노트
         setNotes(prev => {
-          const updatedNotes = prev.map(note => {
+          const updatedNotes: Note[] = prev.map(note => {
             if (note.id === longNote.id) {
               if (isSlide) {
                 // 슬라이드 노트로 변경
-                return { ...note, type: NoteType.SLIDE, slideDirection: 'right', duration: undefined };
+                return { ...note, type: NoteType.SLIDE, slideDirection: 'right' as const, duration: undefined };
               } else {
                 // 일반 노트로 변경
-                return { ...note, type: NoteType.NORMAL, duration: undefined };
+                return { ...note, type: NoteType.NORMAL, duration: undefined, slideDirection: undefined };
               }
             }
             // 이전 노트도 슬라이드로 변경 (연속 입력인 경우)
@@ -170,7 +170,7 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
                 Math.abs(note.timestamp - previousNoteTime) < 50 &&
                 note.id !== longNote.id &&
                 note.type === NoteType.NORMAL) {
-              return { ...note, type: NoteType.SLIDE, slideDirection: 'right' };
+              return { ...note, type: NoteType.SLIDE, slideDirection: 'right' as const };
             }
             return note;
           });
