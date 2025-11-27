@@ -349,11 +349,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
         !processedNotes.current.has(note.id)
       )
       .forEach(note => {
+        // 롱노트는 duration이 필수
+        if (!note.duration) return;
+        
         const currentTime = (audioRef.current?.seek() as number || 0) * 1000;
         const holdTime = currentTime - note.timestamp;
 
         // 롱노트가 시작되었고 아직 끝나지 않았는지 확인
-        if (holdTime >= 0 && holdTime < note.duration!) {
+        if (holdTime >= 0 && holdTime < note.duration) {
           // 롱노트를 키를 떼면 끝남
           // holdTime이 duration의 80% 이상이면 성공, 아니면 실패
           if (holdTime >= note.duration * 0.8) {
