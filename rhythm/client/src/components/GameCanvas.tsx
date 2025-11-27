@@ -402,13 +402,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
         let actualDuration = note.duration || 200;
         
         // 누르고 있으면 실시간 duration 계산 (1ms 단위로 정확하게, 위로 올라가도록)
+        // 길이 제한 없음 (무한정 길 수 있음)
         if (isHeld) {
           // 1ms 단위로 정확하게 계산 (반올림 없음)
           const holdDuration = currentTime - note.timestamp;
           actualDuration = Math.max(actualDuration, Math.floor(holdDuration));
         }
         
-        // 롱노트 길이 계산 (위로 올라가도록)
+        // 롱노트 길이 계산 (위로 올라가도록, 길이 제한 없음)
         const noteLength = calculateLongNoteLength(actualDuration, settings.noteSpeed, laneHeight);
         ctx.fillStyle = 'rgba(255, 200, 0, 0.7)';
         // 롱노트는 판정선에서 위로 올라감
@@ -519,14 +520,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       if (note.type === NoteType.LONG) {
         // 롱노트를 누르고 있는지 확인
         const isHeld = isMyArea && longNotesHeld.current.get(note.id);
-        let actualDuration = note.duration || 100;
+        let actualDuration = note.duration || 200;
         
-        // 누르고 있으면 실시간 duration 계산
+        // 누르고 있으면 실시간 duration 계산 (1ms 단위로 정확하게)
+        // 길이 제한 없음 (무한정 길 수 있음)
         if (isHeld) {
           const holdDuration = currentTime - note.timestamp;
-          actualDuration = Math.max(actualDuration, holdDuration);
+          actualDuration = Math.max(actualDuration, Math.floor(holdDuration));
         }
         
+        // 롱노트 길이 계산 (위로 올라가도록, 길이 제한 없음)
         const noteLength = calculateLongNoteLength(actualDuration, settings.noteSpeed, laneHeight);
         ctx.fillStyle = isMyArea ? 'rgba(255, 255, 0, 0.6)' : 'rgba(255, 0, 255, 0.6)';
         ctx.fillRect(noteX + 2, noteY - noteLength, laneWidth - 4, noteLength);

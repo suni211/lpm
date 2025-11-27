@@ -36,6 +36,7 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
   const keyPressStartTimeRef = useRef<{ [key: string]: number }>({}); // 키를 누른 시간
   const keyPressLaneRef = useRef<{ [key: string]: number }>({}); // 키의 레인 정보
   const lastNoteTimeRef = useRef<{ [lane: number]: number }>({});
+  const allNoteTimestampsRef = useRef<Map<number, Set<number>>>(new Map()); // 타임스탬프별 레인 추적 (정확한 중복 방지)
   const activeLongNotesRef = useRef<{ [key: string]: Note }>({}); // 진행 중인 롱노트
 
   useEffect(() => {
@@ -94,9 +95,22 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
       timestamp = currentTime;
     }
 
+    // 1ms 단위로 정확하게 타임스탬프 정규화
+    timestamp = Math.floor(timestamp);
+    
     // 최소 간격 체크 (같은 레인에서 너무 빠르게 입력 방지)
-    const minInterval = 30; // 30ms
-    if (lastNoteTimeRef.current[lane] && timestamp - lastNoteTimeRef.current[lane] < minInterval) {
+    const minInterval = 10; // 10ms (더 엄격하게)
+    if (lastNoteTimeRef.current[lane] !== undefined) {
+      const timeSinceLastNote = timestamp - lastNoteTimeRef.current[lane];
+      if (timeSinceLastNote < minInterval) {
+        return; // 같은 레인에서 너무 빠르게 입력 방지
+      }
+    }
+    
+    // 정확히 같은 타임스탬프에 같은 레인에 노트가 있는지 체크
+    const lanesAtTimestamp = allNoteTimestampsRef.current.get(timestamp);
+    if (lanesAtTimestamp && lanesAtTimestamp.has(lane)) {
+      // 정확히 같은 타임스탬프, 같은 레인에 노트가 이미 있으면 생성하지 않음
       return;
     }
 
@@ -122,6 +136,12 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     activeLongNotesRef.current[e.code] = longNote;
     setNotes(prev => [...prev, longNote]);
     lastNoteTimeRef.current[lane] = timestamp;
+    
+    // 타임스탬프별 레인 추적 (정확한 중복 방지)
+    if (!allNoteTimestampsRef.current.has(timestamp)) {
+      allNoteTimestampsRef.current.set(timestamp, new Set());
+    }
+    allNoteTimestampsRef.current.get(timestamp)!.add(lane);
   }, [isRecording, isPlaying, isEditingKeys, keyBindings, currentTime, gridSnap, bpm]);
 
   const handleKeyUp = useCallback((e: KeyboardEvent) => {
@@ -155,23 +175,27 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
                     timeSincePreviousNote < slideThreshold;
 
     // 롱노트 duration 업데이트 (키를 떼면 그 시점까지의 duration으로 저장)
+    // 1ms 단위로 정확하게 계산
+    const releaseTimestamp = Math.floor(releaseTime);
+    const holdDurationMs = Math.floor(holdDuration);
+    
     setNotes(prev => {
       const updatedNotes: Note[] = prev.map(note => {
         if (note.id === longNote.id) {
           // 200ms 기준으로 노트 타입 결정
-          if (holdDuration < 200) {
+          if (holdDurationMs < 200) {
             // 0~200ms: 일반 노트 또는 슬라이드 노트
             if (isSlide) {
-              // 슬라이드 노트로 변경
+              // 슬라이드 노트로 변경 (타임스탬프는 그대로 유지)
               return { ...note, type: NoteType.SLIDE, slideDirection: 'right' as const, duration: undefined };
             } else {
-              // 일반 노트로 변경
+              // 일반 노트로 변경 (타임스탬프는 그대로 유지)
               return { ...note, type: NoteType.NORMAL, duration: undefined, slideDirection: undefined };
             }
           } else {
             // 200ms 이상: 롱노트 (키를 떼는 시점까지의 duration으로 저장)
-            // 1ms 단위로 정확하게 저장 (반올림 없음)
-            return { ...note, type: NoteType.LONG, duration: Math.floor(holdDuration) };
+            // 1ms 단위로 정확하게 저장, 길이 제한 없음 (무한정 길 수 있음)
+            return { ...note, type: NoteType.LONG, duration: holdDurationMs };
           }
         }
         // 이전 노트도 슬라이드로 변경 (연속 입력인 경우)
@@ -217,13 +241,18 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     const laneWidth = canvas.width / keyCount;
     const lane = Math.floor(x / laneWidth);
 
-    let timestamp = currentTime;
+    // 1ms 단위로 정확하게 타임스탬프 계산
+    let timestamp = Math.floor(currentTime);
     if (gridSnap) {
       const beatDuration = (60 / bpm) * 1000;
-      timestamp = Math.round(currentTime / beatDuration) * beatDuration;
-    } else {
-      // 1ms 단위로 정확하게 저장 (반올림 없음)
-      timestamp = currentTime;
+      timestamp = Math.round(timestamp / beatDuration) * beatDuration;
+    }
+    
+    // 정확히 같은 타임스탬프에 같은 레인에 노트가 있는지 체크
+    const lanesAtTimestamp = allNoteTimestampsRef.current.get(timestamp);
+    if (lanesAtTimestamp && lanesAtTimestamp.has(lane)) {
+      // 정확히 같은 타임스탬프, 같은 레인에 노트가 이미 있으면 생성하지 않음
+      return;
     }
 
     if (selectedTool === 'note' || selectedTool === 'long' || selectedTool === 'slide') {
@@ -319,18 +348,53 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
         setIsPlaying(true);
       }
     }
+    
+    if (!isRecording) {
+      // 녹음 시작 시 타임스탬프 추적 초기화
+      allNoteTimestampsRef.current.clear();
+      // 기존 노트들의 타임스탬프로 초기화
+      notes.forEach(note => {
+        const ts = Math.floor(note.timestamp);
+        if (!allNoteTimestampsRef.current.has(ts)) {
+          allNoteTimestampsRef.current.set(ts, new Set());
+        }
+        allNoteTimestampsRef.current.get(ts)!.add(note.lane);
+      });
+    }
+    
     setIsRecording(!isRecording);
     pressedKeysRef.current.clear();
   };
 
   const handleSave = () => {
     // 노트를 타임스탬프 순으로 정렬
-    // 1ms 단위로 정확하게 저장 (반올림 없음)
-    const sortedNotes = [...notes].map(note => ({
+    // 1ms 단위로 정확하게 저장 및 중복 제거
+    const processedNotes = notes.map(note => ({
       ...note,
       timestamp: Math.floor(note.timestamp), // 1ms 단위로 정확하게
       duration: note.duration ? Math.floor(note.duration) : undefined
-    })).sort((a, b) => a.timestamp - b.timestamp);
+    }));
+    
+    // 중복 제거: 같은 타임스탬프, 같은 레인에 여러 노트가 있으면 하나만 유지
+    const noteMap = new Map<string, Note>();
+    processedNotes.forEach(note => {
+      const key = `${note.timestamp}-${note.lane}`;
+      if (!noteMap.has(key)) {
+        noteMap.set(key, note);
+      } else {
+        // 같은 타임스탬프, 같은 레인에 노트가 있으면 나중 것만 유지
+        noteMap.set(key, note);
+      }
+    });
+    
+    const uniqueNotes = Array.from(noteMap.values());
+    const sortedNotes = uniqueNotes.sort((a, b) => {
+      if (a.timestamp !== b.timestamp) {
+        return a.timestamp - b.timestamp;
+      }
+      return a.lane - b.lane;
+    });
+    
     onSave(sortedNotes, effects, bpm);
   };
 
