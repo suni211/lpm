@@ -144,11 +144,15 @@ const TradingPage = () => {
 
   // 차트 초기화 (selectedCoin이 있을 때만)
   useEffect(() => {
-    if (!selectedCoin || !chartContainerRef.current) return;
+    if (!selectedCoin) return;
 
     // 기존 차트가 있으면 제거
     if (chartRef.current) {
-      chartRef.current.remove();
+      try {
+        chartRef.current.remove();
+      } catch (e) {
+        // 무시
+      }
       chartRef.current = null;
       candlestickSeriesRef.current = null;
       chartInitializedRef.current = false;
@@ -157,8 +161,16 @@ const TradingPage = () => {
     function initializeChart() {
       if (!chartContainerRef.current || !selectedCoin) return;
 
+      const container = chartContainerRef.current;
+      let width = container.clientWidth;
+      let height = container.clientHeight;
+
+      // 컨테이너 크기가 없으면 기본값 사용
+      if (width === 0) width = 800;
+      if (height === 0) height = 350;
+
       try {
-        const chart = createChart(chartContainerRef.current, {
+        const chart = createChart(container, {
           layout: {
             background: { type: ColorType.Solid, color: '#1a1d29' },
             textColor: '#9ca3af',
@@ -167,8 +179,8 @@ const TradingPage = () => {
             vertLines: { color: '#2a2e3e' },
             horzLines: { color: '#2a2e3e' },
           },
-          width: chartContainerRef.current.clientWidth || 800,
-          height: chartContainerRef.current.clientHeight || 500,
+          width: width,
+          height: height,
           timeScale: {
             timeVisible: true,
             secondsVisible: false,
@@ -193,18 +205,33 @@ const TradingPage = () => {
       }
     }
 
-    // 컨테이너 크기 확인 후 차트 초기화
-    const containerWidth = chartContainerRef.current.clientWidth;
-    if (containerWidth === 0) {
-      const timeoutId = setTimeout(() => {
-        if (chartContainerRef.current && chartContainerRef.current.clientWidth > 0 && selectedCoin) {
+    // 컨테이너가 준비될 때까지 대기 (최대 1초)
+    let timeoutId: NodeJS.Timeout | null = null;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    const tryInitialize = () => {
+      if (!chartContainerRef.current || !selectedCoin) return;
+
+      const container = chartContainerRef.current;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      if (width > 0 && height > 0) {
+        initializeChart();
+      } else {
+        attempts++;
+        if (attempts < maxAttempts) {
+          timeoutId = setTimeout(tryInitialize, 100);
+        } else {
+          // 최대 시도 후에도 크기가 없으면 기본값으로 초기화
           initializeChart();
         }
-      }, 100);
-      return () => clearTimeout(timeoutId);
-    } else {
-      initializeChart();
-    }
+      }
+    };
+
+    // 즉시 시도
+    tryInitialize();
 
     // 리사이즈 핸들러
     const handleResize = () => {
@@ -223,9 +250,16 @@ const TradingPage = () => {
     window.addEventListener('resize', handleResize);
 
     return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       window.removeEventListener('resize', handleResize);
       if (chartRef.current) {
-        chartRef.current.remove();
+        try {
+          chartRef.current.remove();
+        } catch (e) {
+          // 무시
+        }
         chartRef.current = null;
         candlestickSeriesRef.current = null;
         chartInitializedRef.current = false;
@@ -235,7 +269,22 @@ const TradingPage = () => {
 
   // 차트 데이터 업데이트 (최적화: 데이터만 업데이트)
   useEffect(() => {
-    if (!candlestickSeriesRef.current || candles.length === 0) return;
+    if (!candlestickSeriesRef.current) {
+      // 차트가 아직 초기화되지 않았으면 잠시 후 다시 시도
+      if (candles.length > 0) {
+        const timeoutId = setTimeout(() => {
+          // 차트가 초기화되었는지 다시 확인
+          if (candlestickSeriesRef.current && candles.length > 0) {
+            // 강제로 다시 실행하기 위해 상태 업데이트 트리거는 없지만
+            // 다음 렌더링 사이클에서 다시 시도됨
+          }
+        }, 300);
+        return () => clearTimeout(timeoutId);
+      }
+      return;
+    }
+
+    if (candles.length === 0) return;
 
     // 데이터 포맷팅 최적화 (한 번에 처리)
     const formattedData: CandlestickData<UTCTimestamp>[] = [];
@@ -268,11 +317,9 @@ const TradingPage = () => {
       try {
         // 차트 업데이트는 requestAnimationFrame으로 최적화
         requestAnimationFrame(() => {
-          if (candlestickSeriesRef.current) {
+          if (candlestickSeriesRef.current && chartRef.current) {
             candlestickSeriesRef.current.setData(formattedData);
-            if (chartRef.current) {
-              chartRef.current.timeScale().fitContent();
-            }
+            chartRef.current.timeScale().fitContent();
           }
         });
       } catch (error) {
