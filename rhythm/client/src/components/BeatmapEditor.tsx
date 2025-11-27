@@ -176,7 +176,6 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
 
     // 롱노트 duration 업데이트 (키를 떼면 그 시점까지의 duration으로 저장)
     // 1ms 단위로 정확하게 계산
-    const releaseTimestamp = Math.floor(releaseTime);
     const holdDurationMs = Math.floor(holdDuration);
     
     setNotes(prev => {
