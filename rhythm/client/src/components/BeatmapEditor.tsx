@@ -167,27 +167,30 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     const longNote = activeLongNotesRef.current[e.code];
     
     if (longNote) {
-    // 롱노트 duration 업데이트 (키를 떼면 그 시점까지의 duration으로 저장)
-    // 1ms 단위로 정확하게 계산
-    const holdDurationMs = Math.floor(holdDuration);
-    
-    setNotes(prev => {
-      const updatedNotes: Note[] = prev.map(note => {
-        if (note.id === longNote.id) {
-          // 200ms 기준으로 노트 타입 결정
-          if (holdDurationMs < 200) {
-            // 0~200ms: 일반 노트
-            return { ...note, type: NoteType.NORMAL, duration: undefined, slideDirection: undefined };
-          } else {
-            // 200ms 이상: 롱노트 (키를 떼는 시점까지의 duration으로 저장)
-            // 1ms 단위로 정확하게 저장, 길이 제한 없음 (무한정 길 수 있음)
-            return { ...note, type: NoteType.LONG, duration: holdDurationMs };
+      // 롱노트 duration 업데이트 (키를 떼면 그 시점까지의 duration으로 저장)
+      // 1ms 단위로 정확하게 계산
+      const holdDurationMs = Math.floor(holdDuration);
+      
+      setNotes(prev => {
+        const updatedNotes: Note[] = prev.map(note => {
+          if (note.id === longNote.id) {
+            // 200ms 기준으로 노트 타입 결정
+            if (holdDurationMs < 200) {
+              // 0~200ms: 일반 노트
+              return { ...note, type: NoteType.NORMAL, duration: undefined, slideDirection: undefined };
+            } else {
+              // 200ms 이상: 롱노트 (키를 떼는 시점까지의 duration으로 저장)
+              // 1ms 단위로 정확하게 저장, 길이 제한 없음 (무한정 길 수 있음)
+              return { ...note, type: NoteType.LONG, duration: holdDurationMs };
+            }
           }
-        }
-        return note;
+          return note;
+        });
+        return updatedNotes;
       });
-      return updatedNotes;
-    });
+      
+      // 키를 떼면 롱노트가 끝남 (더 이상 길어지지 않음)
+      // activeLongNotesRef에서 삭제하여 실시간 업데이트 중단
       delete activeLongNotesRef.current[e.code];
     }
 
