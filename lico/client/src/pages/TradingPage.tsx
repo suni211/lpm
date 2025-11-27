@@ -479,9 +479,35 @@ const TradingPage = () => {
           },
           width: width,
           height: height,
+          localization: {
+            timeFormatter: (time: number) => {
+              // UTC 타임스탬프를 한국 시간으로 변환
+              const date = new Date(time * 1000);
+              return date.toLocaleString('ko-KR', {
+                timeZone: 'Asia/Seoul',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+            },
+          },
           timeScale: {
             timeVisible: true,
             secondsVisible: false,
+            tickMarkFormatter: (time: number) => {
+              // 차트 축에 한국 시간 표시
+              const date = new Date(time * 1000);
+              const kstDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+
+              const month = String(kstDate.getMonth() + 1).padStart(2, '0');
+              const day = String(kstDate.getDate()).padStart(2, '0');
+              const hours = String(kstDate.getHours()).padStart(2, '0');
+              const minutes = String(kstDate.getMinutes()).padStart(2, '0');
+
+              return `${month}-${day} ${hours}:${minutes}`;
+            },
           },
         });
 
