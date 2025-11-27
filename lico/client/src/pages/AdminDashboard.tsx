@@ -144,14 +144,18 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteCoin = async (coinId: string) => {
-    if (!confirm('정말로 이 코인을 삭제하시겠습니까?')) return;
+    const coin = coins.find(c => c.id === coinId);
+    if (!coin) return;
+
+    if (!confirm(`⚠️ 경고: ${coin.symbol} 코인을 영구 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 다음 데이터가 모두 삭제됩니다:\n- 코인 정보\n- 모든 캔들 데이터 (1m, 1h, 1d)\n- 모든 주문\n- 모든 거래 내역\n- 모든 사용자 잔액\n- 로고 이미지 파일`)) return;
 
     try {
-      await api.patch(`/coins/${coinId}`, { status: 'DELISTED' });
-      alert('코인이 삭제되었습니다!');
+      const response = await api.delete(`/coins/${coinId}`);
+      alert(response.data.message || '코인이 영구 삭제되었습니다!');
       fetchCoins();
     } catch (error: any) {
       alert(error.response?.data?.error || '코인 삭제 실패');
+      console.error('코인 삭제 오류:', error);
     }
   };
 

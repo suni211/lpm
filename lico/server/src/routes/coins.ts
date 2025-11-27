@@ -433,6 +433,100 @@ router.patch('/:id', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
+// 코인 삭제 (관리자) - DB에서 영구 삭제
+router.delete('/:id', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // 코인 존재 확인
+    const existingCoins = await query('SELECT * FROM coins WHERE id = ?', [id]);
+    if (existingCoins.length === 0) {
+      return res.status(404).json({ error: '코인을 찾을 수 없습니다' });
+    }
+
+    const coin = existingCoins[0];
+    console.log(`🗑️ 코인 삭제 시작: ${coin.symbol} (${coin.name})`);
+
+    // 1. 캔들 데이터 삭제
+    try {
+      await query('DELETE FROM candles_1m WHERE coin_id = ?', [id]);
+      console.log('  ✓ 1분 캔들 데이터 삭제 완료');
+    } catch (e) {
+      console.warn('  ⚠️ 1분 캔들 삭제 실패:', e);
+    }
+
+    try {
+      await query('DELETE FROM candles_1h WHERE coin_id = ?', [id]);
+      console.log('  ✓ 1시간 캔들 데이터 삭제 완료');
+    } catch (e) {
+      console.warn('  ⚠️ 1시간 캔들 삭제 실패:', e);
+    }
+
+    try {
+      await query('DELETE FROM candles_1d WHERE coin_id = ?', [id]);
+      console.log('  ✓ 1일 캔들 데이터 삭제 완료');
+    } catch (e) {
+      console.warn('  ⚠️ 1일 캔들 삭제 실패:', e);
+    }
+
+    // 2. 거래 내역 삭제
+    try {
+      await query('DELETE FROM trades WHERE coin_id = ?', [id]);
+      console.log('  ✓ 거래 내역 삭제 완료');
+    } catch (e) {
+      console.warn('  ⚠️ 거래 내역 삭제 실패:', e);
+    }
+
+    // 3. 주문 삭제
+    try {
+      await query('DELETE FROM orders WHERE coin_id = ?', [id]);
+      console.log('  ✓ 주문 삭제 완료');
+    } catch (e) {
+      console.warn('  ⚠️ 주문 삭제 실패:', e);
+    }
+
+    // 4. 코인 잔액 삭제
+    try {
+      await query('DELETE FROM user_coin_balances WHERE coin_id = ?', [id]);
+      console.log('  ✓ 사용자 코인 잔액 삭제 완료');
+    } catch (e) {
+      console.warn('  ⚠️ 코인 잔액 삭제 실패:', e);
+    }
+
+    // 5. 코인 자체 삭제
+    await query('DELETE FROM coins WHERE id = ?', [id]);
+    console.log('  ✓ 코인 삭제 완료');
+
+    // 6. 로고 이미지 파일 삭제 (선택사항)
+    if (coin.logo_url) {
+      try {
+        const logoPath = path.join(process.cwd(), 'public', coin.logo_url);
+        if (fs.existsSync(logoPath)) {
+          fs.unlinkSync(logoPath);
+          console.log('  ✓ 로고 이미지 파일 삭제 완료');
+        }
+      } catch (e) {
+        console.warn('  ⚠️ 로고 이미지 파일 삭제 실패:', e);
+      }
+    }
+
+    console.log(`✅ 코인 ${coin.symbol} 영구 삭제 완료`);
+
+    res.json({
+      success: true,
+      message: `코인 ${coin.symbol}이(가) DB에서 영구 삭제되었습니다`,
+      deleted_coin: {
+        id: coin.id,
+        symbol: coin.symbol,
+        name: coin.name,
+      },
+    });
+  } catch (error: any) {
+    console.error('코인 삭제 오류:', error);
+    res.status(500).json({ error: '코인 삭제 실패', message: error.message });
+  }
+});
+
 // 이미지 업로드 설정
 const uploadDir = path.join(process.cwd(), 'public', 'images', 'coins');
 if (!fs.existsSync(uploadDir)) {
