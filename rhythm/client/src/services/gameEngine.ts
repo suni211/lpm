@@ -107,7 +107,7 @@ export const calculateNoteYPosition = (
   noteTimestamp: number,
   currentTime: number,
   noteSpeed: number,
-  canvasHeight: number,
+  _canvasHeight: number,
   offsetY: number = 0,
   judgementLineY: number = 0
 ): number => {
