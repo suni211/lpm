@@ -240,6 +240,8 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
       description,
       circulating_supply,
       current_price,
+      min_volatility,
+      max_volatility,
     } = req.body;
 
     // 입력 검증
@@ -259,6 +261,21 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
       return res.status(400).json({ error: '초기 가격은 0보다 커야 합니다' });
     }
 
+    // 변동성 검증
+    if (min_volatility !== undefined) {
+      const minVol = parseFloat(min_volatility);
+      if (isNaN(minVol) || minVol < 0.001 || minVol > 0.999) {
+        return res.status(400).json({ error: '최소 변동성은 0.001~0.999 사이의 값이어야 합니다 (0.1%~99.9%)' });
+      }
+    }
+
+    if (max_volatility !== undefined) {
+      const maxVol = parseFloat(max_volatility);
+      if (isNaN(maxVol) || maxVol < 0.001 || maxVol > 0.999) {
+        return res.status(400).json({ error: '최대 변동성은 0.001~0.999 사이의 값이어야 합니다 (0.1%~99.9%)' });
+      }
+    }
+
     // 심볼 중복 확인
     const existing = await query('SELECT * FROM coins WHERE symbol = ?', [symbol.toUpperCase()]);
 
@@ -270,8 +287,8 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
     // initial_supply는 circulating_supply와 동일하게 설정, initial_price는 current_price와 동일하게 설정
     await query(
       `INSERT INTO coins
-       (id, symbol, name, logo_url, description, initial_supply, circulating_supply, initial_price, current_price, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')`,
+       (id, symbol, name, logo_url, description, initial_supply, circulating_supply, initial_price, current_price, min_volatility, max_volatility, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')`,
       [
         coinId,
         symbol.toUpperCase(),
@@ -282,6 +299,8 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
         circulating_supply,
         current_price, // initial_price = current_price
         current_price,
+        min_volatility || null,
+        max_volatility || null,
       ]
     );
 
@@ -397,16 +416,16 @@ router.patch('/:id', isAdmin, async (req: Request, res: Response) => {
     }
     if (req.body.min_volatility !== undefined) {
       const minVol = parseFloat(req.body.min_volatility);
-      if (isNaN(minVol) || minVol < 0 || minVol > 1) {
-        return res.status(400).json({ error: '최소 변동성은 0~1 사이의 값이어야 합니다' });
+      if (isNaN(minVol) || minVol < 0.001 || minVol > 0.999) {
+        return res.status(400).json({ error: '최소 변동성은 0.001~0.999 사이의 값이어야 합니다 (0.1%~99.9%)' });
       }
       updates.push('min_volatility = ?');
       params.push(minVol);
     }
     if (req.body.max_volatility !== undefined) {
       const maxVol = parseFloat(req.body.max_volatility);
-      if (isNaN(maxVol) || maxVol < 0 || maxVol > 1) {
-        return res.status(400).json({ error: '최대 변동성은 0~1 사이의 값이어야 합니다' });
+      if (isNaN(maxVol) || maxVol < 0.001 || maxVol > 0.999) {
+        return res.status(400).json({ error: '최대 변동성은 0.001~0.999 사이의 값이어야 합니다 (0.1%~99.9%)' });
       }
       updates.push('max_volatility = ?');
       params.push(maxVol);

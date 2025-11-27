@@ -103,14 +103,24 @@ const AdminDashboard = () => {
   const handleCreateCoin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/coins', {
+      const payload: any = {
         symbol: formData.symbol,
         name: formData.name,
         logo_url: formData.logo_url || null,
         description: formData.description || null,
         circulating_supply: parseInt(formData.circulating_supply),
         current_price: parseFloat(formData.current_price),
-      });
+      };
+
+      // 변동성 추가 (값이 있을 때만)
+      if (formData.min_volatility) {
+        payload.min_volatility = parseFloat(formData.min_volatility) / 100;
+      }
+      if (formData.max_volatility) {
+        payload.max_volatility = parseFloat(formData.max_volatility) / 100;
+      }
+
+      await api.post('/coins', payload);
       alert('코인이 성공적으로 생성되었습니다!');
       setShowCreateModal(false);
       resetForm();
@@ -168,8 +178,8 @@ const AdminDashboard = () => {
       description: coin.description || '',
       circulating_supply: coin.circulating_supply.toString(),
       current_price: coin.current_price.toString(),
-      min_volatility: coin.min_volatility ? (coin.min_volatility * 100).toFixed(4) : '0.01',
-      max_volatility: coin.max_volatility ? (coin.max_volatility * 100).toFixed(2) : '5.00',
+      min_volatility: coin.min_volatility ? (coin.min_volatility * 100).toFixed(2) : '0.1',
+      max_volatility: coin.max_volatility ? (coin.max_volatility * 100).toFixed(2) : '10.0',
     });
   };
 
@@ -181,8 +191,8 @@ const AdminDashboard = () => {
       description: '',
       circulating_supply: '',
       current_price: '',
-      min_volatility: '0.01',
-      max_volatility: '5.00',
+      min_volatility: '0.1',
+      max_volatility: '10.0',
     });
   };
 
@@ -309,7 +319,7 @@ const AdminDashboard = () => {
                     <td>{formatNumber(coin.market_cap)} G</td>
                     <td>
                       <span style={{ fontSize: '12px', color: '#9ca3af' }}>
-                        {coin.min_volatility ? (parseFloat(coin.min_volatility.toString()) * 100).toFixed(4) : '0.01'}% ~ {coin.max_volatility ? (parseFloat(coin.max_volatility.toString()) * 100).toFixed(2) : '5.00'}%
+                        {coin.min_volatility ? (parseFloat(coin.min_volatility.toString()) * 100).toFixed(2) : '0.1'}% ~ {coin.max_volatility ? (parseFloat(coin.max_volatility.toString()) * 100).toFixed(2) : '10.0'}%
                       </span>
                     </td>
                     <td>
@@ -542,6 +552,32 @@ const AdminDashboard = () => {
                   step="0.00000001"
                 />
               </div>
+              <div className="form-group">
+                <label>최소 변동성 (%)</label>
+                <input
+                  type="number"
+                  value={formData.min_volatility}
+                  onChange={(e) => setFormData({ ...formData, min_volatility: e.target.value })}
+                  min="0.1"
+                  max="99.9"
+                  step="0.1"
+                  placeholder="0.1"
+                />
+                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.1% ~ 99.9% (기본값: 0.1%)</small>
+              </div>
+              <div className="form-group">
+                <label>최대 변동성 (%)</label>
+                <input
+                  type="number"
+                  value={formData.max_volatility}
+                  onChange={(e) => setFormData({ ...formData, max_volatility: e.target.value })}
+                  min="0.1"
+                  max="99.9"
+                  step="0.1"
+                  placeholder="10.0"
+                />
+                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.1% ~ 99.9% (기본값: 10.0%)</small>
+              </div>
               <div className="modal-actions">
                 <button type="button" onClick={() => setShowCreateModal(false)}>
                   취소
@@ -608,6 +644,34 @@ const AdminDashboard = () => {
                   min="0"
                   step="0.00000001"
                 />
+              </div>
+              <div className="form-group">
+                <label>최소 변동성 (%) *</label>
+                <input
+                  type="number"
+                  value={formData.min_volatility}
+                  onChange={(e) => setFormData({ ...formData, min_volatility: e.target.value })}
+                  required
+                  min="0.1"
+                  max="99.9"
+                  step="0.1"
+                  placeholder="0.1"
+                />
+                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.1% ~ 99.9%</small>
+              </div>
+              <div className="form-group">
+                <label>최대 변동성 (%) *</label>
+                <input
+                  type="number"
+                  value={formData.max_volatility}
+                  onChange={(e) => setFormData({ ...formData, max_volatility: e.target.value })}
+                  required
+                  min="0.1"
+                  max="99.9"
+                  step="0.1"
+                  placeholder="10.0"
+                />
+                <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.1% ~ 99.9%</small>
               </div>
               <div className="modal-actions">
                 <button type="button" onClick={() => setEditingCoin(null)}>
