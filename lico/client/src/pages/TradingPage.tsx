@@ -407,7 +407,7 @@ const TradingPage = () => {
         socketRef.current = null;
       }
     };
-  }, [selectedCoin?.id, chartInterval, walletAddress]);
+  }, [selectedCoin?.id, chartInterval]); // walletAddress 제거하여 불필요한 재연결 방지
 
   // 캔들 데이터 가져오기 (초기 로드 및 간격 변경 시)
   useEffect(() => {
