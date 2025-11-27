@@ -44,7 +44,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
 
   const [settings, setSettings] = useState({
     displaySync: 0,
-    noteSpeed: 1.0,
+    noteSpeed: 1, // 1~12배 노트 속도
     playbackSpeed: 1.0,
     keyBindings: {
       key4: ['KeyD', 'KeyF', 'KeyJ', 'KeyK'],
@@ -69,6 +69,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       html5: true,
       onload: () => {
         console.log('Audio loaded');
+        // 오디오 로드 완료 시 자동으로 게임 시작
+        setTimeout(() => {
+          startGame();
+        }, 500);
       },
       onend: () => {
         endGame();
@@ -85,15 +89,23 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!gameState.isPlaying || gameState.isPaused) return;
+
       // 단축키 처리
       if (e.code === 'F1') {
         e.preventDefault();
-        setSettings(s => ({ ...s, playbackSpeed: Math.max(0.5, s.playbackSpeed - 0.1) }));
-        if (audioRef.current) audioRef.current.rate(Math.max(0.5, settings.playbackSpeed - 0.1));
+        setSettings(s => {
+          const newSpeed = Math.max(0.5, s.playbackSpeed - 0.1);
+          if (audioRef.current) audioRef.current.rate(newSpeed);
+          return { ...s, playbackSpeed: newSpeed };
+        });
       } else if (e.code === 'F2') {
         e.preventDefault();
-        setSettings(s => ({ ...s, playbackSpeed: Math.min(2.0, s.playbackSpeed + 0.1) }));
-        if (audioRef.current) audioRef.current.rate(Math.min(2.0, settings.playbackSpeed + 0.1));
+        setSettings(s => {
+          const newSpeed = Math.min(2.0, s.playbackSpeed + 0.1);
+          if (audioRef.current) audioRef.current.rate(newSpeed);
+          return { ...s, playbackSpeed: newSpeed };
+        });
       } else if (e.code === 'F7') {
         e.preventDefault();
         setSettings(s => ({ ...s, displaySync: s.displaySync + 1 }));
@@ -102,10 +114,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
         setSettings(s => ({ ...s, displaySync: s.displaySync - 1 }));
       } else if (e.code === 'F9') {
         e.preventDefault();
-        setSettings(s => ({ ...s, noteSpeed: s.noteSpeed * 0.5 }));
+        setSettings(s => ({ ...s, noteSpeed: Math.max(1, s.noteSpeed - 1) }));
       } else if (e.code === 'F10') {
         e.preventDefault();
-        setSettings(s => ({ ...s, noteSpeed: s.noteSpeed * 2 }));
+        setSettings(s => ({ ...s, noteSpeed: Math.min(12, s.noteSpeed + 1) }));
       } else if (e.code === 'Escape') {
         togglePause();
       } else {
@@ -123,6 +135,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     const handleKeyUp = (e: KeyboardEvent) => {
       keysPressed.current.delete(e.code);
 
+      if (!gameState.isPlaying || gameState.isPaused) return;
+
       // 롱노트 릴리즈 체크
       const keyBinding = settings.keyBindings[`key${beatmap.key_count}` as keyof typeof settings.keyBindings];
       const lane = keyBinding.indexOf(e.code);
@@ -139,7 +153,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [settings, beatmap.key_count, gameState]);
+  }, [settings, beatmap.key_count, gameState.isPlaying, gameState.isPaused]);
 
   const startGame = () => {
     if (audioRef.current) {
@@ -148,7 +162,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       setGameState(s => ({ ...s, isPlaying: true, isPaused: false }));
       // 게임 루프 시작
       const loop = () => {
-        if (audioRef.current) {
+        if (audioRef.current && gameState.isPlaying && !gameState.isPaused) {
           const playing = audioRef.current.playing();
           if (playing) {
             const currentTime = (audioRef.current.seek() as number) * 1000 + settings.displaySync;
@@ -160,6 +174,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
             );
             setActiveEffects(activeEffs);
 
+            // 판정선을 지나친 노트 자동 처리
+            checkMissedNotes(currentTime);
+            
             render(currentTime);
             animationFrameRef.current = requestAnimationFrame(loop);
           } else {
@@ -176,7 +193,19 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     if (audioRef.current) {
       if (gameState.isPaused) {
         audioRef.current.play();
-        animationFrameRef.current = requestAnimationFrame(gameLoop);
+        const loop = () => {
+          if (audioRef.current && gameState.isPlaying && !gameState.isPaused) {
+            const playing = audioRef.current.playing();
+            if (playing) {
+              const currentTime = (audioRef.current.seek() as number) * 1000 + settings.displaySync;
+              setGameState(s => ({ ...s, currentTime }));
+              checkMissedNotes(currentTime);
+              render(currentTime);
+              animationFrameRef.current = requestAnimationFrame(loop);
+            }
+          }
+        };
+        animationFrameRef.current = requestAnimationFrame(loop);
       } else {
         audioRef.current.pause();
         cancelAnimationFrame(animationFrameRef.current);
@@ -185,53 +214,86 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     }
   };
 
-  const gameLoop = () => {
-    if (audioRef.current) {
-      const playing = audioRef.current.playing();
-      if (playing) {
-        const currentTime = (audioRef.current.seek() as number) * 1000 + settings.displaySync;
-        setGameState(s => ({ ...s, currentTime, isPlaying: true }));
-
-        // 이펙트 업데이트
-        const activeEffs = beatmap.effect_data.filter(
-          eff => currentTime >= eff.timestamp && currentTime <= eff.timestamp + eff.duration
-        );
-        setActiveEffects(activeEffs);
-
-        render(currentTime);
-        animationFrameRef.current = requestAnimationFrame(gameLoop);
-      } else {
-        // 재생이 끝났으면 게임 종료
-        endGame();
-      }
-    }
-  };
-
   const handleNoteHit = (lane: number) => {
     const currentTime = (audioRef.current?.seek() as number || 0) * 1000 + settings.displaySync;
 
     const candidateNotes = beatmap.note_data
-      .filter(note => note.lane === lane && !processedNotes.current.has(note.id))
-      .sort((a, b) => a.timestamp - b.timestamp);
+      .filter(note => 
+        note.lane === lane && 
+        !processedNotes.current.has(note.id) &&
+        !longNotesHeld.current.get(note.id)
+      )
+      .sort((a, b) => Math.abs(a.timestamp - currentTime) - Math.abs(b.timestamp - currentTime));
 
     if (candidateNotes.length === 0) return;
 
     const note = candidateNotes[0];
     const timeDiff = note.timestamp - currentTime;
 
+    // 판정 윈도우 내에 있는 노트만 처리
     if (Math.abs(timeDiff) <= 200) {
       const judgement = judgeNote(timeDiff);
-      const points = calculateScore(judgement, gameState.combo, beatmap.total_notes);
+      setGameState(s => {
+        const points = calculateScore(judgement, s.combo, beatmap.total_notes);
+        const newCombo = judgement === JudgementType.FUCK ? 0 : s.combo + 1;
+        const newJudgements = { ...s.judgements };
 
-      if (note.type === NoteType.LONG) {
-        longNotesHeld.current.set(note.id, true);
-      } else {
-        processedNotes.current.add(note.id);
-      }
+        switch (judgement) {
+          case JudgementType.YAS:
+            newJudgements.yas++;
+            break;
+          case JudgementType.OH:
+            newJudgements.oh++;
+            break;
+          case JudgementType.AH:
+            newJudgements.ah++;
+            break;
+          case JudgementType.FUCK:
+            newJudgements.fuck++;
+            break;
+        }
 
-      updateGameState(judgement, points);
-      showJudgement(judgement);
+        if (note.type === NoteType.LONG) {
+          longNotesHeld.current.set(note.id, true);
+        } else {
+          processedNotes.current.add(note.id);
+        }
+
+        showJudgement(judgement);
+
+        return {
+          ...s,
+          score: s.score + points,
+          combo: newCombo,
+          maxCombo: Math.max(s.maxCombo, newCombo),
+          judgements: newJudgements
+        };
+      });
     }
+  };
+
+  const checkMissedNotes = (currentTime: number) => {
+    // 판정선을 지나친 노트를 자동으로 MISS 처리
+    beatmap.note_data.forEach(note => {
+      if (processedNotes.current.has(note.id)) return;
+      if (longNotesHeld.current.get(note.id)) return; // 롱노트는 제외
+      
+      const timeDiff = note.timestamp - currentTime;
+      // 판정선을 지나쳤고 (200ms 이상 지남) 아직 처리되지 않은 노트
+      if (timeDiff < -200) {
+        processedNotes.current.add(note.id);
+        setGameState(s => {
+          const newJudgements = { ...s.judgements };
+          newJudgements.fuck++;
+          showJudgement(JudgementType.FUCK);
+          return {
+            ...s,
+            combo: 0,
+            judgements: newJudgements
+          };
+        });
+      }
+    });
   };
 
   const checkLongNoteRelease = (lane: number) => {
@@ -241,48 +303,24 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
         const currentTime = (audioRef.current?.seek() as number || 0) * 1000;
         const holdTime = currentTime - note.timestamp;
 
-        if (note.duration && holdTime >= note.duration * 0.8) {
-          const combo = calculateLongNoteCombo(note.duration);
-          // 롱노트 성공
-          setGameState(s => ({ ...s, combo: s.combo + combo }));
-        } else {
-          // 롱노트 실패
-          setGameState(s => ({ ...s, combo: 0 }));
-        }
-
-        processedNotes.current.add(note.id);
-        longNotesHeld.current.delete(note.id);
+        setGameState(s => {
+          if (note.duration && holdTime >= note.duration * 0.8) {
+            const combo = calculateLongNoteCombo(note.duration);
+            // 롱노트 성공
+            processedNotes.current.add(note.id);
+            longNotesHeld.current.delete(note.id);
+            return { ...s, combo: s.combo + combo, maxCombo: Math.max(s.maxCombo, s.combo + combo) };
+          } else {
+            // 롱노트 실패
+            processedNotes.current.add(note.id);
+            longNotesHeld.current.delete(note.id);
+            const newJudgements = { ...s.judgements };
+            newJudgements.fuck++;
+            showJudgement(JudgementType.FUCK);
+            return { ...s, combo: 0, judgements: newJudgements };
+          }
+        });
       });
-  };
-
-  const updateGameState = (judgement: JudgementType, points: number) => {
-    setGameState(s => {
-      const newCombo = judgement === JudgementType.FUCK ? 0 : s.combo + 1;
-      const newJudgements = { ...s.judgements };
-
-      switch (judgement) {
-        case JudgementType.YAS:
-          newJudgements.yas++;
-          break;
-        case JudgementType.OH:
-          newJudgements.oh++;
-          break;
-        case JudgementType.AH:
-          newJudgements.ah++;
-          break;
-        case JudgementType.FUCK:
-          newJudgements.fuck++;
-          break;
-      }
-
-      return {
-        ...s,
-        score: s.score + points,
-        combo: newCombo,
-        maxCombo: Math.max(s.maxCombo, newCombo),
-        judgements: newJudgements
-      };
-    });
   };
 
   const showJudgement = (judgement: JudgementType) => {
@@ -297,9 +335,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     setGameState(s => ({ ...s, isPlaying: false }));
     cancelAnimationFrame(animationFrameRef.current);
 
+    const totalJudgements = gameState.judgements.yas + gameState.judgements.oh + gameState.judgements.ah + gameState.judgements.fuck;
+    const accuracy = totalJudgements > 0 
+      ? (gameState.judgements.yas * 100 + gameState.judgements.oh * 70 + gameState.judgements.ah * 40) / totalJudgements
+      : 0;
+
     onGameEnd({
       score: gameState.score,
-      accuracy: (gameState.judgements.yas * 100 + gameState.judgements.oh * 70 + gameState.judgements.ah * 40) / beatmap.total_notes,
+      accuracy,
       maxCombo: gameState.maxCombo,
       judgements: gameState.judgements
     });
@@ -368,7 +411,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       if (!isNoteVisible(note.timestamp, currentTime, settings.noteSpeed)) return;
 
       const x = margin + note.lane * laneWidth;
-      const y = calculateNoteYPosition(note.timestamp, currentTime, settings.noteSpeed, laneHeight, laneStartY);
+      const y = calculateNoteYPosition(note.timestamp, currentTime, settings.noteSpeed, laneHeight, laneStartY, judgementLineY);
+
+      // 노트가 판정선을 지나갔으면 표시하지 않음
+      if (y > judgementLineY + 10) return;
 
       if (note.type === NoteType.LONG && note.duration) {
         const noteLength = calculateLongNoteLength(note.duration, settings.noteSpeed, laneHeight);
@@ -461,7 +507,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       if (!isNoteVisible(note.timestamp, currentTime, settings.noteSpeed)) return;
 
       const noteX = x + marginX + note.lane * laneWidth;
-      const noteY = calculateNoteYPosition(note.timestamp, currentTime, settings.noteSpeed, laneHeight, y + laneStartY);
+      const noteY = calculateNoteYPosition(note.timestamp, currentTime, settings.noteSpeed, laneHeight, y + laneStartY, judgementLineY);
+
+      // 노트가 판정선을 지나갔으면 표시하지 않음
+      if (noteY > judgementLineY + 10) return;
 
       if (note.type === NoteType.LONG && note.duration) {
         const noteLength = calculateLongNoteLength(note.duration, settings.noteSpeed, laneHeight);
@@ -508,7 +557,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     ctx.textAlign = 'left';
     ctx.fillText(`Score: ${gameState.score.toLocaleString()}`, 20, 40);
     ctx.fillText(`Combo: ${gameState.combo}`, 20, 70);
-    ctx.fillText(`Speed: x${settings.playbackSpeed.toFixed(1)}`, 20, 100);
+    ctx.fillText(`노트 속도: ${settings.noteSpeed}배`, 20, 100);
+    ctx.fillText(`재생 속도: x${settings.playbackSpeed.toFixed(1)}`, 20, 130);
 
     // 판정 표시 (중앙)
     ctx.textAlign = 'center';
@@ -524,8 +574,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     if (canvas) {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      // 초기 렌더링
-      render(gameState.currentTime);
     }
   }, []);
 
@@ -534,7 +582,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     if (gameState.isPlaying && !gameState.isPaused) {
       render(gameState.currentTime);
     }
-  }, [gameState.currentTime, gameState.isPlaying, gameState.isPaused, activeEffects]);
+  }, [gameState.currentTime, gameState.isPlaying, gameState.isPaused, activeEffects, settings.noteSpeed]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
@@ -542,21 +590,76 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
         ref={canvasRef}
         style={{ display: 'block', width: '100%', height: '100%' }}
       />
-      {!gameState.isPlaying && (
-        <button
-          onClick={startGame}
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            padding: '20px 40px',
-            fontSize: '24px',
-            cursor: 'pointer'
-          }}
-        >
-          Start Game
-        </button>
+      {/* 노트 속도 조절 UI */}
+      {gameState.isPlaying && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          background: 'rgba(0, 0, 0, 0.7)',
+          padding: '15px',
+          borderRadius: '10px',
+          border: '1px solid rgba(0, 255, 255, 0.3)'
+        }}>
+          <div style={{ color: '#fff', marginBottom: '10px', fontSize: '16px', fontWeight: 'bold' }}>
+            노트 속도: {settings.noteSpeed}배
+          </div>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button
+              onClick={() => setSettings(s => ({ ...s, noteSpeed: Math.max(1, s.noteSpeed - 1) }))}
+              disabled={settings.noteSpeed <= 1}
+              style={{
+                padding: '8px 16px',
+                background: settings.noteSpeed <= 1 ? '#333' : '#00ffff',
+                color: '#000',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: settings.noteSpeed <= 1 ? 'not-allowed' : 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              -
+            </button>
+            <input
+              type="range"
+              min="1"
+              max="12"
+              value={settings.noteSpeed}
+              onChange={(e) => setSettings(s => ({ ...s, noteSpeed: parseInt(e.target.value) }))}
+              style={{ width: '150px' }}
+            />
+            <button
+              onClick={() => setSettings(s => ({ ...s, noteSpeed: Math.min(12, s.noteSpeed + 1) }))}
+              disabled={settings.noteSpeed >= 12}
+              style={{
+                padding: '8px 16px',
+                background: settings.noteSpeed >= 12 ? '#333' : '#00ffff',
+                color: '#000',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: settings.noteSpeed >= 12 ? 'not-allowed' : 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              +
+            </button>
+          </div>
+          <div style={{ color: '#aaa', fontSize: '12px', marginTop: '10px' }}>
+            F9: -1배 | F10: +1배
+          </div>
+        </div>
+      )}
+      {!gameState.isPlaying && !gameState.isPaused && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          textAlign: 'center',
+          color: '#fff'
+        }}>
+          <div style={{ fontSize: '24px', marginBottom: '20px' }}>게임 로딩 중...</div>
+        </div>
       )}
     </div>
   );

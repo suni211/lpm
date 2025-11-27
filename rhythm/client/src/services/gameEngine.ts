@@ -98,21 +98,29 @@ export const isNoteVisible = (
 ): boolean => {
   const timeUntilHit = noteTimestamp - currentTime;
   const visibilityWindow = 2000 / noteSpeed; // 노트 속도에 따른 가시 시간
-  return timeUntilHit >= 0 && timeUntilHit <= visibilityWindow;
+  // 판정선을 지나기 전까지 표시 (200ms 여유)
+  return timeUntilHit >= -200 && timeUntilHit <= visibilityWindow;
 };
 
-// 노트의 Y 위치 계산
+// 노트의 Y 위치 계산 (판정선 기준)
 export const calculateNoteYPosition = (
   noteTimestamp: number,
   currentTime: number,
   noteSpeed: number,
   canvasHeight: number,
-  offsetY: number = 0
+  offsetY: number = 0,
+  judgementLineY: number = 0
 ): number => {
   const timeUntilHit = noteTimestamp - currentTime;
-  const fallDistance = canvasHeight * 0.8;
-  const fallTime = 2000 / noteSpeed;
+  const fallTime = 2000 / noteSpeed; // 노트가 내려오는 시간 (ms)
+  
+  // 판정선까지의 거리
+  const fallDistance = judgementLineY - offsetY;
+  
+  // 진행률 계산 (0 = 시작 위치, 1 = 판정선)
   const progress = 1 - (timeUntilHit / fallTime);
+  
+  // 노트 위치 = 시작 위치 + (판정선까지 거리 * 진행률)
   return offsetY + progress * fallDistance;
 };
 
