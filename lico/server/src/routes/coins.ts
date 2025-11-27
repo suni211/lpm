@@ -192,7 +192,7 @@ router.get('/:coin_id/candles/:interval', async (req: Request, res: Response) =>
       return res.status(400).json({ error: '유효하지 않은 interval (1m, 1h, 1d만 지원)' });
     }
 
-    // 최적화: 필요한 컬럼만 선택하고, 시간순으로 정렬 (reverse 불필요)
+    // 최신 캔들부터 가져오기 (DESC), 프론트엔드에서 reverse
     const candles = await query(
       `SELECT
          id, coin_id, open_time, close_time,
@@ -205,7 +205,7 @@ router.get('/:coin_id/candles/:interval', async (req: Request, res: Response) =>
          AND low_price IS NOT NULL
          AND close_price IS NOT NULL
          AND open_time IS NOT NULL
-       ORDER BY open_time ASC
+       ORDER BY open_time DESC
        LIMIT ?`,
       [coin_id, Number(limit)]
     );
@@ -223,7 +223,8 @@ router.get('/:coin_id/candles/:interval', async (req: Request, res: Response) =>
       parseFloat(candle.close_price) > 0
     );
 
-    res.json({ candles: validCandles });
+    // 프론트엔드에서 정렬하므로 역순으로 전송 (오래된 순 → 최신 순)
+    res.json({ candles: validCandles.reverse() });
   } catch (error) {
     console.error('캔들 데이터 조회 오류:', error);
     res.status(500).json({ error: '캔들 데이터 조회 실패' });

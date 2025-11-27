@@ -352,7 +352,7 @@ const TradingPage = () => {
       lastCandleTimeRef.current = null; // 마지막 캔들 시간 리셋
       try {
         const response = await api.get(`/coins/${selectedCoin.id}/candles/${chartInterval}`, {
-          params: { limit: 100 }
+          params: { limit: 500 } // 500개로 증가 (더 많은 과거 데이터 표시)
         });
         let newCandles = response.data.candles || [];
         console.log('Fetched candles:', newCandles.length);
