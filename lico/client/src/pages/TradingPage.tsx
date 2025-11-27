@@ -118,30 +118,30 @@ const TradingPage = () => {
           const lastCandleTime = lastCandle ? Math.floor(new Date(lastCandle.open_time).getTime() / 1000) : null;
           const currentCandleTime = Math.floor(candleTime);
           
-          if (lastCandleTime === currentCandleTime) {
+          if (lastCandleTime === currentCandleTime && lastCandle) {
             // 같은 시간대 캔들 업데이트 (실시간)
             newCandles[newCandles.length - 1] = {
               ...lastCandle,
-              open_price: candleData.open_price || lastCandle.open_price,
-              high_price: candleData.high_price || lastCandle.high_price,
-              low_price: candleData.low_price || lastCandle.low_price,
-              close_price: candleData.close_price || lastCandle.close_price,
-              volume: candleData.volume || lastCandle.volume,
+              open_price: candleData.open_price ?? lastCandle.open_price,
+              high_price: candleData.high_price ?? lastCandle.high_price,
+              low_price: candleData.low_price ?? lastCandle.low_price,
+              close_price: candleData.close_price ?? lastCandle.close_price,
+              volume: candleData.volume ?? lastCandle.volume,
             };
           } else {
             // 새 캔들 추가
             newCandles.push({
-              id: candleData.id || '',
-              coin_id: candleData.coin_id,
-              open_time: candleData.open_time,
-              close_time: candleData.close_time || candleData.open_time,
-              open_price: candleData.open_price,
-              high_price: candleData.high_price,
-              low_price: candleData.low_price,
-              close_price: candleData.close_price,
+              id: candleData.id || `candle-${Date.now()}-${Math.random()}`,
+              coin_id: candleData.coin_id || selectedCoin.id,
+              open_time: candleData.open_time || new Date().toISOString(),
+              close_time: candleData.close_time || candleData.open_time || new Date().toISOString(),
+              open_price: candleData.open_price || 0,
+              high_price: candleData.high_price || 0,
+              low_price: candleData.low_price || 0,
+              close_price: candleData.close_price || 0,
               volume: candleData.volume || 0,
               trade_count: candleData.trade_count || 0,
-            } as Candle);
+            });
             
             // 최대 100개만 유지
             if (newCandles.length > 100) {
