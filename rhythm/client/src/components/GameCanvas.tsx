@@ -50,7 +50,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     const savedPlaybackSpeed = localStorage.getItem('rhythm_playbackSpeed');
     return {
       displaySync: 0,
-      noteSpeed: savedNoteSpeed ? parseInt(savedNoteSpeed, 10) : 1, // 1~12배 노트 속도
+      noteSpeed: savedNoteSpeed ? parseFloat(savedNoteSpeed) : 1.0, // 1~12배 노트 속도 (float)
       playbackSpeed: savedPlaybackSpeed ? parseFloat(savedPlaybackSpeed) : 1.0,
       keyBindings: {
         key4: ['KeyD', 'KeyF', 'KeyJ', 'KeyK'],
@@ -115,10 +115,18 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
           });
         } else if (e.code === 'F9') {
           e.preventDefault();
-          setSettings(s => ({ ...s, noteSpeed: Math.max(1, s.noteSpeed - 1) }));
+          setSettings(s => {
+            const newSpeed = Math.max(1, s.noteSpeed - 0.5);
+            localStorage.setItem('rhythm_noteSpeed', newSpeed.toString());
+            return { ...s, noteSpeed: newSpeed };
+          });
         } else if (e.code === 'F10') {
           e.preventDefault();
-          setSettings(s => ({ ...s, noteSpeed: Math.min(12, s.noteSpeed + 1) }));
+          setSettings(s => {
+            const newSpeed = Math.min(12, s.noteSpeed + 0.5);
+            localStorage.setItem('rhythm_noteSpeed', newSpeed.toString());
+            return { ...s, noteSpeed: newSpeed };
+          });
         }
         return;
       }
@@ -521,13 +529,30 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     ctx.fillStyle = gradientRed;
     ctx.fillRect(playAreaX, judgementLineY, playAreaWidth, playAreaHeight - judgementLineY);
     
-    // 판정선 (얇은 파란색 선)
-    ctx.strokeStyle = '#00ffff';
+    // 판정선 (밝은 초록색 선)
+    ctx.strokeStyle = '#00ff00';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(playAreaX, judgementLineY);
     ctx.lineTo(playAreaX + playAreaWidth, judgementLineY);
     ctx.stroke();
+    
+    // 상단 COMBO 표시
+    const comboY = playAreaY + 30;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('COMBO', playAreaX + playAreaWidth / 2, comboY);
+    
+    ctx.fillStyle = '#d0d0d0';
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText(gameState.combo.toString(), playAreaX + playAreaWidth / 2, comboY + 20);
+    
+    // COMBO 아래 파란색 바
+    const barY = comboY + 60;
+    ctx.fillStyle = '#0066ff';
+    ctx.fillRect(playAreaX + playAreaWidth * 0.2, barY, playAreaWidth * 0.6, 3);
 
     // 레인 구분선 (얇은 흰색 선)
     const laneWidth = playAreaWidth / beatmap.key_count;
@@ -617,6 +642,49 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     const indicatorY = scrollbarY + (scrollbarHeight - indicatorHeight) * progress;
     ctx.fillStyle = '#505050';
     ctx.fillRect(scrollbarX + 5, indicatorY, scrollbarWidth - 10, indicatorHeight);
+    
+    // 하단 오른쪽 점수 표시
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(gameState.score.toLocaleString(), gameX + gameWidth - 60, gameY + gameHeight - 10);
+    
+    // 하단 왼쪽 설정 패널
+    const settingsPanelX = gameX + 10;
+    const settingsPanelY = gameY + gameHeight - 80;
+    
+    // 탭 (1, 2)
+    ctx.fillStyle = '#333';
+    ctx.fillRect(settingsPanelX, settingsPanelY, 40, 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('1', settingsPanelX + 20, settingsPanelY + 10);
+    
+    // SPEED 설정
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(settingsPanelX, settingsPanelY + 25, 50, 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Arial';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SPEED', settingsPanelX + 5, settingsPanelY + 35);
+    ctx.fillText(settings.noteSpeed.toFixed(2), settingsPanelX + 5, settingsPanelY + 45);
+    
+    // FEVER 설정
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(settingsPanelX + 55, settingsPanelY + 25, 40, 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Arial';
+    ctx.fillText('FEVER', settingsPanelX + 60, settingsPanelY + 35);
+    ctx.fillText('x1', settingsPanelX + 60, settingsPanelY + 45);
+    
+    // AUTO 표시
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Arial';
+    ctx.fillText('AUTO', settingsPanelX, settingsPanelY + 70);
 
     // 노트 그리기 (세로로 길고 얇게)
     // 디버깅: 노트 데이터 확인
@@ -860,7 +928,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     ctx.fillText(`노트 속도: ${settings.noteSpeed}배`, 20, 100);
     ctx.fillText(`재생 속도: x${settings.playbackSpeed.toFixed(1)}`, 20, 130);
 
-    // 판정 표시 (중앙, 반투명하게)
+    // 판정 표시 (판정선 위, 반투명하게)
+    const gameWidth = width * 0.6;
+    const gameHeight = height * 0.6;
+    const gameX = (width - gameWidth) / 2;
+    const gameY = (height - gameHeight) / 2;
+    const playAreaX = gameX + 15;
+    const playAreaWidth = gameWidth - 15 - 50;
+    const playAreaHeight = gameHeight - 80;
+    const judgementLineY = gameY + playAreaHeight - 20;
+    
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     recentJudgements.forEach((j, i) => {
@@ -877,14 +954,32 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       const b = parseInt(color.slice(5, 7), 16);
       
       ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity * 0.8})`; // 최대 80% 투명도
-      ctx.font = 'bold 72px Arial';
+      ctx.font = 'bold 48px Arial';
       ctx.strokeStyle = `rgba(0, 0, 0, ${opacity * 0.5})`;
       ctx.lineWidth = 4;
       
-      // 텍스트 그림자 효과
-      ctx.strokeText(judgementText, width / 2, height / 2 - 50 + i * 80);
-      ctx.fillText(judgementText, width / 2, height / 2 - 50 + i * 80);
+      // 판정선 위에 표시
+      const displayY = judgementLineY - 30 - i * 60;
+      ctx.strokeText(judgementText, playAreaX + playAreaWidth / 2, displayY);
+      ctx.fillText(judgementText, playAreaX + playAreaWidth / 2, displayY);
     });
+    
+    // MAX 100% 표시 (정확도가 100%일 때)
+    const totalJudgements = gameState.judgements.yas + gameState.judgements.oh + gameState.judgements.ah + gameState.judgements.fuck;
+    if (totalJudgements > 0) {
+      const accuracy = (gameState.judgements.yas * 100 + gameState.judgements.oh * 70 + gameState.judgements.ah * 40) / totalJudgements;
+      if (accuracy >= 100) {
+        // 노란색, 오렌지 글로우 효과
+        ctx.shadowColor = 'rgba(255, 165, 0, 0.8)';
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('MAX 100%', playAreaX + playAreaWidth / 2, judgementLineY - 10);
+        ctx.shadowBlur = 0; // 그림자 초기화
+      }
+    }
   };
 
   useEffect(() => {
@@ -908,65 +1003,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
         ref={canvasRef}
         style={{ display: 'block', width: '100%', height: '100%' }}
       />
-      {/* 노트 속도 조절 UI */}
-      {gameState.isPlaying && (
-        <div style={{
-          position: 'absolute',
-          top: '20px',
-          right: '20px',
-          background: 'rgba(0, 0, 0, 0.7)',
-          padding: '15px',
-          borderRadius: '10px',
-          border: '1px solid rgba(0, 255, 255, 0.3)'
-        }}>
-          <div style={{ color: '#fff', marginBottom: '10px', fontSize: '16px', fontWeight: 'bold' }}>
-            노트 속도: {settings.noteSpeed}배
-          </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button
-              onClick={() => setSettings(s => ({ ...s, noteSpeed: Math.max(1, s.noteSpeed - 1) }))}
-              disabled={settings.noteSpeed <= 1}
-              style={{
-                padding: '8px 16px',
-                background: settings.noteSpeed <= 1 ? '#333' : '#00ffff',
-                color: '#000',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: settings.noteSpeed <= 1 ? 'not-allowed' : 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              -
-            </button>
-            <input
-              type="range"
-              min="1"
-              max="12"
-              value={settings.noteSpeed}
-              onChange={(e) => setSettings(s => ({ ...s, noteSpeed: parseInt(e.target.value) }))}
-              style={{ width: '150px' }}
-            />
-            <button
-              onClick={() => setSettings(s => ({ ...s, noteSpeed: Math.min(12, s.noteSpeed + 1) }))}
-              disabled={settings.noteSpeed >= 12}
-              style={{
-                padding: '8px 16px',
-                background: settings.noteSpeed >= 12 ? '#333' : '#00ffff',
-                color: '#000',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: settings.noteSpeed >= 12 ? 'not-allowed' : 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              +
-            </button>
-          </div>
-          <div style={{ color: '#aaa', fontSize: '12px', marginTop: '10px' }}>
-            F9: -1배 | F10: +1배
-          </div>
-        </div>
-      )}
+      {/* 게임 시작 전에만 노트 속도 조절 UI 표시 */}
       {!isGameStarted && (
         <div style={{
           position: 'absolute',
@@ -975,15 +1012,77 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
           transform: 'translate(-50%, -50%)',
           textAlign: 'center',
           color: '#fff',
-          background: 'rgba(0, 0, 0, 0.8)',
-          padding: '30px',
-          borderRadius: '10px'
+          background: 'rgba(0, 0, 0, 0.9)',
+          padding: '40px',
+          borderRadius: '10px',
+          border: '2px solid rgba(255, 255, 255, 0.3)'
         }}>
-          <div style={{ fontSize: '24px', marginBottom: '20px' }}>게임 준비 중...</div>
-          <div style={{ fontSize: '16px', marginBottom: '10px' }}>재생 속도: x{settings.playbackSpeed.toFixed(1)}</div>
-          <div style={{ fontSize: '16px', marginBottom: '10px' }}>노트 속도: {settings.noteSpeed}배</div>
-          <div style={{ fontSize: '14px', color: '#aaa', marginTop: '20px' }}>
-            F1/F2: 재생 속도 조절 | F9/F10: 노트 속도 조절
+          <div style={{ fontSize: '28px', marginBottom: '30px', fontWeight: 'bold' }}>게임 준비 중...</div>
+          <div style={{ fontSize: '18px', marginBottom: '20px' }}>
+            <div style={{ marginBottom: '15px' }}>
+              <div style={{ color: '#aaa', marginBottom: '5px' }}>노트 속도 (배속)</div>
+              <div style={{ display: 'flex', gap: '15px', alignItems: 'center', justifyContent: 'center' }}>
+                <button
+                  onClick={() => setSettings(s => {
+                    const newSpeed = Math.max(1, s.noteSpeed - 0.5);
+                    localStorage.setItem('rhythm_noteSpeed', newSpeed.toString());
+                    return { ...s, noteSpeed: newSpeed };
+                  })}
+                  disabled={settings.noteSpeed <= 1}
+                  style={{
+                    padding: '10px 20px',
+                    background: settings.noteSpeed <= 1 ? '#333' : '#00ffff',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: settings.noteSpeed <= 1 ? 'not-allowed' : 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '18px'
+                  }}
+                >
+                  -
+                </button>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', minWidth: '80px' }}>
+                  {settings.noteSpeed.toFixed(1)}배
+                </div>
+                <button
+                  onClick={() => setSettings(s => {
+                    const newSpeed = Math.min(12, s.noteSpeed + 0.5);
+                    localStorage.setItem('rhythm_noteSpeed', newSpeed.toString());
+                    return { ...s, noteSpeed: newSpeed };
+                  })}
+                  disabled={settings.noteSpeed >= 12}
+                  style={{
+                    padding: '10px 20px',
+                    background: settings.noteSpeed >= 12 ? '#333' : '#00ffff',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: settings.noteSpeed >= 12 ? 'not-allowed' : 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '18px'
+                  }}
+                >
+                  +
+                </button>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="12"
+                step="0.5"
+                value={settings.noteSpeed}
+                onChange={(e) => {
+                  const newSpeed = parseFloat(e.target.value);
+                  localStorage.setItem('rhythm_noteSpeed', newSpeed.toString());
+                  setSettings(s => ({ ...s, noteSpeed: newSpeed }));
+                }}
+                style={{ width: '300px', marginTop: '10px' }}
+              />
+            </div>
+          </div>
+          <div style={{ fontSize: '14px', color: '#aaa', marginTop: '30px' }}>
+            F9: -0.5배 | F10: +0.5배 | 오디오 로드 완료 후 자동 시작
           </div>
         </div>
       )}
