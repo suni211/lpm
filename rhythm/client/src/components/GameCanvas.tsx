@@ -470,33 +470,44 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, width, height);
     
+    // UI 축소 및 여백 추가 (60% 크기, 중앙 배치)
+    const scale = 0.6;
+    const gameWidth = width * scale;
+    const gameHeight = height * scale;
+    const gameX = (width - gameWidth) / 2;
+    const gameY = (height - gameHeight) / 2;
+    
+    // 게임 영역 배경 (약간 밝은 검은색)
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(gameX, gameY, gameWidth, gameHeight);
+    
     // 메탈릭 프레임 (은색-회색, 좌우 하단)
     const frameThickness = 15;
-    const frameGradient = ctx.createLinearGradient(0, 0, width, 0);
+    const frameGradient = ctx.createLinearGradient(gameX, 0, gameX + gameWidth, 0);
     frameGradient.addColorStop(0, '#e8e8e8');
     frameGradient.addColorStop(0.5, '#c0c0c0');
     frameGradient.addColorStop(1, '#a8a8a8');
     ctx.fillStyle = frameGradient;
     
     // 왼쪽 프레임
-    ctx.fillRect(0, 0, frameThickness, height);
+    ctx.fillRect(gameX, gameY, frameThickness, gameHeight);
     // 오른쪽 프레임 (스크롤바 영역 포함)
-    ctx.fillRect(width - 50, 0, 50, height);
+    ctx.fillRect(gameX + gameWidth - 50, gameY, 50, gameHeight);
     // 하단 프레임
-    ctx.fillRect(0, height - 80, width, 80);
+    ctx.fillRect(gameX, gameY + gameHeight - 80, gameWidth, 80);
     
     // 하단 프레임 그라데이션 (청록색 계열)
-    const bottomGradient = ctx.createLinearGradient(0, height - 80, 0, height);
+    const bottomGradient = ctx.createLinearGradient(gameX, gameY + gameHeight - 80, gameX, gameY + gameHeight);
     bottomGradient.addColorStop(0, '#00a0a0');
     bottomGradient.addColorStop(1, '#008080');
     ctx.fillStyle = bottomGradient;
-    ctx.fillRect(0, height - 30, width, 30);
+    ctx.fillRect(gameX, gameY + gameHeight - 30, gameWidth, 30);
     
     // 플레이 필드 (검은색 중앙 영역)
-    const playAreaX = frameThickness;
-    const playAreaWidth = width - frameThickness - 50; // 오른쪽 스크롤바 제외
-    const playAreaY = 0;
-    const playAreaHeight = height - 80; // 하단 버튼 영역 제외
+    const playAreaX = gameX + frameThickness;
+    const playAreaWidth = gameWidth - frameThickness - 50; // 오른쪽 스크롤바 제외
+    const playAreaY = gameY;
+    const playAreaHeight = gameHeight - 80; // 하단 버튼 영역 제외
     
     ctx.fillStyle = '#000';
     ctx.fillRect(playAreaX, playAreaY, playAreaWidth, playAreaHeight);
@@ -533,14 +544,21 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     }
     
     // 하단 버튼 영역 (7개 버튼: 흰색, 파란색, 흰색, 노란색, 흰색, 파란색, 흰색)
-    const buttonAreaY = height - 70;
+    const buttonAreaY = gameY + gameHeight - 70;
     const buttonHeight = 40;
     const buttonWidth = playAreaWidth / beatmap.key_count;
     const buttonColors = ['#fff', '#0066ff', '#fff', '#ffd700', '#fff', '#0066ff', '#fff'];
     
+    // 현재 눌린 키 확인
+    const keyBinding = settings.keyBindings[`key${beatmap.key_count}` as keyof typeof settings.keyBindings];
+    
     for (let i = 0; i < beatmap.key_count; i++) {
       const buttonX = playAreaX + i * buttonWidth;
-      const color = buttonColors[i % buttonColors.length];
+      const keyCode = keyBinding[i];
+      const isPressed = keysPressed.current.has(keyCode);
+      
+      // 키가 눌리면 흰색, 아니면 원래 색상
+      const color = isPressed ? '#fff' : buttonColors[i % buttonColors.length];
       
       // 버튼 배경
       ctx.fillStyle = color;
@@ -557,17 +575,17 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     
     // "JAM" 레이블 (하단 중앙)
     ctx.fillStyle = '#00a0a0';
-    ctx.fillRect(playAreaX, height - 30, playAreaWidth, 20);
+    ctx.fillRect(playAreaX, gameY + gameHeight - 30, playAreaWidth, 20);
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 18px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('JAM', playAreaX + playAreaWidth / 2, height - 20);
+    ctx.fillText('JAM', playAreaX + playAreaWidth / 2, gameY + gameHeight - 20);
     
     // 오른쪽 스크롤바 (은색 원통형)
-    const scrollbarX = width - 45;
+    const scrollbarX = gameX + gameWidth - 45;
     const scrollbarWidth = 30;
-    const scrollbarY = 0;
+    const scrollbarY = gameY;
     const scrollbarHeight = playAreaHeight;
     
     // 스크롤바 배경 (은색 그라데이션)
