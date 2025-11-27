@@ -52,16 +52,24 @@ const Navbar = () => {
             </Link>
           </li>
           <li>
-            <Link 
-              to="/wallet-recovery" 
+            <Link
+              to="/wallet-recovery"
               className={'navbar-link ' + (isActive('/wallet-recovery') ? 'active' : '')}
             >
               지갑 복구
             </Link>
           </li>
           <li>
-            <Link 
-              to="/admin" 
+            <Link
+              to="/news"
+              className={'navbar-link ' + (isActive('/news') ? 'active' : '')}
+            >
+              뉴스
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/admin"
               className={'navbar-link ' + (isActive('/admin') ? 'active' : '')}
             >
               관리자

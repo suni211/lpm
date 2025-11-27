@@ -14,6 +14,8 @@ import StockAccountAgreementPage from './pages/StockAccountAgreementPage';
 import WalletCreatedPage from './pages/WalletCreatedPage';
 import WalletRecoveryPage from './pages/WalletRecoveryPage';
 import WalletInfoPage from './pages/WalletInfoPage';
+import NewsPage from './pages/NewsPage';
+import NewsDetailPage from './pages/NewsDetailPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -104,6 +106,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <InvestmentHistoryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/news"
+              element={
+                <ProtectedRoute>
+                  <NewsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/news/:newsId"
+              element={
+                <ProtectedRoute>
+                  <NewsDetailPage />
                 </ProtectedRoute>
               }
             />
