@@ -33,15 +33,21 @@ router.post('/submit', isAuthenticated, async (req: Request, res: Response) => {
 
     const { question1_answer, question2_answer, question3_answer } = req.body;
 
-    // 이미 제출했는지 확인
+    // 이미 승인된 설문조사가 있는지 확인 (승인된 경우에만 재시도 불가)
     const existing = await query(
-      'SELECT * FROM lico_questionnaires WHERE minecraft_username = ?',
+      'SELECT * FROM lico_questionnaires WHERE minecraft_username = ? AND is_approved = TRUE',
       [minecraft_username]
     );
 
     if (existing.length > 0) {
-      return res.status(400).json({ error: '이미 설문조사를 제출하셨습니다' });
+      return res.status(400).json({ error: '이미 LICO 가입이 승인되었습니다' });
     }
+
+    // 탈락한 경우 기존 기록 삭제 (재시도 허용)
+    await query(
+      'DELETE FROM lico_questionnaires WHERE minecraft_username = ? AND is_approved = FALSE',
+      [minecraft_username]
+    );
 
     // 점수 계산
     let q1Score = 0;

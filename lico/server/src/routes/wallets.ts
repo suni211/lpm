@@ -157,48 +157,38 @@ router.get('/:wallet_address/balances', isAuthenticated, async (req: Request, re
   }
 });
 
-// Bank에서 LICO로 입금
+// Bank에서 LICO로 입금 (보안 강화)
 router.post('/deposit', async (req: Request, res: Response) => {
   try {
-    const { wallet_address, amount } = req.body;
+    const { wallet_address, amount, transaction_id, bank_signature } = req.body;
 
-    if (amount <= 0) {
-      return res.status(400).json({ error: '입금 금액은 0보다 커야 합니다' });
+    // 입력 검증
+    if (!wallet_address || !amount || !transaction_id) {
+      return res.status(400).json({ error: '필수 입력 항목이 누락되었습니다' });
     }
 
-    // 지갑 조회
-    const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
-      wallet_address,
-    ]);
-
-    if (wallets.length === 0) {
-      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+    // Amount 타입 및 범위 검증
+    const depositAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(depositAmount) || !isFinite(depositAmount) || depositAmount <= 0) {
+      return res.status(400).json({ error: '유효하지 않은 입금 금액입니다' });
     }
 
-    // Gold 잔액 증가
-    await query('UPDATE user_wallets SET gold_balance = gold_balance + ?, total_deposit = total_deposit + ? WHERE wallet_address = ?', [
-      amount,
-      amount,
-      wallet_address,
-    ]);
+    // 최대 입금 금액 제한 (1회 최대 1억 Gold)
+    if (depositAmount > 100000000) {
+      return res.status(400).json({ error: '1회 최대 입금 금액은 1억 Gold입니다' });
+    }
 
-    res.json({
-      success: true,
-      message: `${amount} Gold가 입금되었습니다`,
-    });
-  } catch (error) {
-    console.error('입금 오류:', error);
-    res.status(500).json({ error: '입금 실패' });
-  }
-});
+    // 트랜잭션 ID 중복 확인 (같은 입금을 여러 번 처리하지 않도록)
+    const existingDeposit = await query(
+      'SELECT * FROM deposit_logs WHERE transaction_id = ?',
+      [transaction_id]
+    );
 
-// LICO에서 Bank로 출금 (5% 수수료)
-router.post('/withdraw', async (req: Request, res: Response) => {
-  try {
-    const { wallet_address, amount } = req.body;
-
-    if (amount <= 0) {
-      return res.status(400).json({ error: '출금 금액은 0보다 커야 합니다' });
+    if (existingDeposit.length > 0) {
+      return res.status(400).json({
+        error: '이미 처리된 입금 거래입니다',
+        transaction_id: transaction_id
+      });
     }
 
     // 지갑 조회
@@ -212,31 +202,123 @@ router.post('/withdraw', async (req: Request, res: Response) => {
 
     const wallet = wallets[0];
 
-    // 5% 출금 수수료
-    const fee = Math.floor(amount * 0.05);
-    const totalDeduction = amount + fee;
+    // 지갑 상태 확인
+    if (wallet.status !== 'ACTIVE') {
+      return res.status(403).json({ error: '비활성화된 지갑입니다' });
+    }
 
-    if (wallet.gold_balance < totalDeduction) {
+    // 입금 로그 기록 (중복 방지용)
+    const depositLogId = uuidv4();
+    await query(
+      `INSERT INTO deposit_logs (id, wallet_id, wallet_address, amount, transaction_id, bank_signature, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'COMPLETED')`,
+      [depositLogId, wallet.id, wallet_address, depositAmount, transaction_id, bank_signature || null]
+    );
+
+    // Gold 잔액 증가
+    await query(
+      'UPDATE user_wallets SET gold_balance = gold_balance + ?, total_deposit = total_deposit + ? WHERE wallet_address = ?',
+      [depositAmount, depositAmount, wallet_address]
+    );
+
+    console.log(`✅ 입금 완료: ${wallet.minecraft_username} - ${depositAmount} Gold (Transaction: ${transaction_id})`);
+
+    res.json({
+      success: true,
+      message: `${depositAmount} Gold가 입금되었습니다`,
+      transaction_id: transaction_id,
+    });
+  } catch (error) {
+    console.error('입금 오류:', error);
+    res.status(500).json({ error: '입금 실패' });
+  }
+});
+
+// LICO에서 Bank로 출금 (5% 수수료) - 보안 강화
+router.post('/withdraw', async (req: Request, res: Response) => {
+  try {
+    const { wallet_address, amount } = req.body;
+
+    // 입력 검증
+    if (!wallet_address || !amount) {
+      return res.status(400).json({ error: '필수 입력 항목이 누락되었습니다' });
+    }
+
+    // Amount 타입 및 범위 검증
+    const withdrawAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(withdrawAmount) || !isFinite(withdrawAmount) || withdrawAmount <= 0) {
+      return res.status(400).json({ error: '유효하지 않은 출금 금액입니다' });
+    }
+
+    // 최소 출금 금액 (100 Gold)
+    if (withdrawAmount < 100) {
+      return res.status(400).json({ error: '최소 출금 금액은 100 Gold입니다' });
+    }
+
+    // 최대 출금 금액 제한 (1회 최대 1억 Gold)
+    if (withdrawAmount > 100000000) {
+      return res.status(400).json({ error: '1회 최대 출금 금액은 1억 Gold입니다' });
+    }
+
+    // 지갑 조회
+    const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
+      wallet_address,
+    ]);
+
+    if (wallets.length === 0) {
+      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+    }
+
+    const wallet = wallets[0];
+
+    // 지갑 상태 확인
+    if (wallet.status !== 'ACTIVE') {
+      return res.status(403).json({ error: '비활성화된 지갑입니다' });
+    }
+
+    // 5% 출금 수수료
+    const fee = Math.floor(withdrawAmount * 0.05);
+    const totalDeduction = withdrawAmount + fee;
+
+    // 잔액 확인
+    const currentBalance = typeof wallet.gold_balance === 'string'
+      ? parseFloat(wallet.gold_balance)
+      : (wallet.gold_balance || 0);
+
+    if (currentBalance < totalDeduction) {
       return res.status(400).json({
         error: '잔액이 부족합니다',
         required: totalDeduction,
-        available: wallet.gold_balance,
+        available: currentBalance,
         fee,
       });
     }
 
+    // 출금 로그 기록
+    const withdrawalLogId = uuidv4();
+    const transactionId = `WD-${Date.now()}-${uuidv4().substring(0, 8)}`;
+
+    await query(
+      `INSERT INTO withdrawal_logs (id, wallet_id, wallet_address, amount, fee, total_deduction, transaction_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'COMPLETED')`,
+      [withdrawalLogId, wallet.id, wallet_address, withdrawAmount, fee, totalDeduction, transactionId]
+    );
+
     // Gold 잔액 차감
     await query(
       'UPDATE user_wallets SET gold_balance = gold_balance - ?, total_withdrawal = total_withdrawal + ? WHERE wallet_address = ?',
-      [totalDeduction, amount, wallet_address]
+      [totalDeduction, withdrawAmount, wallet_address]
     );
+
+    console.log(`✅ 출금 완료: ${wallet.minecraft_username} - ${withdrawAmount} Gold (수수료: ${fee} Gold, Transaction: ${transactionId})`);
 
     res.json({
       success: true,
-      amount,
+      amount: withdrawAmount,
       fee,
       total: totalDeduction,
-      message: `${amount} Gold가 출금되었습니다 (수수료: ${fee} Gold)`,
+      transaction_id: transactionId,
+      message: `${withdrawAmount} Gold가 출금되었습니다 (수수료: ${fee} Gold)`,
     });
   } catch (error) {
     console.error('출금 오류:', error);
