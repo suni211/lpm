@@ -27,6 +27,8 @@ const TradingPage = () => {
   const [chartLoading, setChartLoading] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const chartInitializedRef = useRef(false);
+  const isInitialDataLoadRef = useRef(true); // 초기 데이터 로드 여부
+  const lastCandleTimeRef = useRef<number | null>(null); // 마지막 캔들 시간 추적
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -108,14 +110,16 @@ const TradingPage = () => {
     // 캔들 업데이트 수신 (실시간)
     socket.on('candle:update', (candleData: any) => {
       if (candleData.coin_id === selectedCoin.id && candleData.interval === chartInterval) {
+        const candleTime = new Date(candleData.open_time).getTime() / 1000;
+        
         setCandles((prevCandles) => {
-          // 마지막 캔들 업데이트 또는 새 캔들 추가
           const newCandles = [...prevCandles];
-          const lastCandle = newCandles[newCandles.length - 1];
-          const candleTime = new Date(candleData.open_time).getTime() / 1000;
+          const lastCandle = newCandles.length > 0 ? newCandles[newCandles.length - 1] : null;
+          const lastCandleTime = lastCandle ? Math.floor(new Date(lastCandle.open_time).getTime() / 1000) : null;
+          const currentCandleTime = Math.floor(candleTime);
           
-          if (lastCandle && Math.floor(new Date(lastCandle.open_time).getTime() / 1000) === Math.floor(candleTime)) {
-            // 같은 시간대 캔들 업데이트
+          if (lastCandleTime === currentCandleTime) {
+            // 같은 시간대 캔들 업데이트 (실시간)
             newCandles[newCandles.length - 1] = {
               ...lastCandle,
               open_price: candleData.open_price || lastCandle.open_price,
@@ -145,6 +149,9 @@ const TradingPage = () => {
             }
           }
           
+          // 마지막 캔들 시간 업데이트
+          lastCandleTimeRef.current = currentCandleTime;
+          
           return newCandles;
         });
       }
@@ -165,16 +172,25 @@ const TradingPage = () => {
     };
   }, [selectedCoin?.id, chartInterval]);
 
-  // 캔들 데이터 가져오기
+  // 캔들 데이터 가져오기 (초기 로드 및 간격 변경 시)
   useEffect(() => {
     const fetchCandles = async () => {
       if (!selectedCoin) return;
       setChartLoading(true);
+      isInitialDataLoadRef.current = true; // 초기 로드 플래그 설정
+      lastCandleTimeRef.current = null; // 마지막 캔들 시간 리셋
       try {
         const response = await api.get(`/coins/${selectedCoin.id}/candles/${chartInterval}`, {
           params: { limit: 100 }
         });
-        setCandles(response.data.candles || []);
+        const newCandles = response.data.candles || [];
+        setCandles(newCandles);
+        
+        // 마지막 캔들 시간 저장
+        if (newCandles.length > 0) {
+          const lastCandle = newCandles[newCandles.length - 1];
+          lastCandleTimeRef.current = new Date(lastCandle.open_time).getTime() / 1000;
+        }
       } catch (error) {
         console.error('Failed to fetch candles:', error);
       } finally {
@@ -185,23 +201,11 @@ const TradingPage = () => {
     if (selectedCoin) {
       fetchCandles();
     }
-  }, [selectedCoin, chartInterval]);
+  }, [selectedCoin?.id, chartInterval]); // 코인 또는 간격 변경 시에만 초기 로드
 
-  // 차트 초기화 (selectedCoin이 있을 때만)
+  // 차트 초기화 (한 번만)
   useEffect(() => {
-    if (!selectedCoin) return;
-
-    // 기존 차트가 있으면 제거
-    if (chartRef.current) {
-      try {
-        chartRef.current.remove();
-      } catch (e) {
-        console.error('Error removing chart:', e);
-      }
-      chartRef.current = null;
-      candlestickSeriesRef.current = null;
-      chartInitializedRef.current = false;
-    }
+    if (!selectedCoin || chartInitializedRef.current) return;
 
     const initializeChart = () => {
       if (!chartContainerRef.current || !selectedCoin) {
@@ -296,75 +300,101 @@ const TradingPage = () => {
         clearTimeout(timeoutId);
       }
       window.removeEventListener('resize', handleResize);
-      if (chartRef.current) {
-        try {
-          chartRef.current.remove();
-        } catch (e) {
-          console.error('Error removing chart on cleanup:', e);
-        }
-        chartRef.current = null;
-        candlestickSeriesRef.current = null;
-        chartInitializedRef.current = false;
-      }
+      // 차트는 한 번만 초기화하므로 cleanup에서 제거하지 않음
     };
-  }, [selectedCoin?.id]); // selectedCoin이 변경될 때 차트 재초기화
+  }, []); // 한 번만 실행
 
   // 차트 데이터 업데이트 (실시간)
   useEffect(() => {
     if (!candlestickSeriesRef.current) {
-      console.warn('Candlestick series not initialized yet');
       return;
     }
 
     if (candles.length === 0) {
-      console.warn('No candles data available');
       return;
     }
 
-    console.log('Updating chart with', candles.length, 'candles');
-
-    // 데이터 포맷팅 최적화 (한 번에 처리)
-    const formattedData: CandlestickData<UTCTimestamp>[] = [];
-    for (const candle of candles) {
-      const open = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
-      const high = typeof candle.high_price === 'string' ? parseFloat(candle.high_price) : (candle.high_price || 0);
-      const low = typeof candle.low_price === 'string' ? parseFloat(candle.low_price) : (candle.low_price || 0);
-      const close = typeof candle.close_price === 'string' ? parseFloat(candle.close_price) : (candle.close_price || 0);
-      
-      if (isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close) || 
-          open <= 0 || high <= 0 || low <= 0 || close <= 0) {
-        continue;
-      }
-
-      const timestamp = new Date(candle.open_time).getTime() / 1000;
-      if (isNaN(timestamp) || timestamp <= 0) {
-        continue;
-      }
-
-      formattedData.push({
-        time: timestamp as UTCTimestamp,
-        open,
-        high,
-        low,
-        close,
-      });
+    // 마지막 캔들만 포맷팅 (실시간 업데이트용)
+    const lastCandle = candles[candles.length - 1];
+    const open = typeof lastCandle.open_price === 'string' ? parseFloat(lastCandle.open_price) : (lastCandle.open_price || 0);
+    const high = typeof lastCandle.high_price === 'string' ? parseFloat(lastCandle.high_price) : (lastCandle.high_price || 0);
+    const low = typeof lastCandle.low_price === 'string' ? parseFloat(lastCandle.low_price) : (lastCandle.low_price || 0);
+    const close = typeof lastCandle.close_price === 'string' ? parseFloat(lastCandle.close_price) : (lastCandle.close_price || 0);
+    
+    if (isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close) || 
+        open <= 0 || high <= 0 || low <= 0 || close <= 0) {
+      return;
     }
 
-    if (formattedData.length > 0) {
-      try {
-        // 항상 전체 데이터 설정 (안정성 우선)
-        if (candlestickSeriesRef.current && chartRef.current) {
-          candlestickSeriesRef.current.setData(formattedData);
-          chartRef.current.timeScale().fitContent();
-          console.log('Chart data updated successfully');
+    const timestamp = new Date(lastCandle.open_time).getTime() / 1000;
+    if (isNaN(timestamp) || timestamp <= 0) {
+      return;
+    }
+
+    const lastFormattedCandle: CandlestickData<UTCTimestamp> = {
+      time: timestamp as UTCTimestamp,
+      open,
+      high,
+      low,
+      close,
+    };
+
+    try {
+      if (candlestickSeriesRef.current && chartRef.current) {
+        // 초기 데이터 로드 시에만 전체 데이터 설정 및 fitContent
+        if (isInitialDataLoadRef.current) {
+          // 전체 데이터 포맷팅
+          const formattedData: CandlestickData<UTCTimestamp>[] = [];
+          for (const candle of candles) {
+            const o = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
+            const h = typeof candle.high_price === 'string' ? parseFloat(candle.high_price) : (candle.high_price || 0);
+            const l = typeof candle.low_price === 'string' ? parseFloat(candle.low_price) : (candle.low_price || 0);
+            const c = typeof candle.close_price === 'string' ? parseFloat(candle.close_price) : (candle.close_price || 0);
+            
+            if (isNaN(o) || isNaN(h) || isNaN(l) || isNaN(c) || 
+                o <= 0 || h <= 0 || l <= 0 || c <= 0) {
+              continue;
+            }
+
+            const t = new Date(candle.open_time).getTime() / 1000;
+            if (isNaN(t) || t <= 0) {
+              continue;
+            }
+
+            formattedData.push({
+              time: t as UTCTimestamp,
+              open: o,
+              high: h,
+              low: l,
+              close: c,
+            });
+          }
+
+          if (formattedData.length > 0) {
+            candlestickSeriesRef.current.setData(formattedData);
+            chartRef.current.timeScale().fitContent();
+            isInitialDataLoadRef.current = false; // 초기 로드 완료
+          }
+        } else {
+          // 실시간 업데이트: 마지막 캔들만 업데이트 (줌 상태 유지)
+          const existingData = candlestickSeriesRef.current.data();
+          const lastExistingTime = existingData && existingData.length > 0 
+            ? existingData[existingData.length - 1].time 
+            : null;
+          
+          if (lastExistingTime === lastFormattedCandle.time) {
+            // 같은 시간대면 업데이트
+            candlestickSeriesRef.current.update(lastFormattedCandle);
+          } else {
+            // 새 캔들 추가
+            candlestickSeriesRef.current.update(lastFormattedCandle);
+          }
         }
-      } catch (error) {
-        console.error('Failed to set chart data:', error);
       }
-    } else {
-      console.warn('No valid formatted data to display');
+    } catch (error) {
+      console.error('Failed to update chart data:', error);
     }
-  }, [candles, chartInterval]);
+  }, [candles]);
 
   const handleOrderSuccess = () => {
     console.log('Order placed successfully');
