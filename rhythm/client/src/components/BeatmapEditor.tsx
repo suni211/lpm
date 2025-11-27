@@ -33,7 +33,10 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
   const [isEditingKeys, setIsEditingKeys] = useState(false);
   const [editingKeyIndex, setEditingKeyIndex] = useState<number | null>(null);
   const pressedKeysRef = useRef<Set<string>>(new Set());
+  const keyPressStartTimeRef = useRef<{ [key: string]: number }>({}); // 키를 누른 시간
+  const keyPressLaneRef = useRef<{ [key: string]: number }>({}); // 키의 레인 정보
   const lastNoteTimeRef = useRef<{ [lane: number]: number }>({});
+  const activeLongNotesRef = useRef<{ [key: string]: Note }>({}); // 진행 중인 롱노트
 
   useEffect(() => {
     audioRef.current = new Howl({
@@ -89,28 +92,105 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     }
 
     // 최소 간격 체크 (같은 레인에서 너무 빠르게 입력 방지)
-    const minInterval = 50; // 50ms
+    const minInterval = 30; // 30ms
     if (lastNoteTimeRef.current[lane] && timestamp - lastNoteTimeRef.current[lane] < minInterval) {
       return;
     }
 
-    lastNoteTimeRef.current[lane] = timestamp;
+    // 이전 노트 시간 저장 (슬라이드 판단용)
+    const previousNoteTime = lastNoteTimeRef.current[lane] || 0;
+    
+    // 키를 누른 시간 기록
+    keyPressStartTimeRef.current[e.code] = timestamp;
+    keyPressLaneRef.current[e.code] = lane;
+    keyPressStartTimeRef.current[`${e.code}_prev`] = previousNoteTime; // 이전 노트 시간 저장
 
-    const newNote: Note = {
-      id: `note-${Date.now()}-${lane}`,
-      type: selectedTool === 'long' ? NoteType.LONG : selectedTool === 'slide' ? NoteType.SLIDE : NoteType.NORMAL,
+    // 롱노트 시작 (나중에 키를 떼면 duration과 타입이 결정됨)
+    const longNoteId = `long-${Date.now()}-${lane}-${e.code}`;
+    const longNote: Note = {
+      id: longNoteId,
+      type: NoteType.NORMAL, // 일단 일반 노트로 시작 (키를 떼면 결정)
       lane,
       timestamp,
-      duration: selectedTool === 'long' ? 500 : undefined,
-      slideDirection: selectedTool === 'slide' ? 'right' : undefined
+      duration: undefined,
+      slideDirection: undefined
     };
 
-    setNotes(prev => [...prev, newNote]);
-  }, [isRecording, isPlaying, isEditingKeys, keyBindings, currentTime, gridSnap, bpm, selectedTool]);
+    activeLongNotesRef.current[e.code] = longNote;
+    setNotes(prev => [...prev, longNote]);
+    lastNoteTimeRef.current[lane] = timestamp;
+  }, [isRecording, isPlaying, isEditingKeys, keyBindings, currentTime, gridSnap, bpm]);
 
   const handleKeyUp = useCallback((e: KeyboardEvent) => {
+    if (!pressedKeysRef.current.has(e.code)) return;
+
     pressedKeysRef.current.delete(e.code);
-  }, []);
+
+    if (!isRecording || !isPlaying) return;
+
+    const keyIndex = keyBindings.indexOf(e.code);
+    if (keyIndex === -1) return;
+
+    const lane = keyPressLaneRef.current[e.code];
+    const pressStartTime = keyPressStartTimeRef.current[e.code];
+    
+    if (pressStartTime === undefined || lane === undefined) return;
+
+    const releaseTime = currentTime;
+    const holdDuration = releaseTime - pressStartTime;
+
+    // 롱노트 찾기
+    const longNote = activeLongNotesRef.current[e.code];
+    
+    if (longNote) {
+      // 이전 노트와의 간격 확인 (슬라이드 판단)
+      const previousNoteTime = keyPressStartTimeRef.current[`${e.code}_prev`] || 0;
+      const slideThreshold = 300; // 300ms 이내면 슬라이드
+      const timeSincePreviousNote = pressStartTime - previousNoteTime;
+      const isSlide = previousNoteTime > 0 && 
+                      timeSincePreviousNote > 30 && 
+                      timeSincePreviousNote < slideThreshold;
+
+      if (holdDuration < 200) {
+        // 200ms 미만이면 일반 노트 또는 슬라이드 노트
+        setNotes(prev => {
+          const updatedNotes = prev.map(note => {
+            if (note.id === longNote.id) {
+              if (isSlide) {
+                // 슬라이드 노트로 변경
+                return { ...note, type: NoteType.SLIDE, slideDirection: 'right', duration: undefined };
+              } else {
+                // 일반 노트로 변경
+                return { ...note, type: NoteType.NORMAL, duration: undefined };
+              }
+            }
+            // 이전 노트도 슬라이드로 변경 (연속 입력인 경우)
+            if (isSlide && 
+                note.lane === lane && 
+                Math.abs(note.timestamp - previousNoteTime) < 50 &&
+                note.id !== longNote.id &&
+                note.type === NoteType.NORMAL) {
+              return { ...note, type: NoteType.SLIDE, slideDirection: 'right' };
+            }
+            return note;
+          });
+          return updatedNotes;
+        });
+      } else {
+        // 200ms 이상이면 롱노트 (duration 업데이트)
+        setNotes(prev => prev.map(note => 
+          note.id === longNote.id 
+            ? { ...note, type: NoteType.LONG, duration: holdDuration }
+            : note
+        ));
+      }
+      delete activeLongNotesRef.current[e.code];
+    }
+
+    delete keyPressStartTimeRef.current[e.code];
+    delete keyPressStartTimeRef.current[`${e.code}_prev`];
+    delete keyPressLaneRef.current[e.code];
+  }, [isRecording, isPlaying, keyBindings, currentTime]);
 
   useEffect(() => {
     if (isRecording && isPlaying) {
@@ -374,35 +454,48 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
       </div>
 
       <div className="editor-tools">
-        <div className="tool-section">
-          <h3>노트 타입</h3>
-          <div className="tool-buttons">
-            <button 
-              onClick={() => setSelectedTool('note')}
-              className={`tool-btn ${selectedTool === 'note' ? 'active' : ''}`}
-            >
-              일반 노트
-            </button>
-            <button 
-              onClick={() => setSelectedTool('long')}
-              className={`tool-btn ${selectedTool === 'long' ? 'active' : ''}`}
-            >
-              롱 노트
-            </button>
-            <button 
-              onClick={() => setSelectedTool('slide')}
-              className={`tool-btn ${selectedTool === 'slide' ? 'active' : ''}`}
-            >
-              슬라이드 노트
-            </button>
-            <button 
-              onClick={() => setSelectedTool('effect')}
-              className={`tool-btn ${selectedTool === 'effect' ? 'active' : ''}`}
-            >
-              이펙트
-            </button>
+        {!isRecording && (
+          <div className="tool-section">
+            <h3>노트 타입 (수동 편집)</h3>
+            <div className="tool-buttons">
+              <button 
+                onClick={() => setSelectedTool('note')}
+                className={`tool-btn ${selectedTool === 'note' ? 'active' : ''}`}
+              >
+                일반 노트
+              </button>
+              <button 
+                onClick={() => setSelectedTool('long')}
+                className={`tool-btn ${selectedTool === 'long' ? 'active' : ''}`}
+              >
+                롱 노트
+              </button>
+              <button 
+                onClick={() => setSelectedTool('slide')}
+                className={`tool-btn ${selectedTool === 'slide' ? 'active' : ''}`}
+              >
+                슬라이드 노트
+              </button>
+              <button 
+                onClick={() => setSelectedTool('effect')}
+                className={`tool-btn ${selectedTool === 'effect' ? 'active' : ''}`}
+              >
+                이펙트
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {isRecording && (
+          <div className="tool-section recording-info">
+            <h3>🎵 자동 녹음 모드</h3>
+            <div className="recording-instructions">
+              <p>• 짧게 누르기 (0~200ms): 일반 노트</p>
+              <p>• 길게 누르기 (200ms 이상): 롱 노트</p>
+              <p>• 연달아 누르기 (300ms 이내): 슬라이드 노트</p>
+            </div>
+          </div>
+        )}
 
         {selectedTool === 'effect' && (
           <div className="tool-section">

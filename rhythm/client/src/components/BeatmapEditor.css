@@ -322,6 +322,29 @@
   margin: 5px 0;
 }
 
+.recording-info {
+  background: rgba(255, 0, 0, 0.1);
+  border: 2px solid rgba(255, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 15px;
+}
+
+.recording-info h3 {
+  color: #ff6b6b;
+  margin-bottom: 15px;
+}
+
+.recording-instructions {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  line-height: 2;
+}
+
+.recording-instructions p {
+  margin: 8px 0;
+  padding-left: 10px;
+}
+
 @media (max-width: 1024px) {
   .editor-header {
     flex-direction: column;
