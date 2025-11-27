@@ -59,6 +59,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
   const [recentJudgements, setRecentJudgements] = useState<Array<{
     type: JudgementType;
     timestamp: number;
+    accuracy: number; // 정확도 (0-100)
   }>>([]);
 
   const processedNotes = useRef<Set<string>>(new Set());
@@ -234,7 +235,23 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
           processedNotes.current.add(note.id);
         }
 
-        showJudgement(judgement);
+        // 정확도 계산 후 판정 표시
+        const tempTotal = newJudgements.yas + newJudgements.oh + newJudgements.ah + newJudgements.fuck;
+        const tempAccuracy = tempTotal > 0
+          ? Math.round(((newJudgements.yas * 100 + newJudgements.oh * 70 + newJudgements.ah * 40) / tempTotal) * 100) / 100
+          : 0;
+        
+        // 정확도에 따른 최종 판정 결정
+        const finalJudgement = tempAccuracy >= 100 ? JudgementType.YAS
+          : tempAccuracy >= 70 ? JudgementType.OH
+          : tempAccuracy >= 30 ? JudgementType.AH
+          : JudgementType.FUCK;
+        
+        const now = Date.now();
+        setRecentJudgements(prev => [...prev, { type: finalJudgement, timestamp: now, accuracy: tempAccuracy }]);
+        setTimeout(() => {
+          setRecentJudgements(prev => prev.filter(j => j.timestamp !== now));
+        }, 1500);
 
         return {
           ...s,
@@ -265,7 +282,24 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
         setGameState(s => {
           const newJudgements = { ...s.judgements };
           newJudgements.fuck++;
-          showJudgement(JudgementType.FUCK);
+          
+          // 정확도 계산 후 판정 표시
+          const tempTotal = newJudgements.yas + newJudgements.oh + newJudgements.ah + newJudgements.fuck;
+          const tempAccuracy = tempTotal > 0
+            ? Math.round(((newJudgements.yas * 100 + newJudgements.oh * 70 + newJudgements.ah * 40) / tempTotal) * 100) / 100
+            : 0;
+          
+          const finalJudgement = tempAccuracy >= 100 ? JudgementType.YAS
+            : tempAccuracy >= 70 ? JudgementType.OH
+            : tempAccuracy >= 30 ? JudgementType.AH
+            : JudgementType.FUCK;
+          
+          const now = Date.now();
+          setRecentJudgements(prev => [...prev, { type: finalJudgement, timestamp: now, accuracy: tempAccuracy }]);
+          setTimeout(() => {
+            setRecentJudgements(prev => prev.filter(j => j.timestamp !== now));
+          }, 1500);
+          
           return {
             ...s,
             combo: 0,
@@ -296,20 +330,38 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
             longNotesHeld.current.delete(note.id);
             const newJudgements = { ...s.judgements };
             newJudgements.fuck++;
-            showJudgement(JudgementType.FUCK);
+            
+            // 정확도 계산 후 판정 표시
+            const tempTotal = newJudgements.yas + newJudgements.oh + newJudgements.ah + newJudgements.fuck;
+            const tempAccuracy = tempTotal > 0
+              ? Math.round(((newJudgements.yas * 100 + newJudgements.oh * 70 + newJudgements.ah * 40) / tempTotal) * 100) / 100
+              : 0;
+            
+            const finalJudgement = tempAccuracy >= 100 ? JudgementType.YAS
+              : tempAccuracy >= 70 ? JudgementType.OH
+              : tempAccuracy >= 30 ? JudgementType.AH
+              : JudgementType.FUCK;
+            
+            const now = Date.now();
+            setRecentJudgements(prev => [...prev, { type: finalJudgement, timestamp: now, accuracy: tempAccuracy }]);
+            setTimeout(() => {
+              setRecentJudgements(prev => prev.filter(j => j.timestamp !== now));
+            }, 1500);
+            
             return { ...s, combo: 0, judgements: newJudgements };
           }
         });
       });
   };
 
-  const showJudgement = (judgement: JudgementType) => {
-    const now = Date.now();
-    setRecentJudgements(prev => [...prev, { type: judgement, timestamp: now }]);
-    setTimeout(() => {
-      setRecentJudgements(prev => prev.filter(j => j.timestamp !== now));
-    }, 500);
+  // 정확도에 따른 판정 텍스트 결정
+  const getJudgementText = (accuracy: number): string => {
+    if (accuracy >= 100) return 'YAS';
+    if (accuracy >= 70) return 'OH!';
+    if (accuracy >= 30) return 'AH...';
+    return 'FUCK';
   };
+
 
   const endGame = () => {
     setGameState(s => ({ ...s, isPlaying: false }));
@@ -585,12 +637,30 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     ctx.fillText(`노트 속도: ${settings.noteSpeed}배`, 20, 100);
     ctx.fillText(`재생 속도: x${settings.playbackSpeed.toFixed(1)}`, 20, 130);
 
-    // 판정 표시 (중앙)
+    // 판정 표시 (중앙, 반투명하게)
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     recentJudgements.forEach((j, i) => {
-      ctx.fillStyle = getJudgementColor(j.type);
-      ctx.font = 'bold 48px Arial';
-      ctx.fillText(j.type, width / 2, height / 2 + i * 60);
+      const elapsed = Date.now() - j.timestamp;
+      const fadeDuration = 1500; // 1.5초
+      const opacity = Math.max(0, 1 - (elapsed / fadeDuration)); // 페이드 아웃
+      
+      const judgementText = getJudgementText(j.accuracy);
+      const color = getJudgementColor(j.type);
+      
+      // 반투명 효과를 위해 rgba 사용
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+      
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity * 0.8})`; // 최대 80% 투명도
+      ctx.font = 'bold 72px Arial';
+      ctx.strokeStyle = `rgba(0, 0, 0, ${opacity * 0.5})`;
+      ctx.lineWidth = 4;
+      
+      // 텍스트 그림자 효과
+      ctx.strokeText(judgementText, width / 2, height / 2 - 50 + i * 80);
+      ctx.fillText(judgementText, width / 2, height / 2 - 50 + i * 80);
     });
   };
 
