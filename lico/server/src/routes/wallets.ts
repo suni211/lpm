@@ -5,6 +5,7 @@ import walletAddressService from '../services/walletAddressService';
 import recoveryWordsService from '../services/recoveryWords';
 import { isAuthenticated } from '../middleware/auth';
 import { strictRateLimiter } from '../middleware/rateLimiter';
+import axios from 'axios';
 
 const router = express.Router();
 
@@ -158,12 +159,13 @@ router.get('/:wallet_address/balances', isAuthenticated, async (req: Request, re
   }
 });
 
-// Bank에서 LICO로 입금 (최강 보안 - 절대 복사 불가)
+// Bank에서 LICO로 입금 (BANK 잔액 확인 및 차감 필수!)
 router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) => {
-  const connection = await query('SELECT 1'); // 연결 테스트
+  const BANK_API_URL = process.env.BANK_URL || 'http://localhost:5001';
+  const LICO_API_SECRET = process.env.LICO_API_SECRET || 'lico-internal-secret-key-change-in-production';
 
   try {
-    const { wallet_address, amount, transaction_id, bank_signature } = req.body;
+    const { wallet_address, amount, transaction_id } = req.body;
 
     // ========== 1단계: 입력 검증 ==========
     if (!wallet_address || !amount || !transaction_id) {
@@ -191,7 +193,63 @@ router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) =
       return res.status(400).json({ error: '1회 최대 입금 금액은 1억 Gold입니다' });
     }
 
-    // ========== 2단계: 트랜잭션 시작 (FOR UPDATE로 락 걸기) ==========
+    // ========== 2단계: 지갑 조회 ==========
+    const wallets = await query(
+      'SELECT * FROM user_wallets WHERE wallet_address = ?',
+      [wallet_address]
+    );
+
+    if (wallets.length === 0) {
+      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+    }
+
+    const wallet = wallets[0];
+
+    // 지갑 상태 확인
+    if (wallet.status !== 'ACTIVE') {
+      return res.status(403).json({ error: '비활성화된 지갑입니다' });
+    }
+
+    // ========== 3단계: BANK API 호출 - 잔액 확인 및 차감 (최우선!) ==========
+    let bankDeductResult;
+    try {
+      bankDeductResult = await axios.post(
+        `${BANK_API_URL}/api/lico-internal/deduct-balance`,
+        {
+          minecraft_username: wallet.minecraft_username,
+          amount: depositAmount,
+          transaction_id: transaction_id
+        },
+        {
+          headers: {
+            'X-Lico-Api-Key': LICO_API_SECRET,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000 // 10초 타임아웃
+        }
+      );
+
+      if (!bankDeductResult.data.success) {
+        return res.status(400).json({
+          error: 'BANK 출금 실패',
+          details: bankDeductResult.data.error || '알 수 없는 오류'
+        });
+      }
+
+      console.log(`✅ BANK 잔액 차감 성공: ${wallet.minecraft_username} - ${depositAmount} Gold`);
+
+    } catch (bankError: any) {
+      console.error('❌ BANK API 호출 실패:', bankError.response?.data || bankError.message);
+
+      // BANK API 오류 처리
+      const errorMsg = bankError.response?.data?.error || 'BANK 서버 연결 실패';
+      return res.status(400).json({
+        error: errorMsg,
+        details: bankError.response?.data
+      });
+    }
+
+    // ========== 4단계: LICO DB 트랜잭션 시작 ==========
     await query('START TRANSACTION');
 
     try {
@@ -203,40 +261,25 @@ router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) =
 
       if (existingDeposit.length > 0) {
         await query('ROLLBACK');
+
+        // BANK에서 이미 차감됐는데 LICO에서 중복이면, BANK로 환불 요청 필요
+        console.error('⚠️ 중복 입금 감지! BANK 환불 필요:', transaction_id);
+
         return res.status(400).json({
           error: '이미 처리된 입금 거래입니다',
           transaction_id: transaction_id
         });
       }
 
-      // 지갑 조회 및 락 (FOR UPDATE)
-      const wallets = await query(
-        'SELECT * FROM user_wallets WHERE wallet_address = ? FOR UPDATE',
-        [wallet_address]
-      );
-
-      if (wallets.length === 0) {
-        await query('ROLLBACK');
-        return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
-      }
-
-      const wallet = wallets[0];
-
-      // 지갑 상태 확인
-      if (wallet.status !== 'ACTIVE') {
-        await query('ROLLBACK');
-        return res.status(403).json({ error: '비활성화된 지갑입니다' });
-      }
-
-      // ========== 3단계: 입금 로그 먼저 기록 (중복 방지) ==========
+      // 입금 로그 먼저 기록 (중복 방지)
       const depositLogId = uuidv4();
       await query(
-        `INSERT INTO deposit_logs (id, wallet_id, wallet_address, amount, transaction_id, bank_signature, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'COMPLETED', NOW())`,
-        [depositLogId, wallet.id, wallet_address, depositAmount, transaction_id, bank_signature || null]
+        `INSERT INTO deposit_logs (id, wallet_id, wallet_address, amount, transaction_id, status, created_at)
+         VALUES (?, ?, ?, ?, ?, 'COMPLETED', NOW())`,
+        [depositLogId, wallet.id, wallet_address, depositAmount, transaction_id]
       );
 
-      // ========== 4단계: 잔액 업데이트 (정확한 금액만) ==========
+      // 잔액 업데이트 (정확한 금액만)
       const updateResult = await query(
         'UPDATE user_wallets SET gold_balance = gold_balance + ?, total_deposit = total_deposit + ? WHERE id = ? AND status = "ACTIVE"',
         [depositAmount, depositAmount, wallet.id]
@@ -245,10 +288,11 @@ router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) =
       // 업데이트 실패 시 롤백
       if (!updateResult || updateResult.affectedRows === 0) {
         await query('ROLLBACK');
+        console.error('⚠️ LICO 잔액 업데이트 실패! BANK 환불 필요:', transaction_id);
         return res.status(500).json({ error: '잔액 업데이트 실패' });
       }
 
-      // ========== 5단계: 트랜잭션 커밋 ==========
+      // 트랜잭션 커밋
       await query('COMMIT');
 
       console.log(`✅ 입금 완료: ${wallet.minecraft_username} - ${depositAmount} Gold (Transaction: ${transaction_id})`);
@@ -263,6 +307,7 @@ router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) =
     } catch (txError) {
       // 트랜잭션 오류 시 롤백
       await query('ROLLBACK');
+      console.error('⚠️ LICO DB 오류! BANK 환불 필요:', transaction_id);
       throw txError;
     }
 
@@ -272,8 +317,11 @@ router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) =
   }
 });
 
-// LICO에서 Bank로 출금 (5% 수수료) - 최강 보안
+// LICO에서 Bank로 출금 (5% 수수료) - BANK 입금 연동
 router.post('/withdraw', strictRateLimiter, async (req: Request, res: Response) => {
+  const BANK_API_URL = process.env.BANK_URL || 'http://localhost:5001';
+  const LICO_API_SECRET = process.env.LICO_API_SECRET || 'lico-internal-secret-key-change-in-production';
+
   try {
     const { wallet_address, amount } = req.body;
 
@@ -370,7 +418,38 @@ router.post('/withdraw', strictRateLimiter, async (req: Request, res: Response) 
       // ========== 5단계: 트랜잭션 커밋 ==========
       await query('COMMIT');
 
-      console.log(`✅ 출금 완료: ${wallet.minecraft_username} - ${withdrawAmount} Gold (수수료: ${fee} Gold, Transaction: ${transactionId})`);
+      console.log(`✅ LICO 출금 완료: ${wallet.minecraft_username} - ${withdrawAmount} Gold (수수료: ${fee} Gold)`);
+
+      // ========== 6단계: BANK API 호출 - 입금 처리 ==========
+      try {
+        const bankAddResult = await axios.post(
+          `${BANK_API_URL}/api/lico-internal/add-balance`,
+          {
+            minecraft_username: wallet.minecraft_username,
+            amount: withdrawAmount, // 수수료 제외한 실제 출금액
+            transaction_id: transactionId,
+            fee: fee
+          },
+          {
+            headers: {
+              'X-Lico-Api-Key': LICO_API_SECRET,
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000 // 10초 타임아웃
+          }
+        );
+
+        if (bankAddResult.data.success) {
+          console.log(`✅ BANK 입금 완료: ${wallet.minecraft_username} - ${withdrawAmount} Gold`);
+        }
+
+      } catch (bankError: any) {
+        // BANK API 실패해도 LICO 출금은 이미 완료됨
+        console.error('⚠️ BANK API 호출 실패 (수동 처리 필요):', bankError.response?.data || bankError.message);
+        console.error(`수동 처리 필요: ${wallet.minecraft_username}에게 ${withdrawAmount} Gold 입금 필요 (Transaction: ${transactionId})`);
+
+        // 사용자에게는 성공으로 응답 (LICO 출금은 완료됨)
+      }
 
       res.json({
         success: true,

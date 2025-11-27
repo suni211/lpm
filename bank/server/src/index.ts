@@ -139,6 +139,7 @@ import scheduledTransfersRoutes from './routes/scheduledTransfers';
 import budgetsRoutes from './routes/budgets';
 import savingsGoalsRoutes from './routes/savingsGoals';
 import licoRoutes from './routes/lico';
+import licoInternalRoutes from './routes/licoInternal';
 import adminRoutes from './routes/admin';
 import statsRoutes from './routes/stats';
 
@@ -148,6 +149,7 @@ app.use('/api/scheduled-transfers', scheduledTransfersRoutes);
 app.use('/api/budgets', budgetsRoutes);
 app.use('/api/savings-goals', savingsGoalsRoutes);
 app.use('/api/lico', licoRoutes);
+app.use('/api/lico-internal', licoInternalRoutes); // LICO 서버 전용 내부 API
 app.use('/api/admin', adminRoutes);
 app.use('/api/stats', statsRoutes);
 
