@@ -192,26 +192,35 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
     // 남은 수량 계산 (부분 체결 고려)
     const remainingQty = typeof order.remaining_quantity === 'string' 
       ? parseFloat(order.remaining_quantity) 
-      : (order.remaining_quantity || 0);
+      : (typeof order.remaining_quantity === 'number' ? order.remaining_quantity : 0);
 
-    if (remainingQty <= 0) {
+    if (isNaN(remainingQty) || remainingQty <= 0) {
       return res.status(400).json({ error: '취소할 수량이 없습니다' });
     }
 
     // 주문 취소 처리
     if (order.order_type === 'BUY') {
       // 매수 취소: Gold 환불 (남은 수량 기준)
-      const refundAmount = order.price * remainingQty;
+      const orderPrice = typeof order.price === 'string' ? parseFloat(order.price) : (typeof order.price === 'number' ? order.price : 0);
+      if (isNaN(orderPrice) || orderPrice <= 0) {
+        return res.status(400).json({ error: '유효하지 않은 주문 가격입니다' });
+      }
+      
+      const refundAmount = parseFloat((orderPrice * remainingQty).toFixed(2));
       const refundFee = Math.floor(refundAmount * 0.05); // 수수료도 환불
+      const totalRefund = refundAmount + refundFee;
+      
+      // 숫자로 명시적 변환
       await query('UPDATE user_wallets SET gold_balance = gold_balance + ? WHERE id = ?', [
-        refundAmount + refundFee,
+        Number(totalRefund),
         order.wallet_id,
       ]);
     } else if (order.order_type === 'SELL') {
       // 매도 취소: 코인 잠금 해제 (남은 수량 기준)
+      const remainingQtyNum = Number(remainingQty);
       await query(
         'UPDATE user_coin_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND coin_id = ?',
-        [remainingQty, remainingQty, order.wallet_id, order.coin_id]
+        [remainingQtyNum, remainingQtyNum, order.wallet_id, order.coin_id]
       );
     }
 

@@ -37,12 +37,28 @@
   border-radius: 8px;
   padding: 24px;
   min-height: 400px;
+  max-height: calc(100vh - 200px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .holdings-table,
 .orders-table,
 .trades-table {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 300px);
+  flex: 1;
+  min-height: 0;
+}
+
+.holdings-table table,
+.orders-table table,
+.trades-table table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
 }
 
 table {
