@@ -337,7 +337,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     // 중앙에 길고 얇은 레인 (양 옆에 여백)
     const margin = width * 0.2; // 양 옆 20% 여백
     const playAreaWidth = width - margin * 2;
-    const centerX = width / 2;
     
     // 판정선 (중앙, 얇고 길게)
     const judgementLineY = height * 0.9;
@@ -423,7 +422,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     areaWidth: number, 
     areaHeight: number, 
     currentTime: number,
-    score: number,
+    _score: number,
     isMyArea: boolean
   ) => {
     // 배경
