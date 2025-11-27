@@ -151,17 +151,23 @@ export const deleteSong = async (req: Request, res: Response) => {
     const userId = (req.session as any).userId;
     const { id } = req.params;
 
+    // 관리자 권한 확인
+    const users = await query(
+      'SELECT is_admin FROM users WHERE id = ?',
+      [userId]
+    ) as any[];
+
+    if (users.length === 0 || !users[0].is_admin) {
+      return res.status(403).json({ error: '관리자 권한이 필요합니다.' });
+    }
+
     const songs = await query(
-      'SELECT creator_id, audio_file, cover_image FROM songs WHERE id = ?',
+      'SELECT audio_file, cover_image FROM songs WHERE id = ?',
       [id]
     ) as any[];
 
     if (songs.length === 0) {
       return res.status(404).json({ error: '곡을 찾을 수 없습니다.' });
-    }
-
-    if (songs[0].creator_id !== userId) {
-      return res.status(403).json({ error: '삭제 권한이 없습니다.' });
     }
 
     // 파일 삭제

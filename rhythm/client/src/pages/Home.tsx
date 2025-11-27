@@ -115,12 +115,14 @@ const Home: React.FC = () => {
               >
                 리더보드
               </button>
-              <button 
-                onClick={() => navigate('/admin')} 
-                className="header-btn admin-btn"
-              >
-                관리자
-              </button>
+              {user.is_admin && (
+                <button 
+                  onClick={() => navigate('/admin')} 
+                  className="header-btn admin-btn"
+                >
+                  관리자
+                </button>
+              )}
               <button 
                 onClick={handleLogout} 
                 className="header-btn logout-btn"

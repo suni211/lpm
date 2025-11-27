@@ -49,6 +49,7 @@ export interface User {
   total_plays: number;
   total_score: number;
   profile_image?: string;
+  is_admin?: boolean;
   created_at: string;
 }
 

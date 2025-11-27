@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { songs, beatmaps } from '../services/api';
+import { songs, beatmaps, auth } from '../services/api';
 import BeatmapEditor from '../components/BeatmapEditor';
-import { Note, Effect, Difficulty } from '../types';
+import { Note, Effect, Difficulty, Song, User } from '../types';
 import './Admin.css';
 
 const Admin: React.FC = () => {
-  const [step, setStep] = useState<'upload' | 'edit'>('upload');
+  const [user, setUser] = useState<User | null>(null);
+  const [step, setStep] = useState<'upload' | 'edit' | 'manage'>('upload');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedCover, setUploadedCover] = useState<File | null>(null);
   const [songId, setSongId] = useState<number | null>(null);
@@ -18,7 +19,37 @@ const Admin: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [songList, setSongList] = useState<Song[]>([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    checkAdminAccess();
+    loadSongs();
+  }, []);
+
+  const checkAdminAccess = async () => {
+    try {
+      const res = await auth.getProfile();
+      const userData = res.data.user;
+      setUser(userData);
+      
+      if (!userData.is_admin) {
+        alert('관리자 권한이 필요합니다.');
+        navigate('/home');
+      }
+    } catch (error) {
+      navigate('/login');
+    }
+  };
+
+  const loadSongs = async () => {
+    try {
+      const res = await songs.getAll();
+      setSongList(res.data.songs);
+    } catch (error) {
+      console.error('곡 로드 실패', error);
+    }
+  };
 
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,9 +101,28 @@ const Admin: React.FC = () => {
       setUploadedFile(null);
       setUploadedCover(null);
       setSongData({ title: '', artist: '', bpm: 120, duration: 0 });
+      loadSongs();
     } catch (error: any) {
       setError(error.response?.data?.error || '비트맵 저장에 실패했습니다.');
       console.error('비트맵 저장 실패', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteSong = async (songId: number, songTitle: string) => {
+    if (!window.confirm(`"${songTitle}" 곡을 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await songs.delete(songId);
+      alert('곡이 삭제되었습니다.');
+      loadSongs();
+    } catch (error: any) {
+      setError(error.response?.data?.error || '곡 삭제에 실패했습니다.');
+      console.error('곡 삭제 실패', error);
     } finally {
       setLoading(false);
     }
@@ -89,6 +139,20 @@ const Admin: React.FC = () => {
     return names[difficulty] || difficulty;
   };
 
+  if (!user || !user.is_admin) {
+    return (
+      <div className="admin-container">
+        <div className="access-denied">
+          <h2>접근 권한이 없습니다</h2>
+          <p>관리자 권한이 필요합니다.</p>
+          <button onClick={() => navigate('/home')} className="back-button">
+            홈으로 돌아가기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="admin-container">
       <div className="admin-header fade-in">
@@ -98,20 +162,35 @@ const Admin: React.FC = () => {
         >
           ← 홈으로
         </button>
-        <h1 className="admin-title">관리자 - 비트맵 제작</h1>
-        <p className="admin-subtitle">새로운 곡과 비트맵을 만들어보세요</p>
+        <h1 className="admin-title">관리자 패널</h1>
+        <p className="admin-subtitle">곡과 비트맵을 관리하세요</p>
       </div>
+
+      <div className="admin-tabs">
+        <button 
+          onClick={() => setStep('upload')}
+          className={`tab-button ${step === 'upload' ? 'active' : ''}`}
+        >
+          곡 업로드
+        </button>
+        <button 
+          onClick={() => setStep('manage')}
+          className={`tab-button ${step === 'manage' ? 'active' : ''}`}
+        >
+          곡 관리
+        </button>
+      </div>
+
+      {error && (
+        <div className="error-message slide-in">
+          {error}
+        </div>
+      )}
 
       {step === 'upload' && (
         <div className="upload-container fade-in">
           <div className="upload-card">
             <h2 className="section-title">곡 업로드</h2>
-            
-            {error && (
-              <div className="error-message slide-in">
-                {error}
-              </div>
-            )}
 
             <form onSubmit={handleFileUpload} className="upload-form">
               <div className="form-group">
@@ -241,6 +320,47 @@ const Admin: React.FC = () => {
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {step === 'manage' && (
+        <div className="manage-container fade-in">
+          <div className="manage-card">
+            <h2 className="section-title">곡 관리</h2>
+            {songList.length === 0 ? (
+              <div className="empty-state">
+                등록된 곡이 없습니다
+              </div>
+            ) : (
+              <div className="song-list-admin">
+                {songList.map(song => (
+                  <div key={song.id} className="song-item-admin">
+                    {song.cover_image && (
+                      <img 
+                        src={`/uploads/${song.cover_image}`} 
+                        alt={song.title}
+                        className="song-cover-admin"
+                      />
+                    )}
+                    <div className="song-info-admin">
+                      <h3 className="song-title-admin">{song.title}</h3>
+                      <p className="song-artist-admin">{song.artist}</p>
+                      <p className="song-meta">BPM: {song.bpm} | 길이: {Math.floor(song.duration / 60)}:{(song.duration % 60).toString().padStart(2, '0')}</p>
+                    </div>
+                    <div className="song-actions">
+                      <button
+                        onClick={() => handleDeleteSong(song.id, song.title)}
+                        className="delete-button"
+                        disabled={loading}
+                      >
+                        🗑️ 삭제
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

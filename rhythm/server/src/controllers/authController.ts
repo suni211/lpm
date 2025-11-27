@@ -120,7 +120,7 @@ export const getProfile = async (req: Request, res: Response) => {
     }
 
     const users = await query(
-      `SELECT id, username, email, display_name, tier, rating, total_plays, total_score, profile_image, created_at
+      `SELECT id, username, email, display_name, tier, rating, total_plays, total_score, profile_image, is_admin, created_at
        FROM users WHERE id = ?`,
       [userId]
     ) as any[];
