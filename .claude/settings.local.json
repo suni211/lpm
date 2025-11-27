@@ -13,7 +13,10 @@
       "Bash(git rm:*)",
       "Bash(test:*)",
       "Bash(git reset:*)",
-      "Bash(ren:*)"
+      "Bash(ren:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm init:*)",
+      "Bash(chmod +x rhythm/deploy.sh)"
     ],
     "deny": [],
     "ask": []

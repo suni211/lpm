@@ -1,0 +1,334 @@
+========================================
+Rhythm Game 배포 가이드 (GCP)
+도메인: rhythm.berrple.com
+========================================
+
+이미 GCP Compute Engine VM에 SSH로 접속되어 있다는 가정하에 진행합니다.
+
+========================================
+1단계: 시스템 업데이트 및 기본 패키지 설치
+========================================
+
+# 시스템 업데이트
+sudo apt-get update
+sudo apt-get upgrade -y
+
+# 필수 패키지 설치
+sudo apt-get install -y curl wget git build-essential
+
+========================================
+2단계: Node.js 20.x 설치
+========================================
+
+# NodeSource 저장소 추가
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+
+# Node.js 설치
+sudo apt-get install -y nodejs
+
+# 버전 확인
+node --version
+npm --version
+
+========================================
+3단계: MariaDB 설치 (로컬 DB 사용 시)
+========================================
+
+# MariaDB 설치
+sudo apt-get install -y mariadb-server mariadb-client
+
+# MariaDB 시작
+sudo systemctl start mariadb
+sudo systemctl enable mariadb
+
+# MariaDB 보안 설정
+sudo mysql_secure_installation
+# - Root 비밀번호 설정
+# - Anonymous users 제거: Y
+# - Root 원격 접속 불가: Y
+# - Test 데이터베이스 제거: Y
+# - Privilege tables 재로드: Y
+
+========================================
+4단계: 데이터베이스 생성
+========================================
+
+# MariaDB 접속
+sudo mysql -u root -p
+
+# 데이터베이스 및 사용자 생성 (MariaDB 쉘에서 실행)
+CREATE DATABASE rhythm_game CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE USER 'rhythm_user'@'localhost' IDENTIFIED BY 'ss092888?';
+
+GRANT ALL PRIVILEGES ON rhythm_game.* TO 'rhythm_user'@'localhost';
+
+FLUSH PRIVILEGES;
+EXIT;
+
+========================================
+5단계: 프로젝트 클론
+========================================
+
+# 홈 디렉토리로 이동
+cd ~
+
+# GitHub에서 프로젝트 클론
+git clone https://github.com/suni211/lpm.git
+
+# 프로젝트 디렉토리로 이동
+cd lpm
+
+========================================
+6단계: Rhythm Server 설정
+========================================
+
+cd ~/lpm/rhythm/server
+
+# 의존성 설치
+npm install
+
+# .env 파일 생성
+cat > .env <<'EOF'
+PORT=5003
+NODE_ENV=production
+
+# Database
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=rhythm_user
+DB_PASSWORD=ss092888?
+DB_NAME=rhythm_game
+
+# Session - 강력한 시크릿으로 교체 필요
+SESSION_SECRET=rhythm_game_secret_key_2024
+
+# CORS
+CORS_ORIGIN=https://rhythm.berrple.com
+EOF
+
+# 데이터베이스 스키마 초기화
+mysql -u rhythm_user -pss092888? rhythm_game < schema.sql
+
+# TypeScript 빌드
+npm run build
+
+========================================
+7단계: Rhythm Client 설정
+========================================
+
+cd ~/lpm/rhythm/client
+
+# 의존성 설치
+npm install
+
+# .env 파일 생성
+cat > .env <<'EOF'
+VITE_API_BASE_URL=https://rhythm.berrple.com
+EOF
+
+# 프로덕션 빌드
+npm run build
+
+========================================
+8단계: PM2 설치 및 애플리케이션 실행
+========================================
+
+# PM2 전역 설치
+sudo npm install -g pm2
+
+# 로그 디렉토리 생성
+mkdir -p ~/lpm/rhythm/server/logs
+
+# PM2로 서버 시작
+cd ~/lpm/rhythm
+pm2 start ecosystem.config.js
+
+# 앱 상태 확인
+pm2 status
+
+# 로그 확인
+pm2 logs rhythm-server
+
+# 부팅 시 자동 시작 설정
+pm2 startup
+# 위 명령어가 출력한 명령어를 복사해서 실행 (sudo env PATH=... 로 시작하는 명령어)
+pm2 save
+
+========================================
+9단계: Nginx 설치 및 설정
+========================================
+
+# Nginx 설치
+sudo apt-get install -y nginx
+
+# Rhythm Server & Client용 Nginx 설정 복사
+sudo cp ~/lpm/rhythm/nginx.conf /etc/nginx/sites-available/rhythm.berrple.com
+
+# Rhythm Client 빌드 파일 복사
+sudo mkdir -p /var/www/rhythm/client/dist
+sudo cp -r ~/lpm/rhythm/client/dist/* /var/www/rhythm/client/dist/
+sudo chown -R www-data:www-data /var/www/rhythm
+
+# 심볼릭 링크 생성
+sudo ln -s /etc/nginx/sites-available/rhythm.berrple.com /etc/nginx/sites-enabled/
+
+# 기본 설정 제거 (다른 프로젝트가 없다면)
+# sudo rm -f /etc/nginx/sites-enabled/default
+
+# Nginx 설정 테스트
+sudo nginx -t
+
+# Nginx 재시작
+sudo systemctl restart nginx
+sudo systemctl enable nginx
+
+========================================
+10단계: 방화벽 설정
+========================================
+
+# UFW 방화벽 설치 (없는 경우)
+sudo apt-get install -y ufw
+
+# 방화벽 규칙 설정
+sudo ufw allow ssh
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# 방화벽 활성화
+sudo ufw enable
+
+# 방화벽 상태 확인
+sudo ufw status
+
+========================================
+11단계: SSL 인증서 설치 (Let's Encrypt)
+========================================
+
+# Certbot 설치
+sudo apt-get install -y certbot python3-certbot-nginx
+
+# SSL 인증서 발급 (Rhythm)
+sudo certbot --nginx -d rhythm.berrple.com --non-interactive --agree-tos --email your-email@example.com
+
+# 자동 갱신 테스트
+sudo certbot renew --dry-run
+
+========================================
+배포 완료 확인
+========================================
+
+# PM2 앱 상태 확인
+pm2 status
+
+# 로그 확인
+pm2 logs rhythm-server
+
+# Rhythm Server 포트 확인
+curl http://localhost:5003
+
+# Nginx 상태 확인
+sudo systemctl status nginx
+
+# 웹사이트 접속 확인
+curl http://rhythm.berrple.com
+
+========================================
+유용한 명령어
+========================================
+
+# PM2 재시작
+pm2 restart rhythm-server
+
+# PM2 중지
+pm2 stop rhythm-server
+
+# PM2 로그 실시간 확인
+pm2 logs rhythm-server
+
+# PM2 모니터링
+pm2 monit
+
+# Nginx 재시작
+sudo systemctl restart nginx
+
+# Nginx 로그 확인
+sudo tail -f /var/log/nginx/access.log
+sudo tail -f /var/log/nginx/error.log
+
+# 데이터베이스 접속
+mysql -u rhythm_user -p rhythm_game
+
+# 포트 확인
+sudo netstat -tulpn | grep :5003
+
+========================================
+업데이트 배포
+========================================
+
+코드 변경 후 업데이트 시:
+
+cd ~/lpm
+git pull
+
+# 🔴 DB 마이그레이션 확인
+# 새로운 테이블이 추가된 경우 실행 필요!
+# mysql -u rhythm_user -p rhythm_game < 새로운_스키마.sql
+
+# Rhythm Server 재빌드
+cd ~/lpm/rhythm/server
+npm install
+npm run build
+
+# PM2 재시작 (서버 재시작 필수!)
+pm2 restart rhythm-server
+
+# Rhythm Client 재빌드
+cd ~/lpm/rhythm/client
+npm install
+npm run build
+sudo rm -rf /var/www/rhythm/client/dist/*
+sudo cp -r dist/* /var/www/rhythm/client/dist/
+sudo chown -R www-data:www-data /var/www/rhythm
+
+# 서버 로그 확인
+pm2 logs rhythm-server --lines 50
+
+========================================
+트러블슈팅
+========================================
+
+### 앱이 시작되지 않을 때
+pm2 logs rhythm-server
+pm2 status
+
+### 포트 확인
+sudo netstat -tulpn | grep :5003
+
+### 데이터베이스 연결 확인
+mysql -u rhythm_user -p rhythm_game
+
+### Nginx 502 에러
+sudo tail -f /var/log/nginx/error.log
+pm2 status
+
+### 업로드 디렉토리 권한 문제
+sudo mkdir -p ~/lpm/rhythm/server/uploads
+sudo chown -R $USER:$USER ~/lpm/rhythm/server/uploads
+
+========================================
+중요 사항
+========================================
+
+1. .env 파일의 비밀번호와 시크릿 값들을 반드시 강력한 값으로 변경하세요
+2. 도메인 DNS 설정이 완료되어야 SSL 인증서 발급이 가능합니다
+3. GCP 방화벽 규칙에서 80, 443 포트가 열려 있어야 합니다
+4. 업로드된 파일(오디오, 이미지)은 ~/lpm/rhythm/server/uploads에 저장됩니다
+5. PM2를 사용하여 서버가 자동으로 재시작되도록 설정되어 있습니다
+
+========================================
+배포 완료!
+========================================
+
+rhythm.berrple.com에서 게임을 즐기세요!
+

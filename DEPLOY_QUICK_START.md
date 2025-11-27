@@ -55,12 +55,15 @@ sudo mysql -u root -p
 # 데이터베이스 및 사용자 생성 (MariaDB 쉘에서 실행)
 CREATE DATABASE bank_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE lico_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE rhythm_game CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE USER 'bank_user'@'localhost' IDENTIFIED BY 'ss092888?';
 CREATE USER 'lico_user'@'localhost' IDENTIFIED BY 'ss092888?';
+CREATE USER 'rhythm_user'@'localhost' IDENTIFIED BY 'ss092888?';
 
 GRANT ALL PRIVILEGES ON bank_db.* TO 'bank_user'@'localhost';
 GRANT ALL PRIVILEGES ON lico_db.* TO 'lico_user'@'localhost';
+GRANT ALL PRIVILEGES ON rhythm_game.* TO 'rhythm_user'@'localhost';
 
 FLUSH PRIVILEGES;
 EXIT;
@@ -171,7 +174,58 @@ EOF
 npm run build
 ```
 
-## 9단계: PM2 설치 및 애플리케이션 실행
+## 9단계: Rhythm Server 설정
+
+```bash
+cd ~/lpm/rhythm/server
+
+# 의존성 설치
+npm install
+
+# .env 파일 생성
+cat > .env <<'EOF'
+PORT=5003
+NODE_ENV=production
+
+# Database
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=rhythm_user
+DB_PASSWORD=ss092888?
+DB_NAME=rhythm_game
+
+# Session - 강력한 시크릿으로 교체 필요
+SESSION_SECRET=rhythm_game_secret_key_2024
+
+# CORS
+CORS_ORIGIN=https://rhythm.berrple.com
+EOF
+
+# 데이터베이스 스키마 초기화
+mysql -u rhythm_user -pss092888? rhythm_game < schema.sql
+
+# TypeScript 빌드
+npm run build
+```
+
+## 10단계: Rhythm Client 설정
+
+```bash
+cd ~/lpm/rhythm/client
+
+# 의존성 설치
+npm install
+
+# .env 파일 생성
+cat > .env <<'EOF'
+VITE_API_BASE_URL=https://rhythm.berrple.com
+EOF
+
+# 프로덕션 빌드
+npm run build
+```
+
+## 11단계: PM2 설치 및 애플리케이션 실행
 
 ```bash
 # PM2 전역 설치
@@ -180,6 +234,7 @@ sudo npm install -g pm2
 # 로그 디렉토리 생성
 mkdir -p ~/lpm/bank/server/logs
 mkdir -p ~/lpm/lico/server/logs
+mkdir -p ~/lpm/rhythm/server/logs
 
 # ecosystem.config.js 파일 생성
 cd ~/lpm
@@ -213,6 +268,20 @@ module.exports = {
       out_file: './logs/out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       merge_logs: true
+    },
+    {
+      name: 'rhythm-server',
+      cwd: './rhythm/server',
+      script: 'dist/index.js',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production'
+      },
+      error_file: './logs/err.log',
+      out_file: './logs/out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true
     }
   ]
 };
@@ -233,7 +302,7 @@ pm2 startup
 pm2 save
 ```
 
-## 10단계: Nginx 설치 및 설정
+## 12단계: Nginx 설치 및 설정
 
 ```bash
 # Nginx 설치
@@ -309,9 +378,18 @@ sudo mkdir -p /var/www/lico
 sudo cp -r ~/lpm/lico/client/dist/* /var/www/lico/
 sudo chown -R www-data:www-data /var/www/lico
 
+# Rhythm Server & Client용 Nginx 설정
+sudo cp ~/lpm/rhythm/nginx.conf /etc/nginx/sites-available/rhythm.berrple.com
+
+# Rhythm Client 빌드 파일 복사
+sudo mkdir -p /var/www/rhythm/client/dist
+sudo cp -r ~/lpm/rhythm/client/dist/* /var/www/rhythm/client/dist/
+sudo chown -R www-data:www-data /var/www/rhythm
+
 # 심볼릭 링크 생성
 sudo ln -s /etc/nginx/sites-available/bank /etc/nginx/sites-enabled/
 sudo ln -s /etc/nginx/sites-available/lico /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/rhythm.berrple.com /etc/nginx/sites-enabled/
 
 # 기본 설정 제거
 sudo rm -f /etc/nginx/sites-enabled/default
@@ -324,7 +402,7 @@ sudo systemctl restart nginx
 sudo systemctl enable nginx
 ```
 
-## 11단계: 방화벽 설정
+## 13단계: 방화벽 설정
 
 ```bash
 # UFW 방화벽 설치 (없는 경우)
@@ -342,7 +420,7 @@ sudo ufw enable
 sudo ufw status
 ```
 
-## 12단계: SSL 인증서 설치 (Let's Encrypt)
+## 14단계: SSL 인증서 설치 (Let's Encrypt)
 
 ```bash
 # Certbot 설치
@@ -353,6 +431,9 @@ sudo certbot --nginx -d bank.berrple.com --non-interactive --agree-tos --email y
 
 # SSL 인증서 발급 (Lico)
 sudo certbot --nginx -d lico.berrple.com --non-interactive --agree-tos --email your-email@example.com
+
+# SSL 인증서 발급 (Rhythm)
+sudo certbot --nginx -d rhythm.berrple.com --non-interactive --agree-tos --email your-email@example.com
 
 # 자동 갱신 테스트
 sudo certbot renew --dry-run
@@ -372,6 +453,9 @@ curl http://localhost:5001
 
 # Lico Server 포트 확인
 curl http://localhost:5002
+
+# Rhythm Server 포트 확인
+curl http://localhost:5003
 
 # Nginx 상태 확인
 sudo systemctl status nginx
@@ -399,6 +483,7 @@ sudo tail -f /var/log/nginx/error.log
 # 데이터베이스 접속
 mysql -u bank_user -p bank_db
 mysql -u lico_user -p lico_db
+mysql -u rhythm_user -p rhythm_game
 ```
 
 ## 업데이트 배포
