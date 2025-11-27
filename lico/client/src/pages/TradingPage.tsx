@@ -196,23 +196,32 @@ const TradingPage = () => {
       try {
         chartRef.current.remove();
       } catch (e) {
-        // 무시
+        console.error('Error removing chart:', e);
       }
       chartRef.current = null;
       candlestickSeriesRef.current = null;
       chartInitializedRef.current = false;
     }
 
-    function initializeChart() {
-      if (!chartContainerRef.current || !selectedCoin) return;
+    const initializeChart = () => {
+      if (!chartContainerRef.current || !selectedCoin) {
+        console.warn('Chart container or selectedCoin not available');
+        return false;
+      }
 
       const container = chartContainerRef.current;
-      let width = container.clientWidth;
-      let height = container.clientHeight;
+      // 컨테이너 크기 확인
+      const rect = container.getBoundingClientRect();
+      const width = rect.width || container.clientWidth || 800;
+      const height = rect.height || container.clientHeight || 350;
 
-      // 컨테이너 크기가 없으면 기본값 사용
-      if (width === 0) width = 800;
-      if (height === 0) height = 350;
+      console.log('Initializing chart with size:', width, height, 'container:', container);
+
+      // 최소 크기 보장
+      if (width < 100 || height < 100) {
+        console.warn('Container too small, using default size');
+        return false;
+      }
 
       try {
         const chart = createChart(container, {
@@ -245,38 +254,26 @@ const TradingPage = () => {
 
         candlestickSeriesRef.current = candlestickSeries;
         chartInitializedRef.current = true;
+        console.log('Chart initialized successfully');
+        return true;
       } catch (error) {
         console.error('Failed to initialize chart:', error);
-      }
-    }
-
-    // 컨테이너가 준비될 때까지 대기 (최대 1초)
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    let attempts = 0;
-    const maxAttempts = 10;
-
-    const tryInitialize = () => {
-      if (!chartContainerRef.current || !selectedCoin) return;
-
-      const container = chartContainerRef.current;
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-
-      if (width > 0 && height > 0) {
-        initializeChart();
-      } else {
-        attempts++;
-        if (attempts < maxAttempts) {
-          timeoutId = setTimeout(tryInitialize, 100);
-        } else {
-          // 최대 시도 후에도 크기가 없으면 기본값으로 초기화
-          initializeChart();
-        }
+        return false;
       }
     };
 
-    // 즉시 시도
-    tryInitialize();
+    // 즉시 초기화 시도
+    let initialized = initializeChart();
+    
+    // 실패하면 짧은 지연 후 재시도
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    if (!initialized) {
+      timeoutId = setTimeout(() => {
+        if (chartContainerRef.current && !chartRef.current) {
+          initializeChart();
+        }
+      }, 200);
+    }
 
     // 리사이즈 핸들러
     const handleResize = () => {
@@ -303,7 +300,7 @@ const TradingPage = () => {
         try {
           chartRef.current.remove();
         } catch (e) {
-          // 무시
+          console.error('Error removing chart on cleanup:', e);
         }
         chartRef.current = null;
         candlestickSeriesRef.current = null;
@@ -315,10 +312,16 @@ const TradingPage = () => {
   // 차트 데이터 업데이트 (실시간)
   useEffect(() => {
     if (!candlestickSeriesRef.current) {
+      console.warn('Candlestick series not initialized yet');
       return;
     }
 
-    if (candles.length === 0) return;
+    if (candles.length === 0) {
+      console.warn('No candles data available');
+      return;
+    }
+
+    console.log('Updating chart with', candles.length, 'candles');
 
     // 데이터 포맷팅 최적화 (한 번에 처리)
     const formattedData: CandlestickData<UTCTimestamp>[] = [];
@@ -349,33 +352,17 @@ const TradingPage = () => {
 
     if (formattedData.length > 0) {
       try {
-        // 실시간 업데이트: 마지막 캔들만 업데이트하거나 전체 데이터 설정
+        // 항상 전체 데이터 설정 (안정성 우선)
         if (candlestickSeriesRef.current && chartRef.current) {
-          // 기존 데이터가 있으면 마지막 캔들만 업데이트 (실시간)
-          const existingData = candlestickSeriesRef.current.data();
-          if (existingData && existingData.length > 0) {
-            const lastExisting = existingData[existingData.length - 1];
-            const lastNew = formattedData[formattedData.length - 1];
-            
-            // 같은 시간대면 업데이트, 아니면 추가
-            if (lastExisting.time === lastNew.time) {
-              candlestickSeriesRef.current.update(lastNew);
-            } else {
-              candlestickSeriesRef.current.update(lastNew);
-            }
-          } else {
-            // 처음 로드 시 전체 데이터 설정
-            candlestickSeriesRef.current.setData(formattedData);
-            chartRef.current.timeScale().fitContent();
-          }
+          candlestickSeriesRef.current.setData(formattedData);
+          chartRef.current.timeScale().fitContent();
+          console.log('Chart data updated successfully');
         }
       } catch (error) {
         console.error('Failed to set chart data:', error);
-        // 에러 발생 시 전체 데이터 다시 설정
-        if (candlestickSeriesRef.current) {
-          candlestickSeriesRef.current.setData(formattedData);
-        }
       }
+    } else {
+      console.warn('No valid formatted data to display');
     }
   }, [candles, chartInterval]);
 
