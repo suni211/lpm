@@ -4,7 +4,8 @@
   padding: 40px 20px;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  overflow-y: auto;
 }
 
 .questionnaire-container {
@@ -15,6 +16,7 @@
   border-radius: 16px;
   padding: 40px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  margin: 20px auto;
 }
 
 .questionnaire-header {
@@ -201,5 +203,30 @@
 .retry-button:hover {
   background: #764ba2;
   transform: translateY(-2px);
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .questionnaire-page {
+    padding: 20px 16px;
+  }
+
+  .questionnaire-container {
+    padding: 24px;
+    margin: 10px auto;
+  }
+
+  .questionnaire-header h1 {
+    font-size: 24px;
+  }
+
+  .question-label {
+    font-size: 14px;
+  }
+
+  .submit-button {
+    font-size: 16px;
+    padding: 14px 24px;
+  }
 }
 
