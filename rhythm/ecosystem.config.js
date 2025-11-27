@@ -2,10 +2,10 @@ module.exports = {
   apps: [
     {
       name: 'rhythm-server',
-      script: './server/dist/index.js',
-      cwd: './rhythm',
+      script: 'dist/index.js',
+      cwd: './server',
       instances: 1,
-      exec_mode: 'cluster',
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 5003
