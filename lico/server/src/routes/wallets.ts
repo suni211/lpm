@@ -280,13 +280,13 @@ router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) =
       );
 
       // 잔액 업데이트 (정확한 금액만)
-      const updateResult = await query(
+      const updateResult: any = await query(
         'UPDATE user_wallets SET gold_balance = gold_balance + ?, total_deposit = total_deposit + ? WHERE id = ? AND status = "ACTIVE"',
         [depositAmount, depositAmount, wallet.id]
       );
 
       // 업데이트 실패 시 롤백
-      if (!updateResult || updateResult.affectedRows === 0) {
+      if (!updateResult || (updateResult.affectedRows !== undefined && updateResult.affectedRows === 0)) {
         await query('ROLLBACK');
         console.error('⚠️ LICO 잔액 업데이트 실패! BANK 환불 필요:', transaction_id);
         return res.status(500).json({ error: '잔액 업데이트 실패' });
@@ -404,13 +404,13 @@ router.post('/withdraw', strictRateLimiter, async (req: Request, res: Response) 
       );
 
       // ========== 4단계: 잔액 차감 (조건부 - 잔액 재확인) ==========
-      const updateResult = await query(
+      const updateResult: any = await query(
         'UPDATE user_wallets SET gold_balance = gold_balance - ?, total_withdrawal = total_withdrawal + ? WHERE id = ? AND status = "ACTIVE" AND gold_balance >= ?',
         [totalDeduction, withdrawAmount, wallet.id, totalDeduction]
       );
 
       // 업데이트 실패 시 롤백 (잔액 부족 등)
-      if (!updateResult || updateResult.affectedRows === 0) {
+      if (!updateResult || (updateResult.affectedRows !== undefined && updateResult.affectedRows === 0)) {
         await query('ROLLBACK');
         return res.status(400).json({ error: '출금 처리 실패 (잔액 부족 또는 지갑 상태 변경)' });
       }

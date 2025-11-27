@@ -101,12 +101,12 @@ router.post('/deduct-balance', validateLicoApiKey, async (req: Request, res: Res
       }
 
       // ========== 3단계: 잔액 차감 ==========
-      const updateResult = await query(
+      const updateResult: any = await query(
         'UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?',
         [deductAmount, account.id, deductAmount]
       );
 
-      if (!updateResult || updateResult.affectedRows === 0) {
+      if (!updateResult || (updateResult.affectedRows !== undefined && updateResult.affectedRows === 0)) {
         await query('ROLLBACK');
         return res.status(500).json({ error: '잔액 차감 실패' });
       }
@@ -204,12 +204,12 @@ router.post('/add-balance', validateLicoApiKey, async (req: Request, res: Respon
       const account = accounts[0];
 
       // ========== 3단계: 잔액 추가 ==========
-      const updateResult = await query(
+      const updateResult: any = await query(
         'UPDATE accounts SET balance = balance + ? WHERE id = ?',
         [addAmount, account.id]
       );
 
-      if (!updateResult || updateResult.affectedRows === 0) {
+      if (!updateResult || (updateResult.affectedRows !== undefined && updateResult.affectedRows === 0)) {
         await query('ROLLBACK');
         return res.status(500).json({ error: '잔액 추가 실패' });
       }
