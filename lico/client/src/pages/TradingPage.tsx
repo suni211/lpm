@@ -105,6 +105,51 @@ const TradingPage = () => {
       }
     });
 
+    // 캔들 업데이트 수신 (실시간)
+    socket.on('candle:update', (candleData: any) => {
+      if (candleData.coin_id === selectedCoin.id && candleData.interval === chartInterval) {
+        setCandles((prevCandles) => {
+          // 마지막 캔들 업데이트 또는 새 캔들 추가
+          const newCandles = [...prevCandles];
+          const lastCandle = newCandles[newCandles.length - 1];
+          const candleTime = new Date(candleData.open_time).getTime() / 1000;
+          
+          if (lastCandle && Math.floor(new Date(lastCandle.open_time).getTime() / 1000) === Math.floor(candleTime)) {
+            // 같은 시간대 캔들 업데이트
+            newCandles[newCandles.length - 1] = {
+              ...lastCandle,
+              open_price: candleData.open_price || lastCandle.open_price,
+              high_price: candleData.high_price || lastCandle.high_price,
+              low_price: candleData.low_price || lastCandle.low_price,
+              close_price: candleData.close_price || lastCandle.close_price,
+              volume: candleData.volume || lastCandle.volume,
+            };
+          } else {
+            // 새 캔들 추가
+            newCandles.push({
+              id: candleData.id || '',
+              coin_id: candleData.coin_id,
+              open_time: candleData.open_time,
+              close_time: candleData.close_time || candleData.open_time,
+              open_price: candleData.open_price,
+              high_price: candleData.high_price,
+              low_price: candleData.low_price,
+              close_price: candleData.close_price,
+              volume: candleData.volume || 0,
+              trade_count: candleData.trade_count || 0,
+            } as Candle);
+            
+            // 최대 100개만 유지
+            if (newCandles.length > 100) {
+              newCandles.shift();
+            }
+          }
+          
+          return newCandles;
+        });
+      }
+    });
+
     // 연결 오류 처리
     socket.on('connect_error', (error) => {
       console.error('WebSocket connection error:', error);
@@ -118,7 +163,7 @@ const TradingPage = () => {
         socketRef.current = null;
       }
     };
-  }, [selectedCoin?.id]);
+  }, [selectedCoin?.id, chartInterval]);
 
   // 캔들 데이터 가져오기
   useEffect(() => {
@@ -267,20 +312,9 @@ const TradingPage = () => {
     };
   }, [selectedCoin?.id]); // selectedCoin이 변경될 때 차트 재초기화
 
-  // 차트 데이터 업데이트 (최적화: 데이터만 업데이트)
+  // 차트 데이터 업데이트 (실시간)
   useEffect(() => {
     if (!candlestickSeriesRef.current) {
-      // 차트가 아직 초기화되지 않았으면 잠시 후 다시 시도
-      if (candles.length > 0) {
-        const timeoutId = setTimeout(() => {
-          // 차트가 초기화되었는지 다시 확인
-          if (candlestickSeriesRef.current && candles.length > 0) {
-            // 강제로 다시 실행하기 위해 상태 업데이트 트리거는 없지만
-            // 다음 렌더링 사이클에서 다시 시도됨
-          }
-        }, 300);
-        return () => clearTimeout(timeoutId);
-      }
       return;
     }
 
@@ -315,15 +349,32 @@ const TradingPage = () => {
 
     if (formattedData.length > 0) {
       try {
-        // 차트 업데이트는 requestAnimationFrame으로 최적화
-        requestAnimationFrame(() => {
-          if (candlestickSeriesRef.current && chartRef.current) {
+        // 실시간 업데이트: 마지막 캔들만 업데이트하거나 전체 데이터 설정
+        if (candlestickSeriesRef.current && chartRef.current) {
+          // 기존 데이터가 있으면 마지막 캔들만 업데이트 (실시간)
+          const existingData = candlestickSeriesRef.current.data();
+          if (existingData && existingData.length > 0) {
+            const lastExisting = existingData[existingData.length - 1];
+            const lastNew = formattedData[formattedData.length - 1];
+            
+            // 같은 시간대면 업데이트, 아니면 추가
+            if (lastExisting.time === lastNew.time) {
+              candlestickSeriesRef.current.update(lastNew);
+            } else {
+              candlestickSeriesRef.current.update(lastNew);
+            }
+          } else {
+            // 처음 로드 시 전체 데이터 설정
             candlestickSeriesRef.current.setData(formattedData);
             chartRef.current.timeScale().fitContent();
           }
-        });
+        }
       } catch (error) {
         console.error('Failed to set chart data:', error);
+        // 에러 발생 시 전체 데이터 다시 설정
+        if (candlestickSeriesRef.current) {
+          candlestickSeriesRef.current.setData(formattedData);
+        }
       }
     }
   }, [candles, chartInterval]);

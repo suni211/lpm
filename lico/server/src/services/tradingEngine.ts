@@ -688,6 +688,8 @@ export class TradingEngine {
       [coinId, openTime]
     );
 
+    let candleData: any;
+
     if (existing.length > 0) {
       await query(
         `UPDATE candles_1m
@@ -699,12 +701,43 @@ export class TradingEngine {
          WHERE coin_id = ? AND open_time = ?`,
         [price, price, price, volume, coinId, openTime]
       );
+      
+      // 업데이트된 캔들 데이터 조회
+      const updated = await query(
+        'SELECT * FROM candles_1m WHERE coin_id = ? AND open_time = ?',
+        [coinId, openTime]
+      );
+      candleData = updated[0];
     } else {
+      const candleId = uuidv4();
       await query(
         `INSERT INTO candles_1m (id, coin_id, open_time, close_time, open_price, high_price, low_price, close_price, volume, trade_count)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [uuidv4(), coinId, openTime, closeTime, price, price, price, price, volume]
+        [candleId, coinId, openTime, closeTime, price, price, price, price, volume]
       );
+      
+      // 새로 생성된 캔들 데이터 조회
+      const newCandle = await query(
+        'SELECT * FROM candles_1m WHERE id = ?',
+        [candleId]
+      );
+      candleData = newCandle[0];
+    }
+
+    // WebSocket으로 캔들 업데이트 브로드캐스트
+    if (websocketInstance && websocketInstance.broadcastCandleUpdate && candleData) {
+      websocketInstance.broadcastCandleUpdate(coinId, '1m', {
+        coin_id: coinId,
+        id: candleData.id,
+        open_time: candleData.open_time,
+        close_time: candleData.close_time,
+        open_price: candleData.open_price,
+        high_price: candleData.high_price,
+        low_price: candleData.low_price,
+        close_price: candleData.close_price,
+        volume: candleData.volume,
+        trade_count: candleData.trade_count,
+      });
     }
   }
 }
