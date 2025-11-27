@@ -86,13 +86,17 @@ const Admin: React.FC = () => {
 
     setLoading(true);
     try {
+      // 노트 수 정확하게 집계 (롱노트는 1개로 카운트)
+      const totalNotes = notes.length;
+      
       await beatmaps.create({
         song_id: songId,
         difficulty: beatmapSettings.difficulty,
         key_count: beatmapSettings.keyCount,
         note_data: JSON.stringify(notes),
         effect_data: JSON.stringify(effects),
-        level: beatmapSettings.level
+        level: beatmapSettings.level,
+        total_notes: totalNotes
       });
 
       alert('비트맵이 성공적으로 저장되었습니다!');

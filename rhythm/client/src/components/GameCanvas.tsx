@@ -41,6 +41,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     maxCombo: 0,
     judgements: { yas: 0, oh: 0, ah: 0, fuck: 0 }
   });
+  
+  const [isGameStarted, setIsGameStarted] = useState(false);
 
   const [settings, setSettings] = useState({
     displaySync: 0,
@@ -89,53 +91,46 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!gameState.isPlaying || gameState.isPaused) return;
-
-      // 단축키 처리
-      if (e.code === 'F1') {
-        e.preventDefault();
-        setSettings(s => {
-          const newSpeed = Math.max(0.5, s.playbackSpeed - 0.1);
-          if (audioRef.current) audioRef.current.rate(newSpeed);
-          return { ...s, playbackSpeed: newSpeed };
-        });
-      } else if (e.code === 'F2') {
-        e.preventDefault();
-        setSettings(s => {
-          const newSpeed = Math.min(2.0, s.playbackSpeed + 0.1);
-          if (audioRef.current) audioRef.current.rate(newSpeed);
-          return { ...s, playbackSpeed: newSpeed };
-        });
-      } else if (e.code === 'F7') {
-        e.preventDefault();
-        setSettings(s => ({ ...s, displaySync: s.displaySync + 1 }));
-      } else if (e.code === 'F8') {
-        e.preventDefault();
-        setSettings(s => ({ ...s, displaySync: s.displaySync - 1 }));
-      } else if (e.code === 'F9') {
-        e.preventDefault();
-        setSettings(s => ({ ...s, noteSpeed: Math.max(1, s.noteSpeed - 1) }));
-      } else if (e.code === 'F10') {
-        e.preventDefault();
-        setSettings(s => ({ ...s, noteSpeed: Math.min(12, s.noteSpeed + 1) }));
-      } else if (e.code === 'Escape') {
-        togglePause();
-      } else {
-        // 게임 키 입력
-        const keyBinding = settings.keyBindings[`key${beatmap.key_count}` as keyof typeof settings.keyBindings];
-        const lane = keyBinding.indexOf(e.code);
-
-        if (lane !== -1 && !keysPressed.current.has(e.code)) {
-          keysPressed.current.add(e.code);
-          handleNoteHit(lane);
+      // 게임 시작 전에는 배속 설정만 가능
+      if (!isGameStarted) {
+        if (e.code === 'F1') {
+          e.preventDefault();
+          setSettings(s => {
+            const newSpeed = Math.max(0.5, s.playbackSpeed - 0.1);
+            return { ...s, playbackSpeed: newSpeed };
+          });
+        } else if (e.code === 'F2') {
+          e.preventDefault();
+          setSettings(s => {
+            const newSpeed = Math.min(2.0, s.playbackSpeed + 0.1);
+            return { ...s, playbackSpeed: newSpeed };
+          });
+        } else if (e.code === 'F9') {
+          e.preventDefault();
+          setSettings(s => ({ ...s, noteSpeed: Math.max(1, s.noteSpeed - 1) }));
+        } else if (e.code === 'F10') {
+          e.preventDefault();
+          setSettings(s => ({ ...s, noteSpeed: Math.min(12, s.noteSpeed + 1) }));
         }
+        return;
+      }
+      
+      if (!gameState.isPlaying) return;
+
+      // 게임 중에는 게임 키 입력만 처리 (단축키 제거)
+      const keyBinding = settings.keyBindings[`key${beatmap.key_count}` as keyof typeof settings.keyBindings];
+      const lane = keyBinding.indexOf(e.code);
+
+      if (lane !== -1 && !keysPressed.current.has(e.code)) {
+        keysPressed.current.add(e.code);
+        handleNoteHit(lane);
       }
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
+      const handleKeyUp = (e: KeyboardEvent) => {
       keysPressed.current.delete(e.code);
 
-      if (!gameState.isPlaying || gameState.isPaused) return;
+      if (!gameState.isPlaying || !isGameStarted) return;
 
       // 롱노트 릴리즈 체크
       const keyBinding = settings.keyBindings[`key${beatmap.key_count}` as keyof typeof settings.keyBindings];
@@ -153,16 +148,17 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [settings, beatmap.key_count, gameState.isPlaying, gameState.isPaused]);
+  }, [settings, beatmap.key_count, gameState.isPlaying, isGameStarted]);
 
   const startGame = () => {
     if (audioRef.current) {
+      setIsGameStarted(true);
       audioRef.current.play();
       audioRef.current.rate(settings.playbackSpeed);
       setGameState(s => ({ ...s, isPlaying: true, isPaused: false }));
       // 게임 루프 시작
       const loop = () => {
-        if (audioRef.current && gameState.isPlaying && !gameState.isPaused) {
+        if (audioRef.current && gameState.isPlaying) {
           const playing = audioRef.current.playing();
           if (playing) {
             const currentTime = (audioRef.current.seek() as number) * 1000 + settings.displaySync;
@@ -177,7 +173,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
             // 판정선을 지나친 노트 자동 처리
             checkMissedNotes(currentTime);
             
-            // 롱노트 실시간 duration 업데이트
+            // 롱노트를 누르고 있는 동안 지속적으로 업데이트
             updateLongNoteDurations(currentTime);
             
             render(currentTime);
@@ -192,30 +188,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     }
   };
 
-  const togglePause = () => {
-    if (audioRef.current) {
-      if (gameState.isPaused) {
-        audioRef.current.play();
-        const loop = () => {
-          if (audioRef.current && gameState.isPlaying && !gameState.isPaused) {
-            const playing = audioRef.current.playing();
-            if (playing) {
-              const currentTime = (audioRef.current.seek() as number) * 1000 + settings.displaySync;
-              setGameState(s => ({ ...s, currentTime }));
-              checkMissedNotes(currentTime);
-              render(currentTime);
-              animationFrameRef.current = requestAnimationFrame(loop);
-            }
-          }
-        };
-        animationFrameRef.current = requestAnimationFrame(loop);
-      } else {
-        audioRef.current.pause();
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      setGameState(s => ({ ...s, isPaused: !s.isPaused }));
-    }
-  };
 
   const handleNoteHit = (lane: number) => {
     const currentTime = (audioRef.current?.seek() as number || 0) * 1000 + settings.displaySync;
@@ -275,8 +247,18 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     }
   };
 
-  const updateLongNoteDurations = (_currentTime: number) => {
-    // 롱노트 duration은 렌더링 시 실시간으로 계산됨
+  const updateLongNoteDurations = (currentTime: number) => {
+    // 롱노트를 누르고 있는 동안 지속적으로 체크
+    // 매 프레임마다 정확하게 업데이트되어야 함
+    longNotesHeld.current.forEach((isHeld, noteId) => {
+      if (isHeld) {
+        const note = beatmap.note_data.find(n => n.id === noteId);
+        if (note && note.type === NoteType.LONG) {
+          // 롱노트를 누르고 있는 동안 duration이 계속 증가해야 함
+          // 렌더링 시 실시간으로 계산되므로 여기서는 상태만 확인
+        }
+      }
+    });
   };
 
   const checkMissedNotes = (currentTime: number) => {
@@ -428,10 +410,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
         const isHeld = longNotesHeld.current.get(note.id);
         let actualDuration = note.duration || 200;
         
-        // 누르고 있으면 실시간 duration 계산 (위로 올라가도록)
+        // 누르고 있으면 실시간 duration 계산 (1ms 단위로 정확하게, 위로 올라가도록)
         if (isHeld) {
+          // 1ms 단위로 정확하게 계산 (반올림 없음)
           const holdDuration = currentTime - note.timestamp;
-          actualDuration = Math.max(actualDuration, holdDuration);
+          actualDuration = Math.max(actualDuration, Math.floor(holdDuration));
         }
         
         // 롱노트 길이 계산 (위로 올라가도록)
@@ -627,10 +610,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
 
   // 게임 상태 변경 시 렌더링
   useEffect(() => {
-    if (gameState.isPlaying && !gameState.isPaused) {
+    if (gameState.isPlaying) {
       render(gameState.currentTime);
     }
-  }, [gameState.currentTime, gameState.isPlaying, gameState.isPaused, activeEffects, settings.noteSpeed]);
+  }, [gameState.currentTime, gameState.isPlaying, activeEffects, settings.noteSpeed]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
@@ -697,16 +680,24 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
           </div>
         </div>
       )}
-      {!gameState.isPlaying && !gameState.isPaused && (
+      {!isGameStarted && (
         <div style={{
           position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
           textAlign: 'center',
-          color: '#fff'
+          color: '#fff',
+          background: 'rgba(0, 0, 0, 0.8)',
+          padding: '30px',
+          borderRadius: '10px'
         }}>
-          <div style={{ fontSize: '24px', marginBottom: '20px' }}>게임 로딩 중...</div>
+          <div style={{ fontSize: '24px', marginBottom: '20px' }}>게임 준비 중...</div>
+          <div style={{ fontSize: '16px', marginBottom: '10px' }}>재생 속도: x{settings.playbackSpeed.toFixed(1)}</div>
+          <div style={{ fontSize: '16px', marginBottom: '10px' }}>노트 속도: {settings.noteSpeed}배</div>
+          <div style={{ fontSize: '14px', color: '#aaa', marginTop: '20px' }}>
+            F1/F2: 재생 속도 조절 | F9/F10: 노트 속도 조절
+          </div>
         </div>
       )}
     </div>

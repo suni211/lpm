@@ -88,7 +88,8 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     // 그리드 스냅
     if (gridSnap) {
       const beatDuration = (60 / bpm) * 1000;
-      timestamp = Math.round(currentTime / beatDuration) * beatDuration;
+      // 1ms 단위로 정확하게 저장 (반올림 제거)
+      timestamp = currentTime;
     }
 
     // 최소 간격 체크 (같은 레인에서 너무 빠르게 입력 방지)
@@ -167,7 +168,8 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
             }
           } else {
             // 200ms 이상: 롱노트 (키를 떼는 시점까지의 duration으로 저장)
-            return { ...note, type: NoteType.LONG, duration: holdDuration };
+            // 1ms 단위로 정확하게 저장 (반올림 없음)
+            return { ...note, type: NoteType.LONG, duration: Math.floor(holdDuration) };
           }
         }
         // 이전 노트도 슬라이드로 변경 (연속 입력인 경우)
@@ -216,7 +218,8 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     let timestamp = currentTime;
     if (gridSnap) {
       const beatDuration = (60 / bpm) * 1000;
-      timestamp = Math.round(currentTime / beatDuration) * beatDuration;
+      // 1ms 단위로 정확하게 저장 (반올림 제거)
+      timestamp = currentTime;
     }
 
     if (selectedTool === 'note' || selectedTool === 'long' || selectedTool === 'slide') {
@@ -265,9 +268,11 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
                 if (activeKey) {
                   const pressStartTime = keyPressStartTimeRef.current[activeKey];
                   if (pressStartTime !== undefined) {
+                    // 1ms 단위로 정확하게 계산 (반올림 없음)
                     const holdDuration = time - pressStartTime;
                     // 실시간으로 duration 업데이트 (최소 200ms 이상이어야 롱노트)
-                    return { ...note, duration: Math.max(200, holdDuration) };
+                    // 정확한 1ms 단위로 저장
+                    return { ...note, duration: Math.max(200, Math.floor(holdDuration)) };
                   }
                 }
                 return note;
@@ -316,7 +321,12 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
 
   const handleSave = () => {
     // 노트를 타임스탬프 순으로 정렬
-    const sortedNotes = [...notes].sort((a, b) => a.timestamp - b.timestamp);
+    // 1ms 단위로 정확하게 저장 (반올림 없음)
+    const sortedNotes = [...notes].map(note => ({
+      ...note,
+      timestamp: Math.floor(note.timestamp), // 1ms 단위로 정확하게
+      duration: note.duration ? Math.floor(note.duration) : undefined
+    })).sort((a, b) => a.timestamp - b.timestamp);
     onSave(sortedNotes, effects, bpm);
   };
 
