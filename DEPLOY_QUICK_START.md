@@ -409,6 +409,11 @@ mysql -u lico_user -p lico_db
 cd ~/lpm
 git pull
 
+# 🔴 DB 마이그레이션 확인 (deposit_logs, withdrawal_logs 등)
+# 새로운 테이블이 추가된 경우 실행 필요!
+cd ~/lpm/lico/server
+mysql -u root -p lico_db < src/database/create_deposit_logs.sql
+
 # Bank Server 재빌드
 cd ~/lpm/bank/server
 npm install
@@ -418,6 +423,8 @@ npm run build
 cd ~/lpm/lico/server
 npm install
 npm run build
+
+# PM2 재시작 (서버 재시작 필수!)
 pm2 restart all
 
 # Lico Client 재빌드
@@ -428,9 +435,15 @@ sudo rm -rf /var/www/lico/*
 sudo cp -r dist/* /var/www/lico/
 sudo chown -R www-data:www-data /var/www/lico
 
-# PM2 재시작
-pm2 restart all
+# 서버 로그 확인 (보안 시스템 정상 작동 확인)
+pm2 logs lico-server --lines 50
 ```
+
+**⚠️ 중요 보안 업데이트 (2025-11-27):**
+- `deposit_logs`, `withdrawal_logs` 테이블 생성 필수
+- Rate Limiting 적용 (1분에 5회 제한)
+- Transaction ID 중복 검사 활성화
+- 서버 재시작 없이는 보안 패치가 적용되지 않음!
 
 ## 트러블슈팅
 
