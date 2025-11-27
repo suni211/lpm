@@ -1,6 +1,7 @@
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import cron from 'node-cron';
+import { updateCandleData } from '../utils/candleUtils';
 
 // WebSocket 인스턴스를 가져오기 위한 타입
 let websocketInstance: any = null;
@@ -121,6 +122,9 @@ export class AITradingBot {
       'UPDATE coins SET current_price = ?, price_change_24h = ?, volume_24h = ? WHERE id = ?',
       [newPrice, priceChange24h, volume24h, coin.id]
     );
+
+    // 캔들 데이터 저장 (차트에 표시)
+    await updateCandleData(coin.id, newPrice, 0);
 
     // WebSocket으로 가격 업데이트 브로드캐스트
     if (websocketInstance && websocketInstance.broadcastPriceUpdate) {

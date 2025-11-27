@@ -1,6 +1,7 @@
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import aiTradingBot from './aiTradingBot';
+import { updateCandleData } from '../utils/candleUtils';
 
 // WebSocket 인스턴스를 가져오기 위한 타입
 let websocketInstance: any = null;
@@ -700,66 +701,35 @@ export class TradingEngine {
     }
   }
 
-  // 캔들스틱 데이터 업데이트 (1분봉)
+  // 캔들스틱 데이터 업데이트 (1분봉, 1시간봉, 1일봉)
   private async updateCandlestick(coinId: string, price: number, volume: number) {
-    const now = new Date();
-    const openTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0);
-    const closeTime = new Date(openTime.getTime() + 60000);
+    // 공통 유틸리티 함수 사용 (1분봉, 1시간봉, 1일봉 모두 업데이트)
+    await updateCandleData(coinId, price, volume);
 
-    const existing = await query(
+    // WebSocket으로 캔들 업데이트 브로드캐스트
+    const now = new Date();
+    const openTime = new Date(now);
+    openTime.setSeconds(0);
+    openTime.setMilliseconds(0);
+
+    const candleData = await query(
       'SELECT * FROM candles_1m WHERE coin_id = ? AND open_time = ?',
       [coinId, openTime]
     );
 
-    let candleData: any;
-
-    if (existing.length > 0) {
-      await query(
-        `UPDATE candles_1m
-         SET high_price = GREATEST(high_price, ?),
-             low_price = LEAST(low_price, ?),
-             close_price = ?,
-             volume = volume + ?,
-             trade_count = trade_count + 1
-         WHERE coin_id = ? AND open_time = ?`,
-        [price, price, price, volume, coinId, openTime]
-      );
-      
-      // 업데이트된 캔들 데이터 조회
-      const updated = await query(
-        'SELECT * FROM candles_1m WHERE coin_id = ? AND open_time = ?',
-        [coinId, openTime]
-      );
-      candleData = updated[0];
-    } else {
-      const candleId = uuidv4();
-      await query(
-        `INSERT INTO candles_1m (id, coin_id, open_time, close_time, open_price, high_price, low_price, close_price, volume, trade_count)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [candleId, coinId, openTime, closeTime, price, price, price, price, volume]
-      );
-      
-      // 새로 생성된 캔들 데이터 조회
-      const newCandle = await query(
-        'SELECT * FROM candles_1m WHERE id = ?',
-        [candleId]
-      );
-      candleData = newCandle[0];
-    }
-
-    // WebSocket으로 캔들 업데이트 브로드캐스트
-    if (websocketInstance && websocketInstance.broadcastCandleUpdate && candleData) {
+    if (websocketInstance && websocketInstance.broadcastCandleUpdate && candleData.length > 0) {
+      const candle = candleData[0];
       websocketInstance.broadcastCandleUpdate(coinId, '1m', {
         coin_id: coinId,
-        id: candleData.id,
-        open_time: candleData.open_time,
-        close_time: candleData.close_time,
-        open_price: candleData.open_price,
-        high_price: candleData.high_price,
-        low_price: candleData.low_price,
-        close_price: candleData.close_price,
-        volume: candleData.volume,
-        trade_count: candleData.trade_count,
+        id: candle.id,
+        open_time: candle.open_time,
+        close_time: candle.close_time,
+        open_price: candle.open_price,
+        high_price: candle.high_price,
+        low_price: candle.low_price,
+        close_price: candle.close_price,
+        volume: candle.volume,
+        trade_count: candle.trade_count,
       });
     }
   }
