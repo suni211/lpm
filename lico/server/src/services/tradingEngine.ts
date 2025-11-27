@@ -1,5 +1,13 @@
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
+import aiTradingBot from './aiTradingBot';
+
+// WebSocket 인스턴스를 가져오기 위한 타입
+let websocketInstance: any = null;
+
+export function setWebSocketInstance(ws: any) {
+  websocketInstance = ws;
+}
 
 // 주문 매칭 엔진
 export class TradingEngine {
@@ -491,11 +499,128 @@ export class TradingEngine {
       ? ((price - price24hAgo) / price24hAgo) * 100 
       : 0;
 
+    // 거래량 기반 가격 변동 적용 (현실적인 시장 반응)
+    const currentPrice = typeof coin.current_price === 'string' 
+      ? parseFloat(coin.current_price) 
+      : (coin.current_price || 0);
+    
+    // 거래량 대비 변동성 계산 (거래량이 클수록 가격 변동 증가)
+    const minVolatility = parseFloat(coin.min_volatility) || 0.0001; // 0.01%
+    const maxVolatility = parseFloat(coin.max_volatility) || 0.05; // 5%
+    
+    // 거래량에 따른 가격 변동 (거래량이 전체 유통량의 0.1% 이상이면 최대 변동성)
+    const circulatingSupply = typeof coin.circulating_supply === 'string' 
+      ? parseFloat(coin.circulating_supply) 
+      : (coin.circulating_supply || 1);
+    const tradeRatio = quantity / Math.max(circulatingSupply, 1);
+    const volumeBasedVolatility = Math.min(minVolatility + (maxVolatility - minVolatility) * Math.min(tradeRatio * 1000, 1), maxVolatility);
+    
+    // 매수/매도 방향에 따른 가격 변동
+    // 매수 거래가 많으면 가격 상승, 매도 거래가 많으면 가격 하락
+    const recentBuyTrades = await query(
+      `SELECT COUNT(*) as count FROM trades 
+       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE) 
+       AND buyer_wallet_id != (SELECT id FROM user_wallets WHERE minecraft_username = 'AI_BOT' LIMIT 1)`,
+      [coinId]
+    );
+    const recentSellTrades = await query(
+      `SELECT COUNT(*) as count FROM trades 
+       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE) 
+       AND seller_wallet_id != (SELECT id FROM user_wallets WHERE minecraft_username = 'AI_BOT' LIMIT 1)`,
+      [coinId]
+    );
+    
+    const buyCount = recentBuyTrades[0]?.count || 0;
+    const sellCount = recentSellTrades[0]?.count || 0;
+    const totalRecentTrades = buyCount + sellCount;
+    
+    // 매수/매도 비율에 따른 가격 변동 방향 결정
+    let priceDirection = 0; // -1 (하락) ~ +1 (상승)
+    if (totalRecentTrades > 0) {
+      priceDirection = (buyCount - sellCount) / totalRecentTrades;
+    }
+    
+    // 거래량 기반 가격 변동 적용 (최대 volumeBasedVolatility 범위 내)
+    const tradeImpact = priceDirection * volumeBasedVolatility * Math.min(quantity / 1000, 1);
+    const adjustedPrice = currentPrice * (1 + tradeImpact);
+    
+    // 최종 가격 (체결 가격과 조정된 가격의 가중 평균)
+    // 거래량이 클수록 시장 반응 비중 증가
+    const marketReactionWeight = Math.min(0.5, tradeRatio * 500); // 최대 50%
+    const finalPrice = price * (1 - marketReactionWeight) + adjustedPrice * marketReactionWeight;
+    
+    // 24시간 변동률 재계산
+    const finalPriceChange24h = price24hAgo > 0 
+      ? ((finalPrice - price24hAgo) / price24hAgo) * 100 
+      : 0;
+
     // 코인 현재가 및 24시간 변동률 업데이트
-    await query('UPDATE coins SET current_price = ?, price_change_24h = ? WHERE id = ?', [price, priceChange24h, coinId]);
+    await query('UPDATE coins SET current_price = ?, price_change_24h = ? WHERE id = ?', [finalPrice, finalPriceChange24h, coinId]);
 
     // 캔들스틱 데이터 업데이트
-    await this.updateCandlestick(coinId, price, quantity);
+    await this.updateCandlestick(coinId, finalPrice, quantity);
+
+    // 실시간 가격 조정 (거래 체결 시마다)
+    try {
+      await aiTradingBot.adjustPriceForCoin(coinId);
+      
+      // WebSocket으로 가격 업데이트 브로드캐스트
+      if (websocketInstance && websocketInstance.broadcastPriceUpdate) {
+        const updatedCoin = (await query('SELECT * FROM coins WHERE id = ?', [coinId]))[0];
+        websocketInstance.broadcastPriceUpdate(coinId, {
+          current_price: updatedCoin.current_price,
+          price_change_24h: updatedCoin.price_change_24h,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (error) {
+      console.error('실시간 가격 조정 오류:', error);
+    }
+
+    // 실시간 유동성 공급 (거래 체결 시마다)
+    try {
+      await aiTradingBot.provideLiquidityForCoin(coinId);
+      
+      // WebSocket으로 호가창 업데이트 브로드캐스트
+      if (websocketInstance && websocketInstance.broadcastOrderbookUpdate) {
+        // 호가창 데이터 조회
+        const buyOrders = await query(
+          `SELECT price, SUM(remaining_quantity) as total_quantity, COUNT(*) as order_count
+           FROM orders
+           WHERE coin_id = ? AND order_type = 'BUY' AND status IN ('PENDING', 'PARTIAL')
+           GROUP BY price
+           ORDER BY price DESC
+           LIMIT 20`,
+          [coinId]
+        );
+        const sellOrders = await query(
+          `SELECT price, SUM(remaining_quantity) as total_quantity, COUNT(*) as order_count
+           FROM orders
+           WHERE coin_id = ? AND order_type = 'SELL' AND status IN ('PENDING', 'PARTIAL')
+           GROUP BY price
+           ORDER BY price ASC
+           LIMIT 20`,
+          [coinId]
+        );
+        
+        websocketInstance.broadcastOrderbookUpdate(coinId, {
+          buy_orders: buyOrders,
+          sell_orders: sellOrders,
+        });
+      }
+    } catch (error) {
+      console.error('실시간 유동성 공급 오류:', error);
+    }
+
+    // 거래 체결 브로드캐스트
+    if (websocketInstance && websocketInstance.broadcastTrade) {
+      websocketInstance.broadcastTrade(coinId, {
+        id: tradeId,
+        price: finalPrice,
+        quantity: quantity,
+        created_at: new Date().toISOString(),
+      });
+    }
 
     return tradeId;
   }
