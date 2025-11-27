@@ -666,9 +666,23 @@ const TradingPage = () => {
           const high = Math.max(h, l);
           const low = Math.min(h, l);
 
-          const t = new Date(candle.open_time).getTime() / 1000;
-          if (isNaN(t) || t <= 0 || !isFinite(t)) {
-            console.warn('Invalid timestamp:', candle.open_time);
+          // 타임스탬프 변환 (초 단위로)
+          let t: number;
+          const timeValue = new Date(candle.open_time).getTime();
+
+          // 밀리초를 초로 변환
+          t = Math.floor(timeValue / 1000);
+
+          // 타임스탬프 유효성 검증 (2020년 ~ 2030년 사이)
+          const minTimestamp = new Date('2020-01-01').getTime() / 1000; // 1577836800
+          const maxTimestamp = new Date('2030-12-31').getTime() / 1000; // 1924905600
+
+          if (isNaN(t) || !isFinite(t) || t < minTimestamp || t > maxTimestamp) {
+            console.warn('Invalid or out-of-range timestamp:', {
+              open_time: candle.open_time,
+              timestamp: t,
+              date: new Date(t * 1000).toISOString()
+            });
             continue;
           }
 
@@ -735,6 +749,14 @@ const TradingPage = () => {
             }
 
             if (high < low) {
+              return false;
+            }
+
+            // 타임스탬프 범위 검증 (2020년 ~ 2030년)
+            const minTimestamp = new Date('2020-01-01').getTime() / 1000;
+            const maxTimestamp = new Date('2030-12-31').getTime() / 1000;
+            if (time < minTimestamp || time > maxTimestamp) {
+              console.warn('Timestamp out of range:', { time, date: new Date(time * 1000).toISOString() });
               return false;
             }
 
@@ -850,8 +872,18 @@ const TradingPage = () => {
           const high = Math.max(h, l);
           const low = Math.min(h, l);
 
-          const t = new Date(candle.open_time).getTime() / 1000;
-          if (isNaN(t) || t <= 0 || !isFinite(t)) {
+          // 타임스탬프 변환 (초 단위로)
+          let t: number;
+          const timeValue = new Date(candle.open_time).getTime();
+
+          // 밀리초를 초로 변환
+          t = Math.floor(timeValue / 1000);
+
+          // 타임스탬프 유효성 검증 (2020년 ~ 2030년 사이)
+          const minTimestamp = new Date('2020-01-01').getTime() / 1000;
+          const maxTimestamp = new Date('2030-12-31').getTime() / 1000;
+
+          if (isNaN(t) || !isFinite(t) || t < minTimestamp || t > maxTimestamp) {
             continue;
           }
 
@@ -914,6 +946,14 @@ const TradingPage = () => {
             }
 
             if (high < low) {
+              return false;
+            }
+
+            // 타임스탬프 범위 검증 (2020년 ~ 2030년)
+            const minTimestamp = new Date('2020-01-01').getTime() / 1000;
+            const maxTimestamp = new Date('2030-12-31').getTime() / 1000;
+            if (time < minTimestamp || time > maxTimestamp) {
+              console.warn('Timestamp out of range:', { time, date: new Date(time * 1000).toISOString() });
               return false;
             }
 
