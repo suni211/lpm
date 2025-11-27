@@ -3,42 +3,42 @@
 echo "🚀 Starting Rhythm Game Deployment..."
 
 # 환경 변수 확인
-if [ ! -f "rhythm/server/.env" ]; then
-    echo "❌ Error: .env file not found in rhythm/server/"
+if [ ! -f "server/.env" ]; then
+    echo "❌ Error: .env file not found in server/"
     echo "Please create .env file based on .env.example"
     exit 1
 fi
 
 # 서버 빌드
 echo "📦 Building server..."
-cd rhythm/server
+cd server
 npm install --production=false
 npm run build
-cd ../..
+cd ..
 
 # 클라이언트 빌드
 echo "📦 Building client..."
-cd rhythm/client
+cd client
 npm install
 npm run build
-cd ../..
+cd ..
 
 # PM2로 서버 시작/재시작
 echo "🔄 Deploying server with PM2..."
 pm2 delete rhythm-server 2>/dev/null || true
-pm2 start rhythm/ecosystem.config.js
+pm2 start ecosystem.config.js
 
 # Nginx 설정 복사 (처음 한 번만)
 if [ ! -f "/etc/nginx/sites-available/rhythm.berrple.com" ]; then
     echo "📝 Setting up Nginx..."
-    sudo cp rhythm/nginx.conf /etc/nginx/sites-available/rhythm.berrple.com
+    sudo cp nginx.conf /etc/nginx/sites-available/rhythm.berrple.com
     sudo ln -sf /etc/nginx/sites-available/rhythm.berrple.com /etc/nginx/sites-enabled/
 fi
 
 # 클라이언트 파일 배포
 echo "📂 Deploying client files..."
-sudo mkdir -p /var/www/rhythm/client
-sudo cp -r rhythm/client/dist/* /var/www/rhythm/client/dist/
+sudo mkdir -p /var/www/rhythm/client/dist
+sudo cp -r client/dist/* /var/www/rhythm/client/dist/
 
 # Nginx 설정 테스트 및 재시작
 echo "🔄 Restarting Nginx..."

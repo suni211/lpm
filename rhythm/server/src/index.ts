@@ -14,8 +14,22 @@ const server = createServer(app);
 const PORT = process.env.PORT || 5003;
 
 // 미들웨어
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000', 'http://localhost:3003'];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // origin이 없는 경우 (같은 도메인에서의 요청) 허용
+    if (!origin) return callback(null, true);
+    
+    // 허용된 origin인지 확인
+    if (allowedOrigins.includes(origin) || allowedOrigins.some(allowed => origin?.includes(allowed))) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS 정책에 의해 차단되었습니다.'));
+    }
+  },
   credentials: true
 }));
 
@@ -28,8 +42,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production' && process.env.SSL_ENABLED === 'true',
     httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7일
   }
 }));
