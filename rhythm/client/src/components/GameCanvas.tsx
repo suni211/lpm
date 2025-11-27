@@ -133,12 +133,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
 
       if (!gameState.isPlaying || !isGameStarted) return;
 
-      // 롱노트 릴리즈 체크
+      // 롱노트는 키를 떼도 계속 유지됨 (끊기지 않음)
+      // 롱노트가 끝날 때까지 (duration 만큼) 계속 누르고 있어야 함
+      // 키를 떼는 것은 롱노트를 끊는 것이 아니라, 롱노트가 끝날 때까지 유지
+      // checkLongNoteRelease는 롱노트가 duration 만큼 지났는지만 확인
       const keyBinding = settings.keyBindings[`key${beatmap.key_count}` as keyof typeof settings.keyBindings];
       const lane = keyBinding.indexOf(e.code);
 
       if (lane !== -1) {
-        checkLongNoteRelease(lane);
+        // 롱노트는 키를 떼도 계속 유지되므로, 여기서는 아무것도 하지 않음
+        // 롱노트가 duration 만큼 지났는지는 게임 루프에서 확인
       }
     };
 
@@ -176,6 +180,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
             
             // 롱노트를 누르고 있는 동안 지속적으로 업데이트
             updateLongNoteDurations(currentTime);
+            
+            // 롱노트가 duration 만큼 지났는지 확인 (모든 레인 체크)
+            for (let lane = 0; lane < beatmap.key_count; lane++) {
+              checkLongNoteRelease(lane);
+            }
             
             render(currentTime);
             animationFrameRef.current = requestAnimationFrame(loop);
@@ -230,8 +239,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
         }
 
         if (note.type === NoteType.LONG) {
+          // 롱노트는 키를 누르면 시작하고, duration 만큼 지날 때까지 계속 유지
           longNotesHeld.current.set(note.id, true);
         } else {
+          // 일반 노트는 즉시 처리
           processedNotes.current.add(note.id);
         }
 
@@ -311,46 +322,27 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
   };
 
   const checkLongNoteRelease = (lane: number) => {
+    // 롱노트는 키를 떼도 계속 유지됨 (끊기지 않음)
+    // 롱노트가 끝날 때까지 (duration 만큼) 계속 누르고 있어야 함
     beatmap.note_data
       .filter(note => note.lane === lane && note.type === NoteType.LONG && longNotesHeld.current.get(note.id))
       .forEach(note => {
         const currentTime = (audioRef.current?.seek() as number || 0) * 1000;
         const holdTime = currentTime - note.timestamp;
 
-        setGameState(s => {
-          if (note.duration && holdTime >= note.duration * 0.8) {
-            const combo = calculateLongNoteCombo(note.duration);
-            // 롱노트 성공
-            processedNotes.current.add(note.id);
-            longNotesHeld.current.delete(note.id);
-            return { ...s, combo: s.combo + combo, maxCombo: Math.max(s.maxCombo, s.combo + combo) };
-          } else {
-            // 롱노트 실패
-            processedNotes.current.add(note.id);
-            longNotesHeld.current.delete(note.id);
-            const newJudgements = { ...s.judgements };
-            newJudgements.fuck++;
-            
-            // 정확도 계산 후 판정 표시
-            const tempTotal = newJudgements.yas + newJudgements.oh + newJudgements.ah + newJudgements.fuck;
-            const tempAccuracy = tempTotal > 0
-              ? Math.round(((newJudgements.yas * 100 + newJudgements.oh * 70 + newJudgements.ah * 40) / tempTotal) * 100) / 100
-              : 0;
-            
-            const finalJudgement = tempAccuracy >= 100 ? JudgementType.YAS
-              : tempAccuracy >= 70 ? JudgementType.OH
-              : tempAccuracy >= 30 ? JudgementType.AH
-              : JudgementType.FUCK;
-            
-            const now = Date.now();
-            setRecentJudgements(prev => [...prev, { type: finalJudgement, timestamp: now, accuracy: tempAccuracy }]);
-            setTimeout(() => {
-              setRecentJudgements(prev => prev.filter(j => j.timestamp !== now));
-            }, 1500);
-            
-            return { ...s, combo: 0, judgements: newJudgements };
-          }
-        });
+        // 롱노트가 끝났는지 확인 (duration 만큼 지났는지)
+        if (note.duration && holdTime >= note.duration) {
+          // 롱노트 완료
+          const combo = calculateLongNoteCombo(note.duration);
+          processedNotes.current.add(note.id);
+          longNotesHeld.current.delete(note.id);
+          setGameState(s => ({
+            ...s,
+            combo: s.combo + combo,
+            maxCombo: Math.max(s.maxCombo, s.combo + combo)
+          }));
+        }
+        // 롱노트가 아직 끝나지 않았으면 계속 유지 (키를 떼도 삭제하지 않음)
       });
   };
 
@@ -444,18 +436,19 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       console.warn('비트맵에 노트가 없습니다:', beatmap);
     }
     
+    let visibleNotesCount = 0;
     beatmap.note_data.forEach(note => {
       if (processedNotes.current.has(note.id)) return;
-      const isVisible = isNoteVisible(note.timestamp, currentTime, settings.noteSpeed);
-      if (!isVisible) return;
-
+      
       const x = playAreaX + note.lane * laneWidth;
       const y = calculateNoteYPosition(note.timestamp, currentTime, settings.noteSpeed, laneHeight, laneStartY, judgementLineY);
 
-      // 노트가 판정선을 지나갔거나 아직 보이지 않는 위치면 표시하지 않음
-      // 하지만 노트가 보이는 범위 내에 있으면 표시
-      if (y > judgementLineY + 10) return; // 판정선을 지나간 노트는 표시하지 않음
-      if (y < laneStartY - 50) return; // 아직 보이지 않는 위치의 노트는 표시하지 않음
+      // 노트가 화면 범위 내에 있는지 확인 (더 관대하게)
+      if (y > judgementLineY + 20) return; // 판정선을 많이 지나간 노트는 표시하지 않음
+      if (y < laneStartY - 100) return; // 아직 보이지 않는 위치의 노트는 표시하지 않음
+      
+      // 노트가 보이는 범위 내에 있으면 렌더링
+      visibleNotesCount++;
 
       if (note.type === NoteType.LONG) {
         // 롱노트를 누르고 있는지 확인
@@ -485,7 +478,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       // 노트를 두껍고 짧게 (DJMAX 스타일: 정사각형에 가깝게)
       const noteSize = Math.min(laneWidth * 0.9, 25); // 최대 25px, 레인의 90%
       const noteX = x + (laneWidth - noteSize) / 2;
-      ctx.fillStyle = note.type === NoteType.SLIDE ? '#ff00ff' : '#00ff00';
+      ctx.fillStyle = '#00ff00'; // 슬라이드 제거, 일반 노트만 녹색
       ctx.fillRect(noteX, y - noteSize / 2, noteSize, noteSize);
       
       // 노트 테두리

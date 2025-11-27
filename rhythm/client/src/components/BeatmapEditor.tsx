@@ -8,6 +8,8 @@ interface BeatmapEditorProps {
   bpm?: number;
   keyCount: number;
   onSave: (notes: Note[], effects: Effect[], bpm: number) => void;
+  initialNotes?: Note[];
+  initialEffects?: Effect[];
 }
 
 // 기본 키 설정
@@ -17,17 +19,17 @@ const DEFAULT_KEY_BINDINGS = {
   6: ['KeyS', 'KeyD', 'KeyF', 'KeyJ', 'KeyK', 'KeyL']
 };
 
-const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm, keyCount, onSave }) => {
+const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm, keyCount, onSave, initialNotes, initialEffects }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<Howl | null>(null);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [effects, setEffects] = useState<Effect[]>([]);
+  const [notes, setNotes] = useState<Note[]>(initialNotes || []);
+  const [effects, setEffects] = useState<Effect[]>(initialEffects || []);
   const [currentTime, setCurrentTime] = useState(0);
   const [bpm, setBpm] = useState(initialBpm || 120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [gridSnap, setGridSnap] = useState(true);
-  const [selectedTool, setSelectedTool] = useState<'note' | 'long' | 'slide' | 'effect'>('note');
+  const [selectedTool, setSelectedTool] = useState<'note' | 'long' | 'effect'>('note');
   const [selectedEffect, setSelectedEffect] = useState<EffectType>(EffectType.ROTATE);
   const [keyBindings, setKeyBindings] = useState<string[]>(DEFAULT_KEY_BINDINGS[keyCount as keyof typeof DEFAULT_KEY_BINDINGS] || []);
   const [isEditingKeys, setIsEditingKeys] = useState(false);
@@ -54,10 +56,27 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
       detectBPM();
     }
 
+    // 초기 노트와 이펙트 로드 (재편집 시)
+    if (initialNotes && initialNotes.length > 0) {
+      setNotes(initialNotes);
+      // 타임스탬프 추적 초기화
+      allNoteTimestampsRef.current.clear();
+      initialNotes.forEach(note => {
+        const ts = Math.floor(note.timestamp);
+        if (!allNoteTimestampsRef.current.has(ts)) {
+          allNoteTimestampsRef.current.set(ts, new Set());
+        }
+        allNoteTimestampsRef.current.get(ts)!.add(note.lane);
+      });
+    }
+    if (initialEffects && initialEffects.length > 0) {
+      setEffects(initialEffects);
+    }
+
     return () => {
       audioRef.current?.unload();
     };
-  }, [songFile]);
+  }, [songFile, initialNotes, initialEffects]);
 
   useEffect(() => {
     // 키 설정이 변경되면 기본값으로 업데이트
@@ -148,14 +167,6 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     const longNote = activeLongNotesRef.current[e.code];
     
     if (longNote) {
-    // 이전 노트와의 간격 확인 (슬라이드 판단)
-    const previousNoteTime = keyPressStartTimeRef.current[`${e.code}_prev`] || 0;
-    const slideThreshold = 300; // 300ms 이내면 슬라이드
-    const timeSincePreviousNote = pressStartTime - previousNoteTime;
-    const isSlide = previousNoteTime > 0 && 
-                    timeSincePreviousNote > 30 && 
-                    timeSincePreviousNote < slideThreshold;
-
     // 롱노트 duration 업데이트 (키를 떼면 그 시점까지의 duration으로 저장)
     // 1ms 단위로 정확하게 계산
     const holdDurationMs = Math.floor(holdDuration);
@@ -165,27 +176,13 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
         if (note.id === longNote.id) {
           // 200ms 기준으로 노트 타입 결정
           if (holdDurationMs < 200) {
-            // 0~200ms: 일반 노트 또는 슬라이드 노트
-            if (isSlide) {
-              // 슬라이드 노트로 변경 (타임스탬프는 그대로 유지)
-              return { ...note, type: NoteType.SLIDE, slideDirection: 'right' as const, duration: undefined };
-            } else {
-              // 일반 노트로 변경 (타임스탬프는 그대로 유지)
-              return { ...note, type: NoteType.NORMAL, duration: undefined, slideDirection: undefined };
-            }
+            // 0~200ms: 일반 노트
+            return { ...note, type: NoteType.NORMAL, duration: undefined, slideDirection: undefined };
           } else {
             // 200ms 이상: 롱노트 (키를 떼는 시점까지의 duration으로 저장)
             // 1ms 단위로 정확하게 저장, 길이 제한 없음 (무한정 길 수 있음)
             return { ...note, type: NoteType.LONG, duration: holdDurationMs };
           }
-        }
-        // 이전 노트도 슬라이드로 변경 (연속 입력인 경우)
-        if (isSlide && 
-            note.lane === lane && 
-            Math.abs(note.timestamp - previousNoteTime) < 50 &&
-            note.id !== longNote.id &&
-            note.type === NoteType.NORMAL) {
-          return { ...note, type: NoteType.SLIDE, slideDirection: 'right' as const };
         }
         return note;
       });
@@ -240,14 +237,14 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
       }
       timestamp = finalTimestamp;
 
-    if (selectedTool === 'note' || selectedTool === 'long' || selectedTool === 'slide') {
+    if (selectedTool === 'note' || selectedTool === 'long') {
       const newNote: Note = {
         id: `note-${Date.now()}`,
-        type: selectedTool === 'long' ? NoteType.LONG : selectedTool === 'slide' ? NoteType.SLIDE : NoteType.NORMAL,
+        type: selectedTool === 'long' ? NoteType.LONG : NoteType.NORMAL,
         lane,
         timestamp,
         duration: selectedTool === 'long' ? 500 : undefined,
-        slideDirection: selectedTool === 'slide' ? 'right' : undefined
+        slideDirection: undefined
       };
       setNotes([...notes, newNote]);
     } else if (selectedTool === 'effect') {
@@ -527,7 +524,7 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
       // 노트를 두껍고 짧게 (DJMAX 스타일: 정사각형에 가깝게)
       const noteSize = Math.min(laneWidth * 0.9, 25); // 최대 25px, 레인의 90%
       const noteX = x + (laneWidth - noteSize) / 2;
-      ctx.fillStyle = note.type === NoteType.SLIDE ? '#ff00ff' : note.type === NoteType.LONG ? '#ffaa00' : '#00ff00';
+      ctx.fillStyle = note.type === NoteType.LONG ? '#ffaa00' : '#00ff00';
       ctx.fillRect(noteX, noteY - noteSize / 2, noteSize, noteSize);
       
       // 노트 테두리
@@ -624,12 +621,6 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
                 롱 노트
               </button>
               <button 
-                onClick={() => setSelectedTool('slide')}
-                className={`tool-btn ${selectedTool === 'slide' ? 'active' : ''}`}
-              >
-                슬라이드 노트
-              </button>
-              <button 
                 onClick={() => setSelectedTool('effect')}
                 className={`tool-btn ${selectedTool === 'effect' ? 'active' : ''}`}
               >
@@ -645,7 +636,6 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
             <div className="recording-instructions">
               <p>• 짧게 누르기 (0~200ms): 일반 노트</p>
               <p>• 길게 누르기 (200ms 이상): 롱 노트</p>
-              <p>• 연달아 누르기 (300ms 이내): 슬라이드 노트</p>
             </div>
           </div>
         )}

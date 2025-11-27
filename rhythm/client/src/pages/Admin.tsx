@@ -7,7 +7,9 @@ import './Admin.css';
 
 const Admin: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [step, setStep] = useState<'upload' | 'edit' | 'manage'>('upload');
+  const [step, setStep] = useState<'upload' | 'edit' | 'manage' | 'editBeatmap'>('upload');
+  const [editingBeatmapId, setEditingBeatmapId] = useState<number | null>(null);
+  const [editingBeatmapData, setEditingBeatmapData] = useState<any>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedCover, setUploadedCover] = useState<File | null>(null);
   const [songId, setSongId] = useState<number | null>(null);
@@ -82,26 +84,37 @@ const Admin: React.FC = () => {
   };
 
   const handleSaveBeatmap = async (notes: Note[], effects: Effect[], _bpm: number) => {
-    if (!songId) return;
+    if (!songId && !editingBeatmapId) return;
 
     setLoading(true);
     try {
       // 노트 수 정확하게 집계 (롱노트는 1개로 카운트)
       const totalNotes = notes.length;
       
-      await beatmaps.create({
-        song_id: songId,
+      const beatmapData = {
+        song_id: editingBeatmapId ? editingBeatmapData.song_id : songId,
         difficulty: beatmapSettings.difficulty,
         key_count: beatmapSettings.keyCount,
         note_data: JSON.stringify(notes),
         effect_data: JSON.stringify(effects),
         level: beatmapSettings.level,
         total_notes: totalNotes
-      });
+      };
 
-      alert('비트맵이 성공적으로 저장되었습니다!');
+      if (editingBeatmapId) {
+        // 기존 비트맵 업데이트
+        await beatmaps.update(editingBeatmapId, beatmapData);
+        alert('비트맵이 성공적으로 업데이트되었습니다!');
+      } else {
+        // 새 비트맵 생성
+        await beatmaps.create(beatmapData);
+        alert('비트맵이 성공적으로 저장되었습니다!');
+      }
+
       setStep('upload');
       setSongId(null);
+      setEditingBeatmapId(null);
+      setEditingBeatmapData(null);
       setUploadedFile(null);
       setUploadedCover(null);
       setSongData({ title: '', artist: '', bpm: 120, duration: 0 });
@@ -109,6 +122,50 @@ const Admin: React.FC = () => {
     } catch (error: any) {
       setError(error.response?.data?.error || '비트맵 저장에 실패했습니다.');
       console.error('비트맵 저장 실패', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditBeatmap = async (songId: number) => {
+    setLoading(true);
+    try {
+      // 곡 정보 가져오기
+      const songRes = await songs.getOne(songId);
+      const song = songRes.data.song;
+      
+      // 비트맵 가져오기
+      const beatmapRes = await beatmaps.getBySong(songId);
+      const beatmapsList = beatmapRes.data.beatmaps;
+      
+      if (beatmapsList.length === 0) {
+        alert('이 곡에는 비트맵이 없습니다. 새로 만들어주세요.');
+        setLoading(false);
+        return;
+      }
+
+      // 첫 번째 비트맵 사용 (또는 선택 UI 추가 가능)
+      const beatmap = beatmapsList[0];
+      
+      setSongId(songId);
+      setEditingBeatmapId(beatmap.id);
+      // 비트맵 데이터에 곡 정보도 포함
+      setEditingBeatmapData({ ...beatmap, song_audio_file: song.audio_file });
+      setSongData({
+        title: song.title,
+        artist: song.artist,
+        bpm: song.bpm,
+        duration: song.duration
+      });
+      setBeatmapSettings({
+        difficulty: beatmap.difficulty,
+        keyCount: beatmap.key_count,
+        level: beatmap.level
+      });
+      setStep('editBeatmap');
+    } catch (error: any) {
+      setError(error.response?.data?.error || '비트맵 로드에 실패했습니다.');
+      console.error('비트맵 로드 실패', error);
     } finally {
       setLoading(false);
     }
@@ -354,6 +411,14 @@ const Admin: React.FC = () => {
                     </div>
                     <div className="song-actions">
                       <button
+                        onClick={() => handleEditBeatmap(song.id)}
+                        className="edit-button"
+                        disabled={loading}
+                        style={{ marginRight: '10px' }}
+                      >
+                        ✏️ 비트맵 편집
+                      </button>
+                      <button
                         onClick={() => handleDeleteSong(song.id, song.title)}
                         className="delete-button"
                         disabled={loading}
@@ -369,14 +434,34 @@ const Admin: React.FC = () => {
         </div>
       )}
 
-      {step === 'edit' && uploadedFile && (
+      {(step === 'edit' || step === 'editBeatmap') && (uploadedFile || editingBeatmapData) && (
         <div className="editor-container fade-in">
           <BeatmapEditor
-            songFile={URL.createObjectURL(uploadedFile)}
+            songFile={
+              editingBeatmapData?.song_audio_file
+                ? `/uploads/${editingBeatmapData.song_audio_file.split('/').pop() || editingBeatmapData.song_audio_file}`
+                : uploadedFile 
+                  ? URL.createObjectURL(uploadedFile) 
+                  : ''
+            }
             bpm={songData.bpm}
             keyCount={beatmapSettings.keyCount}
             onSave={handleSaveBeatmap}
+            initialNotes={editingBeatmapData ? JSON.parse(editingBeatmapData.note_data || '[]') : undefined}
+            initialEffects={editingBeatmapData ? JSON.parse(editingBeatmapData.effect_data || '[]') : undefined}
           />
+          <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <button
+              onClick={() => {
+                setStep('upload');
+                setEditingBeatmapId(null);
+                setEditingBeatmapData(null);
+              }}
+              className="back-button"
+            >
+              편집 취소
+            </button>
+          </div>
         </div>
       )}
     </div>
