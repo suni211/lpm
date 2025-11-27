@@ -1,6 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Note, Effect, NoteType, EffectType } from '../types';
 import { Howl } from 'howler';
+import './BeatmapEditor.css';
 
 interface BeatmapEditorProps {
   songFile: string;
@@ -8,6 +9,13 @@ interface BeatmapEditorProps {
   keyCount: number;
   onSave: (notes: Note[], effects: Effect[], bpm: number) => void;
 }
+
+// 기본 키 설정
+const DEFAULT_KEY_BINDINGS = {
+  4: ['KeyD', 'KeyF', 'KeyJ', 'KeyK'],
+  5: ['KeyD', 'KeyF', 'Space', 'KeyJ', 'KeyK'],
+  6: ['KeyS', 'KeyD', 'KeyF', 'KeyJ', 'KeyK', 'KeyL']
+};
 
 const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm, keyCount, onSave }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -17,19 +25,27 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
   const [currentTime, setCurrentTime] = useState(0);
   const [bpm, setBpm] = useState(initialBpm || 120);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [gridSnap, setGridSnap] = useState(true);
   const [selectedTool, setSelectedTool] = useState<'note' | 'long' | 'slide' | 'effect'>('note');
   const [selectedEffect, setSelectedEffect] = useState<EffectType>(EffectType.ROTATE);
+  const [keyBindings, setKeyBindings] = useState<string[]>(DEFAULT_KEY_BINDINGS[keyCount as keyof typeof DEFAULT_KEY_BINDINGS] || []);
+  const [isEditingKeys, setIsEditingKeys] = useState(false);
+  const [editingKeyIndex, setEditingKeyIndex] = useState<number | null>(null);
+  const pressedKeysRef = useRef<Set<string>>(new Set());
+  const lastNoteTimeRef = useRef<{ [lane: number]: number }>({});
 
   useEffect(() => {
     audioRef.current = new Howl({
       src: [songFile],
       html5: true,
-      onload: () => console.log('Audio loaded for editor'),
-      onend: () => setIsPlaying(false)
+      onload: () => console.log('에디터용 오디오 로드 완료'),
+      onend: () => {
+        setIsPlaying(false);
+        setIsRecording(false);
+      }
     });
 
-    // BPM 자동 감지 (기본 구현)
     if (!initialBpm) {
       detectBPM();
     }
@@ -39,12 +55,77 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     };
   }, [songFile]);
 
+  useEffect(() => {
+    // 키 설정이 변경되면 기본값으로 업데이트
+    if (keyBindings.length !== keyCount) {
+      setKeyBindings(DEFAULT_KEY_BINDINGS[keyCount as keyof typeof DEFAULT_KEY_BINDINGS] || []);
+    }
+  }, [keyCount]);
+
   const detectBPM = async () => {
-    // 간단한 BPM 감지 로직 (실제로는 Web Audio API 사용)
     setBpm(120); // 기본값
   };
 
+  // 키보드 이벤트 핸들러
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (isEditingKeys || !isRecording || !isPlaying) return;
+
+    const keyIndex = keyBindings.indexOf(e.code);
+    if (keyIndex === -1) return;
+
+    // 중복 입력 방지
+    if (pressedKeysRef.current.has(e.code)) return;
+    pressedKeysRef.current.add(e.code);
+
+    e.preventDefault();
+
+    const lane = keyIndex;
+    let timestamp = currentTime;
+
+    // 그리드 스냅
+    if (gridSnap) {
+      const beatDuration = (60 / bpm) * 1000;
+      timestamp = Math.round(currentTime / beatDuration) * beatDuration;
+    }
+
+    // 최소 간격 체크 (같은 레인에서 너무 빠르게 입력 방지)
+    const minInterval = 50; // 50ms
+    if (lastNoteTimeRef.current[lane] && timestamp - lastNoteTimeRef.current[lane] < minInterval) {
+      return;
+    }
+
+    lastNoteTimeRef.current[lane] = timestamp;
+
+    const newNote: Note = {
+      id: `note-${Date.now()}-${lane}`,
+      type: selectedTool === 'long' ? NoteType.LONG : selectedTool === 'slide' ? NoteType.SLIDE : NoteType.NORMAL,
+      lane,
+      timestamp,
+      duration: selectedTool === 'long' ? 500 : undefined,
+      slideDirection: selectedTool === 'slide' ? 'right' : undefined
+    };
+
+    setNotes(prev => [...prev, newNote]);
+  }, [isRecording, isPlaying, isEditingKeys, keyBindings, currentTime, gridSnap, bpm, selectedTool]);
+
+  const handleKeyUp = useCallback((e: KeyboardEvent) => {
+    pressedKeysRef.current.delete(e.code);
+  }, []);
+
+  useEffect(() => {
+    if (isRecording && isPlaying) {
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keyup', handleKeyUp);
+      };
+    }
+  }, [isRecording, isPlaying, handleKeyDown, handleKeyUp]);
+
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isRecording) return; // 녹음 중에는 클릭 비활성화
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -85,6 +166,7 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
   const togglePlayback = () => {
     if (isPlaying) {
       audioRef.current?.pause();
+      setIsRecording(false);
     } else {
       audioRef.current?.play();
       updateCurrentTime();
@@ -92,20 +174,70 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     setIsPlaying(!isPlaying);
   };
 
+  const toggleRecording = () => {
+    if (!isPlaying) {
+      // 녹음 시작 시 재생도 함께 시작
+      audioRef.current?.play();
+      setIsPlaying(true);
+      updateCurrentTime();
+    }
+    setIsRecording(!isRecording);
+    pressedKeysRef.current.clear();
+  };
+
   const updateCurrentTime = () => {
     if (audioRef.current && isPlaying) {
-      setCurrentTime((audioRef.current.seek() as number) * 1000);
+      const time = (audioRef.current.seek() as number) * 1000;
+      setCurrentTime(time);
       requestAnimationFrame(updateCurrentTime);
     }
   };
 
   const handleSave = () => {
-    onSave(notes, effects, bpm);
+    // 노트를 타임스탬프 순으로 정렬
+    const sortedNotes = [...notes].sort((a, b) => a.timestamp - b.timestamp);
+    onSave(sortedNotes, effects, bpm);
+  };
+
+  const handleKeyBindingChange = (index: number, newKey: string) => {
+    const newBindings = [...keyBindings];
+    newBindings[index] = newKey;
+    setKeyBindings(newBindings);
+  };
+
+  const startKeyEdit = (index: number) => {
+    setIsEditingKeys(true);
+    setEditingKeyIndex(index);
+  };
+
+  const handleKeyCapture = (e: React.KeyboardEvent) => {
+    if (editingKeyIndex === null) return;
+    e.preventDefault();
+    handleKeyBindingChange(editingKeyIndex, e.code);
+    setIsEditingKeys(false);
+    setEditingKeyIndex(null);
+  };
+
+  const resetKeyBindings = () => {
+    setKeyBindings(DEFAULT_KEY_BINDINGS[keyCount as keyof typeof DEFAULT_KEY_BINDINGS] || []);
+  };
+
+  const getKeyDisplayName = (keyCode: string) => {
+    const keyMap: { [key: string]: string } = {
+      'KeyD': 'D',
+      'KeyF': 'F',
+      'KeyJ': 'J',
+      'KeyK': 'K',
+      'KeyS': 'S',
+      'KeyL': 'L',
+      'Space': 'SPACE'
+    };
+    return keyMap[keyCode] || keyCode.replace('Key', '');
   };
 
   useEffect(() => {
     renderEditor();
-  }, [notes, effects, currentTime, keyCount]);
+  }, [notes, effects, currentTime, keyCount, isRecording]);
 
   const renderEditor = () => {
     const canvas = canvasRef.current;
@@ -116,14 +248,14 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
 
     const { width, height } = canvas;
 
-    ctx.fillStyle = '#1a1a1a';
+    ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, width, height);
 
     // 레인 그리기
     const laneWidth = width / keyCount;
     for (let i = 0; i <= keyCount; i++) {
-      ctx.strokeStyle = '#444';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = i === keyCount / 2 ? '#00ffff' : '#333';
+      ctx.lineWidth = i === keyCount / 2 ? 2 : 1;
       ctx.beginPath();
       ctx.moveTo(i * laneWidth, 0);
       ctx.lineTo(i * laneWidth, height);
@@ -132,86 +264,214 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
 
     // 타임라인 그리드
     const beatDuration = (60 / bpm) * 1000;
-    const pixelsPerMs = width / 10000;
+    const pixelsPerMs = height / 60000; // 60초 기준
 
-    for (let t = 0; t < 100000; t += beatDuration) {
-      const x = (t - currentTime) * pixelsPerMs + width / 2;
-      if (x < 0 || x > width) continue;
+    for (let t = 0; t < 60000; t += beatDuration) {
+      const y = height - (t - currentTime) * pixelsPerMs;
+      if (y < 0 || y > height) continue;
 
       ctx.strokeStyle = t % (beatDuration * 4) === 0 ? '#666' : '#333';
       ctx.lineWidth = t % (beatDuration * 4) === 0 ? 2 : 1;
       ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
       ctx.stroke();
     }
+
+    // 현재 시간 라인
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, height);
+    ctx.lineTo(width, height);
+    ctx.stroke();
 
     // 노트 그리기
     notes.forEach(note => {
       const x = note.lane * laneWidth;
-      const noteX = (note.timestamp - currentTime) * pixelsPerMs + width / 2;
+      const noteY = height - (note.timestamp - currentTime) * pixelsPerMs;
 
-      if (noteX < -50 || noteX > width + 50) return;
+      if (noteY < -50 || noteY > height + 50) return;
 
       if (note.type === NoteType.LONG && note.duration) {
         const length = note.duration * pixelsPerMs;
-        ctx.fillStyle = 'rgba(255, 200, 0, 0.5)';
-        ctx.fillRect(noteX, x, length, laneWidth - 10);
+        ctx.fillStyle = 'rgba(255, 200, 0, 0.6)';
+        ctx.fillRect(x + 2, noteY - length, laneWidth - 4, length);
       }
 
-      ctx.fillStyle = note.type === NoteType.SLIDE ? '#ff00ff' : '#00ff00';
-      ctx.fillRect(noteX - 5, x + 5, 10, laneWidth - 10);
+      ctx.fillStyle = note.type === NoteType.SLIDE ? '#ff00ff' : note.type === NoteType.LONG ? '#ffaa00' : '#00ff00';
+      ctx.fillRect(x + 5, noteY - 10, laneWidth - 10, 20);
+      
+      // 노트 테두리
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x + 5, noteY - 10, laneWidth - 10, 20);
     });
 
     // 현재 시간 표시
     ctx.fillStyle = '#fff';
-    ctx.font = '16px Arial';
-    ctx.fillText(`Time: ${(currentTime / 1000).toFixed(2)}s`, 10, 20);
-    ctx.fillText(`BPM: ${bpm}`, 10, 40);
-    ctx.fillText(`Notes: ${notes.length}`, 10, 60);
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText(`시간: ${(currentTime / 1000).toFixed(2)}초`, 10, 25);
+    ctx.fillText(`BPM: ${bpm}`, 10, 50);
+    ctx.fillText(`노트: ${notes.length}개`, 10, 75);
+    
+    if (isRecording) {
+      ctx.fillStyle = '#ff0000';
+      ctx.fillText('● 녹음 중', 10, 100);
+    }
   };
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
-      canvas.width = 800;
-      canvas.height = 600;
+      canvas.width = 1200;
+      canvas.height = 800;
     }
   }, []);
 
   return (
-    <div style={{ padding: '20px' }}>
-      <div style={{ marginBottom: '20px' }}>
-        <button onClick={togglePlayback}>{isPlaying ? 'Pause' : 'Play'}</button>
-        <button onClick={handleSave}>Save Beatmap</button>
-        <label>
-          BPM: <input type="number" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} />
-        </label>
-        <label>
-          <input type="checkbox" checked={gridSnap} onChange={(e) => setGridSnap(e.target.checked)} />
-          Grid Snap
-        </label>
-      </div>
-      <div style={{ marginBottom: '20px' }}>
-        <button onClick={() => setSelectedTool('note')}>Normal Note</button>
-        <button onClick={() => setSelectedTool('long')}>Long Note</button>
-        <button onClick={() => setSelectedTool('slide')}>Slide Note</button>
-        <button onClick={() => setSelectedTool('effect')}>Effect</button>
-      </div>
-      {selectedTool === 'effect' && (
-        <div style={{ marginBottom: '20px' }}>
-          <select value={selectedEffect} onChange={(e) => setSelectedEffect(e.target.value as EffectType)}>
-            <option value={EffectType.ROTATE}>Rotate</option>
-            <option value={EffectType.NOISE}>Noise</option>
-            <option value={EffectType.ZOOM}>Zoom</option>
-          </select>
+    <div className="beatmap-editor">
+      <div className="editor-header">
+        <div className="editor-controls">
+          <button 
+            onClick={togglePlayback} 
+            className={`control-btn ${isPlaying ? 'pause-btn' : 'play-btn'}`}
+          >
+            {isPlaying ? '⏸ 일시정지' : '▶ 재생'}
+          </button>
+          <button 
+            onClick={toggleRecording} 
+            className={`control-btn record-btn ${isRecording ? 'recording' : ''}`}
+          >
+            {isRecording ? '● 녹음 중' : '● 녹음 시작'}
+          </button>
+          <button onClick={handleSave} className="control-btn save-btn">
+            💾 비트맵 저장
+          </button>
         </div>
-      )}
-      <canvas
-        ref={canvasRef}
-        onClick={handleCanvasClick}
-        style={{ border: '1px solid #666', cursor: 'crosshair' }}
-      />
+
+        <div className="editor-settings">
+          <label className="setting-item">
+            BPM: 
+            <input 
+              type="number" 
+              value={bpm} 
+              onChange={(e) => setBpm(Number(e.target.value))}
+              className="setting-input"
+              min="60"
+              max="300"
+            />
+          </label>
+          <label className="setting-item">
+            <input 
+              type="checkbox" 
+              checked={gridSnap} 
+              onChange={(e) => setGridSnap(e.target.checked)}
+            />
+            그리드 스냅
+          </label>
+        </div>
+      </div>
+
+      <div className="editor-tools">
+        <div className="tool-section">
+          <h3>노트 타입</h3>
+          <div className="tool-buttons">
+            <button 
+              onClick={() => setSelectedTool('note')}
+              className={`tool-btn ${selectedTool === 'note' ? 'active' : ''}`}
+            >
+              일반 노트
+            </button>
+            <button 
+              onClick={() => setSelectedTool('long')}
+              className={`tool-btn ${selectedTool === 'long' ? 'active' : ''}`}
+            >
+              롱 노트
+            </button>
+            <button 
+              onClick={() => setSelectedTool('slide')}
+              className={`tool-btn ${selectedTool === 'slide' ? 'active' : ''}`}
+            >
+              슬라이드 노트
+            </button>
+            <button 
+              onClick={() => setSelectedTool('effect')}
+              className={`tool-btn ${selectedTool === 'effect' ? 'active' : ''}`}
+            >
+              이펙트
+            </button>
+          </div>
+        </div>
+
+        {selectedTool === 'effect' && (
+          <div className="tool-section">
+            <h3>이펙트 타입</h3>
+            <select 
+              value={selectedEffect} 
+              onChange={(e) => setSelectedEffect(e.target.value as EffectType)}
+              className="effect-select"
+            >
+              <option value={EffectType.ROTATE}>회전</option>
+              <option value={EffectType.NOISE}>노이즈</option>
+              <option value={EffectType.ZOOM}>줌</option>
+            </select>
+          </div>
+        )}
+
+        <div className="tool-section key-settings">
+          <h3>키 설정 ({keyCount}키)</h3>
+          <div className="key-bindings">
+            {keyBindings.map((key, index) => (
+              <div key={index} className="key-binding-item">
+                <span className="key-label">레인 {index + 1}:</span>
+                {editingKeyIndex === index ? (
+                  <input
+                    type="text"
+                    className="key-input"
+                    placeholder="키를 누르세요"
+                    onKeyDown={handleKeyCapture}
+                    autoFocus
+                    onBlur={() => {
+                      setIsEditingKeys(false);
+                      setEditingKeyIndex(null);
+                    }}
+                  />
+                ) : (
+                  <button
+                    onClick={() => startKeyEdit(index)}
+                    className="key-btn"
+                  >
+                    {getKeyDisplayName(key)}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button onClick={resetKeyBindings} className="reset-keys-btn">
+            기본값으로 초기화
+          </button>
+        </div>
+      </div>
+
+      <div className="editor-canvas-wrapper">
+        <canvas
+          ref={canvasRef}
+          onClick={handleCanvasClick}
+          className="editor-canvas"
+        />
+        {isRecording && (
+          <div className="recording-overlay">
+            <div className="recording-indicator pulse"></div>
+            <p>키보드로 노트를 입력하세요</p>
+          </div>
+        )}
+      </div>
+
+      <div className="editor-info">
+        <p>💡 팁: 녹음 모드에서 재생 버튼을 누르고 키보드로 노트를 입력하세요</p>
+        <p>💡 팁: 키 설정을 클릭하여 원하는 키로 변경할 수 있습니다</p>
+      </div>
     </div>
   );
 };
