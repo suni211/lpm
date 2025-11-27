@@ -124,13 +124,13 @@ export const calculateNoteYPosition = (
   return offsetY + progress * fallDistance;
 };
 
-// 롱노트 길이 계산
+// 롱노트 길이 계산 (위로 올라가는 방향)
 export const calculateLongNoteLength = (
   duration: number,
   noteSpeed: number,
   canvasHeight: number
 ): number => {
-  const fallDistance = canvasHeight * 0.8;
-  const fallTime = 2000 / noteSpeed;
-  return (duration / fallTime) * fallDistance;
+  const fallTime = 2000 / noteSpeed; // 노트가 내려오는 시간 (ms)
+  // 롱노트는 위로 올라가므로, duration에 비례하여 길이 계산
+  return (duration / fallTime) * (canvasHeight * 0.7);
 };

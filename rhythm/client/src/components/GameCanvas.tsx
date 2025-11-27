@@ -384,27 +384,27 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
   };
 
   const renderSolo = (ctx: CanvasRenderingContext2D, width: number, height: number, currentTime: number) => {
-    // 중앙에 길고 얇은 레인 (양 옆에 여백)
-    const margin = width * 0.2; // 양 옆 20% 여백
-    const playAreaWidth = width - margin * 2;
+    // DJMAX 스타일: 중앙에 얇고 작은 레인 영역
+    const playAreaWidth = Math.min(width * 0.15, 200); // 최대 200px, 화면의 15%
+    const playAreaX = (width - playAreaWidth) / 2; // 중앙 정렬
     
-    // 판정선 (중앙, 얇고 길게)
-    const judgementLineY = height * 0.9;
+    // 판정선 (중앙, 얇고 짧게)
+    const judgementLineY = height * 0.85;
     ctx.strokeStyle = '#00ffff';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(margin, judgementLineY);
-    ctx.lineTo(width - margin, judgementLineY);
+    ctx.moveTo(playAreaX, judgementLineY);
+    ctx.lineTo(playAreaX + playAreaWidth, judgementLineY);
     ctx.stroke();
 
-    // 레인 그리기 (세로로 길고 얇게)
+    // 레인 그리기 (DJMAX 스타일: 얇고 작게)
     const laneWidth = playAreaWidth / beatmap.key_count;
-    const laneHeight = height * 0.8; // 화면의 80% 높이
-    const laneStartY = height * 0.1; // 상단 10% 여백
+    const laneHeight = height * 0.7; // 화면의 70% 높이
+    const laneStartY = height * 0.15; // 상단 15% 여백
 
     for (let i = 0; i <= beatmap.key_count; i++) {
-      const x = margin + i * laneWidth;
-      ctx.strokeStyle = '#333';
+      const x = playAreaX + i * laneWidth;
+      ctx.strokeStyle = '#444';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x, laneStartY);
@@ -417,7 +417,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       if (processedNotes.current.has(note.id)) return;
       if (!isNoteVisible(note.timestamp, currentTime, settings.noteSpeed)) return;
 
-      const x = margin + note.lane * laneWidth;
+      const x = playAreaX + note.lane * laneWidth;
       const y = calculateNoteYPosition(note.timestamp, currentTime, settings.noteSpeed, laneHeight, laneStartY, judgementLineY);
 
       // 노트가 판정선을 지나갔으면 표시하지 않음
@@ -426,30 +426,36 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       if (note.type === NoteType.LONG) {
         // 롱노트를 누르고 있는지 확인
         const isHeld = longNotesHeld.current.get(note.id);
-        let actualDuration = note.duration || 100;
+        let actualDuration = note.duration || 200;
         
-        // 누르고 있으면 실시간 duration 계산
+        // 누르고 있으면 실시간 duration 계산 (위로 올라가도록)
         if (isHeld) {
           const holdDuration = currentTime - note.timestamp;
           actualDuration = Math.max(actualDuration, holdDuration);
         }
         
+        // 롱노트 길이 계산 (위로 올라가도록)
         const noteLength = calculateLongNoteLength(actualDuration, settings.noteSpeed, laneHeight);
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.6)';
-        ctx.fillRect(x + 2, y - noteLength, laneWidth - 4, noteLength);
+        ctx.fillStyle = 'rgba(255, 200, 0, 0.7)';
+        // 롱노트는 판정선에서 위로 올라감
+        ctx.fillRect(x + 1, judgementLineY - noteLength, laneWidth - 2, noteLength);
+        
+        // 롱노트 시작 부분 (두껍게)
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
+        const noteSize = Math.min(laneWidth * 0.9, 25);
+        ctx.fillRect(x + (laneWidth - noteSize) / 2, judgementLineY - noteLength - noteSize / 2, noteSize, noteSize);
       }
 
-      // 노트를 작고 두껍게 (너비는 레인의 80%, 높이는 30px)
-      const noteWidth = laneWidth * 0.8;
-      const noteHeight = 30;
-      const noteX = x + (laneWidth - noteWidth) / 2;
+      // 노트를 두껍고 짧게 (DJMAX 스타일: 정사각형에 가깝게)
+      const noteSize = Math.min(laneWidth * 0.9, 25); // 최대 25px, 레인의 90%
+      const noteX = x + (laneWidth - noteSize) / 2;
       ctx.fillStyle = note.type === NoteType.SLIDE ? '#ff00ff' : '#00ff00';
-      ctx.fillRect(noteX, y - noteHeight / 2, noteWidth, noteHeight);
+      ctx.fillRect(noteX, y - noteSize / 2, noteSize, noteSize);
       
       // 노트 테두리
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2;
-      ctx.strokeRect(noteX, y - noteHeight / 2, noteWidth, noteHeight);
+      ctx.strokeRect(noteX, y - noteSize / 2, noteSize, noteSize);
     });
   };
 

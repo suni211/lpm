@@ -112,7 +112,7 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
       type: NoteType.LONG, // 롱노트로 시작
       lane,
       timestamp,
-      duration: 100, // 임시 duration (키를 떼면 실제 duration으로 업데이트)
+      duration: 200, // 임시 duration (키를 떼면 실제 duration으로 업데이트)
       slideDirection: undefined
     };
 
@@ -155,9 +155,9 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     setNotes(prev => {
       const updatedNotes: Note[] = prev.map(note => {
         if (note.id === longNote.id) {
-          // 최소 롱노트 duration은 100ms
-          if (holdDuration < 100) {
-            // 100ms 미만이면 일반 노트 또는 슬라이드 노트로 변경
+          // 200ms 기준으로 노트 타입 결정
+          if (holdDuration < 200) {
+            // 0~200ms: 일반 노트 또는 슬라이드 노트
             if (isSlide) {
               // 슬라이드 노트로 변경
               return { ...note, type: NoteType.SLIDE, slideDirection: 'right' as const, duration: undefined };
@@ -166,7 +166,7 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
               return { ...note, type: NoteType.NORMAL, duration: undefined, slideDirection: undefined };
             }
           } else {
-            // 100ms 이상이면 롱노트 (키를 떼는 시점까지의 duration으로 저장)
+            // 200ms 이상: 롱노트 (키를 떼는 시점까지의 duration으로 저장)
             return { ...note, type: NoteType.LONG, duration: holdDuration };
           }
         }
@@ -266,8 +266,8 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
                   const pressStartTime = keyPressStartTimeRef.current[activeKey];
                   if (pressStartTime !== undefined) {
                     const holdDuration = time - pressStartTime;
-                    // 실시간으로 duration 업데이트
-                    return { ...note, duration: Math.max(100, holdDuration) };
+                    // 실시간으로 duration 업데이트 (최소 200ms 이상이어야 롱노트)
+                    return { ...note, duration: Math.max(200, holdDuration) };
                   }
                 }
                 return note;
@@ -372,14 +372,19 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, width, height);
 
-    // 레인 그리기
-    const laneWidth = width / keyCount;
+    // DJMAX 스타일: 중앙에 얇고 작은 레인 영역
+    const playAreaWidth = Math.min(width * 0.15, 200); // 최대 200px, 화면의 15%
+    const playAreaX = (width - playAreaWidth) / 2; // 중앙 정렬
+    
+    // 레인 그리기 (얇고 작게)
+    const laneWidth = playAreaWidth / keyCount;
     for (let i = 0; i <= keyCount; i++) {
+      const x = playAreaX + i * laneWidth;
       ctx.strokeStyle = i === keyCount / 2 ? '#00ffff' : '#333';
       ctx.lineWidth = i === keyCount / 2 ? 2 : 1;
       ctx.beginPath();
-      ctx.moveTo(i * laneWidth, 0);
-      ctx.lineTo(i * laneWidth, height);
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
       ctx.stroke();
     }
 
@@ -407,25 +412,65 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     ctx.lineTo(width, height);
     ctx.stroke();
 
-    // 노트 그리기
+    // 판정선 (현재 시간 기준)
+    const judgementLineY = height;
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(playAreaX, judgementLineY);
+    ctx.lineTo(playAreaX + playAreaWidth, judgementLineY);
+    ctx.stroke();
+
+    // 노트 그리기 (게임과 동일한 스타일)
     notes.forEach(note => {
-      const x = note.lane * laneWidth;
-      const noteY = height - (note.timestamp - currentTime) * pixelsPerMs;
+      const x = playAreaX + note.lane * laneWidth;
+      // 노트 위치 계산 (게임과 동일)
+      const timeUntilHit = note.timestamp - currentTime;
+      const fallTime = 2000 / 1; // 기본 속도
+      const fallDistance = height * 0.7;
+      const progress = 1 - (timeUntilHit / fallTime);
+      const noteY = height * 0.15 + progress * fallDistance;
 
       if (noteY < -50 || noteY > height + 50) return;
 
-      if (note.type === NoteType.LONG && note.duration) {
-        const length = note.duration * pixelsPerMs;
-        ctx.fillStyle = 'rgba(255, 200, 0, 0.6)';
-        ctx.fillRect(x + 2, noteY - length, laneWidth - 4, length);
+      if (note.type === NoteType.LONG) {
+        // 롱노트: 실시간 duration 확인
+        const activeKey = Object.keys(activeLongNotesRef.current).find(key => {
+          const longNote = activeLongNotesRef.current[key];
+          return longNote && longNote.id === note.id;
+        });
+        
+        let actualDuration = note.duration || 200;
+        if (activeKey) {
+          const pressStartTime = keyPressStartTimeRef.current[activeKey];
+          if (pressStartTime !== undefined) {
+            const holdDuration = currentTime - pressStartTime;
+            actualDuration = Math.max(actualDuration, holdDuration);
+          }
+        }
+        
+        // 롱노트 길이 계산 (위로 올라가도록)
+        const noteLength = (actualDuration / fallTime) * fallDistance;
+        ctx.fillStyle = 'rgba(255, 200, 0, 0.7)';
+        // 롱노트는 판정선에서 위로 올라감
+        ctx.fillRect(x + 1, judgementLineY - noteLength, laneWidth - 2, noteLength);
+        
+        // 롱노트 시작 부분 (두껍게)
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
+        const noteSize = Math.min(laneWidth * 0.9, 25);
+        ctx.fillRect(x + (laneWidth - noteSize) / 2, judgementLineY - noteLength - noteSize / 2, noteSize, noteSize);
       }
 
-      // 노트를 작고 두껍게 (너비는 레인의 80%, 높이는 30px)
-      const noteWidth = laneWidth * 0.8;
-      const noteHeight = 30;
-      const noteX = x + (laneWidth - noteWidth) / 2;
+      // 노트를 두껍고 짧게 (DJMAX 스타일: 정사각형에 가깝게)
+      const noteSize = Math.min(laneWidth * 0.9, 25); // 최대 25px, 레인의 90%
+      const noteX = x + (laneWidth - noteSize) / 2;
       ctx.fillStyle = note.type === NoteType.SLIDE ? '#ff00ff' : note.type === NoteType.LONG ? '#ffaa00' : '#00ff00';
-      ctx.fillRect(noteX, noteY - noteHeight / 2, noteWidth, noteHeight);
+      ctx.fillRect(noteX, noteY - noteSize / 2, noteSize, noteSize);
+      
+      // 노트 테두리
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(noteX, noteY - noteSize / 2, noteSize, noteSize);
       
       // 노트 테두리
       ctx.strokeStyle = '#fff';
