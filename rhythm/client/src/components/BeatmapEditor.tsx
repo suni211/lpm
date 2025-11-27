@@ -105,14 +105,14 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
     keyPressLaneRef.current[e.code] = lane;
     keyPressStartTimeRef.current[`${e.code}_prev`] = previousNoteTime; // 이전 노트 시간 저장
 
-    // 롱노트 시작 (나중에 키를 떼면 duration과 타입이 결정됨)
+    // 롱노트 시작 (키를 누르면 롱노트로 시작, 키를 떼면 duration 결정)
     const longNoteId = `long-${Date.now()}-${lane}-${e.code}`;
     const longNote: Note = {
       id: longNoteId,
-      type: NoteType.NORMAL, // 일단 일반 노트로 시작 (키를 떼면 결정)
+      type: NoteType.LONG, // 롱노트로 시작
       lane,
       timestamp,
-      duration: undefined,
+      duration: 100, // 임시 duration (키를 떼면 실제 duration으로 업데이트)
       slideDirection: undefined
     };
 
@@ -151,12 +151,13 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
                     timeSincePreviousNote > 30 && 
                     timeSincePreviousNote < slideThreshold;
 
-    // 같은 레인에서의 이전 노트 찾기 (슬라이드 체크용)
+    // 롱노트 duration 업데이트 (키를 떼면 그 시점까지의 duration으로 저장)
     setNotes(prev => {
       const updatedNotes: Note[] = prev.map(note => {
         if (note.id === longNote.id) {
-          if (holdDuration < 200) {
-            // 200ms 미만이면 일반 노트 또는 슬라이드 노트
+          // 최소 롱노트 duration은 100ms
+          if (holdDuration < 100) {
+            // 100ms 미만이면 일반 노트 또는 슬라이드 노트로 변경
             if (isSlide) {
               // 슬라이드 노트로 변경
               return { ...note, type: NoteType.SLIDE, slideDirection: 'right' as const, duration: undefined };
@@ -165,7 +166,7 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
               return { ...note, type: NoteType.NORMAL, duration: undefined, slideDirection: undefined };
             }
           } else {
-            // 200ms 이상이면 롱노트 (duration 업데이트)
+            // 100ms 이상이면 롱노트 (키를 떼는 시점까지의 duration으로 저장)
             return { ...note, type: NoteType.LONG, duration: holdDuration };
           }
         }
