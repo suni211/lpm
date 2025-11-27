@@ -126,6 +126,43 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
         setError(`잔액 부족 (필요: ${formatNumber(totalRequired)} G, 보유: ${formatNumber(goldBalance)} G)`);
         return;
       }
+    } else {
+      // 매도: 코인 잔액 체크 (예약 주문이므로 total_amount 체크)
+      if (!coinBalance) {
+        // 코인 잔액을 다시 조회
+        try {
+          const balances = await walletService.getMyBalances(walletAddress);
+          const balance = balances.balances?.find((b: CoinBalance) => b.coin_id === coin.id);
+          if (!balance || (typeof balance.total_amount === 'string' ? parseFloat(balance.total_amount) : (balance.total_amount || 0)) <= 0) {
+            setError('매도할 수 있는 코인이 없습니다');
+            return;
+          }
+        } catch (err) {
+          setError('코인 잔액을 확인할 수 없습니다');
+          return;
+        }
+      } else {
+        const totalAmount = typeof coinBalance.total_amount === 'string' ? parseFloat(coinBalance.total_amount) : (coinBalance.total_amount || 0);
+        const availableAmount = typeof coinBalance.available_amount === 'string' ? parseFloat(coinBalance.available_amount) : (coinBalance.available_amount || 0);
+        
+        // 예약 주문이므로 total_amount가 있으면 가능하지만, 입력한 수량이 total_amount를 초과하면 안 됨
+        if (totalAmount <= 0) {
+          setError('매도할 수 있는 코인이 없습니다');
+          return;
+        }
+        
+        // 입력한 수량이 보유량을 초과하는지 체크
+        if (finalQuantity > totalAmount) {
+          setError(`보유량 부족 (보유: ${formatNumber(totalAmount)} ${coin.symbol}, 요청: ${formatNumber(finalQuantity)} ${coin.symbol})`);
+          return;
+        }
+        
+        // available_amount가 부족하면 경고만 (예약 주문이므로 가능)
+        if (finalQuantity > availableAmount) {
+          // 경고만 표시하고 계속 진행 (다른 주문이 체결되면 사용 가능해질 수 있음)
+          console.warn(`사용 가능한 수량이 부족합니다 (사용 가능: ${formatNumber(availableAmount)}, 요청: ${formatNumber(finalQuantity)})`);
+        }
+      }
     }
 
     setLoading(true);
@@ -151,6 +188,16 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
       setQuantity('');
       setAmount('');
       setError('');
+      
+      // 코인 잔액 다시 조회
+      try {
+        const balances = await walletService.getMyBalances(walletAddress);
+        const balance = balances.balances?.find((b: CoinBalance) => b.coin_id === coin.id);
+        setCoinBalance(balance || null);
+      } catch (err) {
+        console.error('Failed to refresh coin balance:', err);
+      }
+      
       alert('주문이 등록되었습니다!');
       onOrderSuccess();
     } catch (err: any) {
@@ -186,19 +233,21 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
         }
       }
     } else {
-      // 매도: 코인 잔액 사용
-      if (coinBalance && coinBalance.available_amount > 0) {
-        const availableQty = parseFloat(coinBalance.available_amount.toString());
-        if (inputMode === 'amount') {
-          const p = parseFloat(price) || 0;
-          if (p > 0) {
-            const maxAmount = parseFloat((availableQty * p).toFixed(8));
-            setAmount(maxAmount.toString());
-            handleAmountChange(maxAmount.toString());
+      // 매도: 코인 잔액 사용 (total_amount 사용, 예약 주문이므로)
+      if (coinBalance) {
+        const totalAmount = typeof coinBalance.total_amount === 'string' ? parseFloat(coinBalance.total_amount) : (coinBalance.total_amount || 0);
+        if (totalAmount > 0) {
+          if (inputMode === 'amount') {
+            const p = parseFloat(price) || 0;
+            if (p > 0) {
+              const maxAmount = parseFloat((totalAmount * p).toFixed(8));
+              setAmount(maxAmount.toString());
+              handleAmountChange(maxAmount.toString());
+            }
+          } else {
+            setQuantity(totalAmount.toString());
+            handleQuantityChange(totalAmount.toString());
           }
-        } else {
-          setQuantity(availableQty.toString());
-          handleQuantityChange(availableQty.toString());
         }
       }
     }
@@ -225,14 +274,36 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
         }
       }, 100);
     } else {
-      // 전량 매도: 코인 잔액 전부 사용
-      if (!coinBalance || coinBalance.available_amount <= 0) {
-        setError('매도할 수 있는 코인이 없습니다');
-        return;
+      // 전량 매도: 코인 잔액 전부 사용 (예약 주문이므로 total_amount 사용)
+      if (!coinBalance) {
+        // 코인 잔액을 다시 조회
+        try {
+          const balances = await walletService.getMyBalances(walletAddress);
+          const balance = balances.balances?.find((b: CoinBalance) => b.coin_id === coin.id);
+          if (!balance) {
+            setError('코인 잔액을 확인할 수 없습니다');
+            return;
+          }
+          const totalAmount = typeof balance.total_amount === 'string' ? parseFloat(balance.total_amount) : (balance.total_amount || 0);
+          if (totalAmount <= 0) {
+            setError('매도할 수 있는 코인이 없습니다');
+            return;
+          }
+          setQuantity(totalAmount.toString());
+          handleQuantityChange(totalAmount.toString());
+        } catch (err) {
+          setError('코인 잔액을 확인할 수 없습니다');
+          return;
+        }
+      } else {
+        const totalAmount = typeof coinBalance.total_amount === 'string' ? parseFloat(coinBalance.total_amount) : (coinBalance.total_amount || 0);
+        if (totalAmount <= 0) {
+          setError('매도할 수 있는 코인이 없습니다');
+          return;
+        }
+        setQuantity(totalAmount.toString());
+        handleQuantityChange(totalAmount.toString());
       }
-      const availableQty = parseFloat(coinBalance.available_amount.toString());
-      setQuantity(availableQty.toString());
-      handleQuantityChange(availableQty.toString());
       // 자동으로 주문 제출
       setTimeout(() => {
         const form = document.querySelector('.order-form form') as HTMLFormElement;
@@ -428,12 +499,35 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
             <span>보유 골드</span>
             <span className="balance-amount">{formatNumber(goldBalance)} G</span>
           </div>
-          {coinBalance && coinBalance.available_amount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>보유 {coin.symbol}</span>
-              <span className="balance-amount">{formatNumber(coinBalance.available_amount)} {coin.symbol}</span>
-            </div>
-          )}
+          {coinBalance && (() => {
+            const totalAmount = typeof coinBalance.total_amount === 'string' ? parseFloat(coinBalance.total_amount) : (coinBalance.total_amount || 0);
+            const availableAmount = typeof coinBalance.available_amount === 'string' ? parseFloat(coinBalance.available_amount) : (coinBalance.available_amount || 0);
+            const lockedAmount = typeof coinBalance.locked_amount === 'string' ? parseFloat(coinBalance.locked_amount) : (coinBalance.locked_amount || 0);
+            
+            if (totalAmount > 0) {
+              return (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>보유 {coin.symbol}</span>
+                    <span className="balance-amount">{formatNumber(totalAmount)} {coin.symbol}</span>
+                  </div>
+                  {availableAmount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#9ca3af' }}>
+                      <span>사용 가능</span>
+                      <span>{formatNumber(availableAmount)} {coin.symbol}</span>
+                    </div>
+                  )}
+                  {lockedAmount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f59e0b' }}>
+                      <span>주문 중</span>
+                      <span>{formatNumber(lockedAmount)} {coin.symbol}</span>
+                    </div>
+                  )}
+                </>
+              );
+            }
+            return null;
+          })()}
         </div>
 
         {error && <div className="error-message">{error}</div>}
