@@ -689,16 +689,46 @@ const TradingPage = () => {
         }
 
         if (formattedData.length > 0) {
-          // 최종 배열 검증: 모든 항목이 유효한지 확인
-          const validData = formattedData.filter(d => 
-            d != null &&
-            d.time != null && isFinite(d.time as number) && (d.time as number) > 0 &&
-            d.open != null && isFinite(d.open) && d.open > 0 &&
-            d.high != null && isFinite(d.high) && d.high > 0 &&
-            d.low != null && isFinite(d.low) && d.low > 0 &&
-            d.close != null && isFinite(d.close) && d.close > 0 &&
-            d.high >= d.low
-          );
+          // 최종 배열 검증: 모든 항목이 유효한지 확인 (더 엄격한 검증)
+          const validData = formattedData.filter(d => {
+            // null/undefined 체크
+            if (d == null) return false;
+
+            // 각 속성이 존재하고 null이 아닌지 확인
+            if (d.time == null || d.open == null || d.high == null || d.low == null || d.close == null) {
+              return false;
+            }
+
+            // 숫자 타입 및 유효성 검증
+            const time = d.time as number;
+            const open = d.open;
+            const high = d.high;
+            const low = d.low;
+            const close = d.close;
+
+            if (typeof time !== 'number' || typeof open !== 'number' ||
+                typeof high !== 'number' || typeof low !== 'number' || typeof close !== 'number') {
+              return false;
+            }
+
+            if (isNaN(time) || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
+              return false;
+            }
+
+            if (!isFinite(time) || !isFinite(open) || !isFinite(high) || !isFinite(low) || !isFinite(close)) {
+              return false;
+            }
+
+            if (time <= 0 || open <= 0 || high <= 0 || low <= 0 || close <= 0) {
+              return false;
+            }
+
+            if (high < low) {
+              return false;
+            }
+
+            return true;
+          });
 
           if (validData.length === 0) {
             console.error('No valid candle data after filtering');
@@ -717,7 +747,19 @@ const TradingPage = () => {
           
           // 차트에 데이터 설정 (try-catch로 안전하게)
           try {
-            candlestickSeriesRef.current.setData(validData);
+            // 최종 안전 검사: setData 호출 직전에 한 번 더 확인
+            const safeData = validData.filter(d =>
+              d && d.time && d.open && d.high && d.low && d.close &&
+              typeof d.time === 'number' && typeof d.open === 'number' &&
+              typeof d.high === 'number' && typeof d.low === 'number' &&
+              typeof d.close === 'number'
+            );
+
+            if (safeData.length > 0) {
+              candlestickSeriesRef.current.setData(safeData);
+            } else {
+              console.error('All data filtered out before setData call');
+            }
           } catch (error) {
             console.error('Error setting chart data:', error, 'Data:', validData);
           }
@@ -817,16 +859,46 @@ const TradingPage = () => {
         }
 
         if (formattedData.length > 0) {
-          // 최종 배열 검증: 모든 항목이 유효한지 확인
-          const validData = formattedData.filter(d => 
-            d != null &&
-            d.time != null && isFinite(d.time as number) && (d.time as number) > 0 &&
-            d.open != null && isFinite(d.open) && d.open > 0 &&
-            d.high != null && isFinite(d.high) && d.high > 0 &&
-            d.low != null && isFinite(d.low) && d.low > 0 &&
-            d.close != null && isFinite(d.close) && d.close > 0 &&
-            d.high >= d.low
-          );
+          // 최종 배열 검증: 모든 항목이 유효한지 확인 (더 엄격한 검증)
+          const validData = formattedData.filter(d => {
+            // null/undefined 체크
+            if (d == null) return false;
+
+            // 각 속성이 존재하고 null이 아닌지 확인
+            if (d.time == null || d.open == null || d.high == null || d.low == null || d.close == null) {
+              return false;
+            }
+
+            // 숫자 타입 및 유효성 검증
+            const time = d.time as number;
+            const open = d.open;
+            const high = d.high;
+            const low = d.low;
+            const close = d.close;
+
+            if (typeof time !== 'number' || typeof open !== 'number' ||
+                typeof high !== 'number' || typeof low !== 'number' || typeof close !== 'number') {
+              return false;
+            }
+
+            if (isNaN(time) || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
+              return false;
+            }
+
+            if (!isFinite(time) || !isFinite(open) || !isFinite(high) || !isFinite(low) || !isFinite(close)) {
+              return false;
+            }
+
+            if (time <= 0 || open <= 0 || high <= 0 || low <= 0 || close <= 0) {
+              return false;
+            }
+
+            if (high < low) {
+              return false;
+            }
+
+            return true;
+          });
 
           if (validData.length === 0) {
             console.error('No valid candle data after filtering (realtime update)');
@@ -836,7 +908,19 @@ const TradingPage = () => {
           // 실시간 업데이트: 전체 데이터 재설정
           // lightweight-charts는 setData를 호출해도 줌 상태를 유지함
           try {
-            candlestickSeriesRef.current.setData(validData);
+            // 최종 안전 검사: setData 호출 직전에 한 번 더 확인
+            const safeData = validData.filter(d =>
+              d && d.time && d.open && d.high && d.low && d.close &&
+              typeof d.time === 'number' && typeof d.open === 'number' &&
+              typeof d.high === 'number' && typeof d.low === 'number' &&
+              typeof d.close === 'number'
+            );
+
+            if (safeData.length > 0) {
+              candlestickSeriesRef.current.setData(safeData);
+            } else {
+              console.warn('All realtime data filtered out before setData call');
+            }
           } catch (error) {
             console.error('Error updating chart data:', error, 'Data:', validData);
           }
