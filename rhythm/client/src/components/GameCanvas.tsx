@@ -161,14 +161,27 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       audioRef.current.play();
       audioRef.current.rate(settings.playbackSpeed);
       setGameState(s => ({ ...s, isPlaying: true, isPaused: false }));
+      
+      // 디버깅: 게임 시작 정보
+      console.log('게임 시작:', {
+        beatmapId: beatmap.id,
+        totalNotes: beatmap.note_data.length,
+        noteData: beatmap.note_data.slice(0, 5), // 처음 5개 노트만
+        keyCount: beatmap.key_count
+      });
+      
       // 게임 루프 시작
       const loop = () => {
-        if (audioRef.current && gameState.isPlaying) {
+        if (audioRef.current) {
           const playing = audioRef.current.playing();
-          if (playing) {
-            const currentTime = (audioRef.current.seek() as number) * 1000 + settings.displaySync;
-            setGameState(s => ({ ...s, currentTime, isPlaying: true }));
+          const currentTime = (audioRef.current.seek() as number) * 1000 + settings.displaySync;
+          
+          setGameState(s => {
+            if (!s.isPlaying) return s;
+            return { ...s, currentTime, isPlaying: true };
+          });
 
+          if (playing) {
             // 이펙트 업데이트
             const activeEffs = beatmap.effect_data.filter(
               eff => currentTime >= eff.timestamp && currentTime <= eff.timestamp + eff.duration
@@ -357,7 +370,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
 
   const endGame = () => {
     setGameState(s => ({ ...s, isPlaying: false }));
+    setIsGameStarted(false);
     cancelAnimationFrame(animationFrameRef.current);
+    animationFrameRef.current = 0;
 
     const totalJudgements = gameState.judgements.yas + gameState.judgements.oh + gameState.judgements.ah + gameState.judgements.fuck;
     const accuracy = totalJudgements > 0 
@@ -434,6 +449,20 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
     // 디버깅: 노트 데이터 확인
     if (beatmap.note_data.length === 0) {
       console.warn('비트맵에 노트가 없습니다:', beatmap);
+    } else {
+      // 첫 프레임에만 로그 출력
+      if (currentTime < 100) {
+        console.log('노트 렌더링 시작:', {
+          totalNotes: beatmap.note_data.length,
+          currentTime,
+          noteSpeed: settings.noteSpeed,
+          playAreaX,
+          playAreaWidth,
+          laneWidth,
+          laneStartY,
+          judgementLineY
+        });
+      }
     }
     
     let visibleNotesCount = 0;
@@ -444,8 +473,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ beatmap, onGameEnd, isMultiplay
       const y = calculateNoteYPosition(note.timestamp, currentTime, settings.noteSpeed, laneHeight, laneStartY, judgementLineY);
 
       // 노트가 화면 범위 내에 있는지 확인 (더 관대하게)
-      if (y > judgementLineY + 20) return; // 판정선을 많이 지나간 노트는 표시하지 않음
-      if (y < laneStartY - 100) return; // 아직 보이지 않는 위치의 노트는 표시하지 않음
+      // 노트가 판정선 위쪽에 있으면 표시 (y가 laneStartY보다 크고 judgementLineY보다 작으면 표시)
+      if (y > judgementLineY + 50) return; // 판정선을 많이 지나간 노트는 표시하지 않음
+      if (y < laneStartY - 200) return; // 아직 보이지 않는 위치의 노트는 표시하지 않음
       
       // 노트가 보이는 범위 내에 있으면 렌더링
       visibleNotesCount++;
