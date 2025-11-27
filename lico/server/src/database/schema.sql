@@ -28,6 +28,8 @@ CREATE TABLE coins (
     price_change_24h DECIMAL(10, 2) DEFAULT 0 COMMENT '24시간 가격 변동률 (%)',
     volume_24h BIGINT DEFAULT 0 COMMENT '24시간 거래량',
     market_cap BIGINT AS (circulating_supply * current_price) STORED COMMENT '시가총액',
+    min_volatility DECIMAL(10, 5) DEFAULT 0.00001 COMMENT 'AI 최소 변동성 (0.001%)',
+    max_volatility DECIMAL(10, 5) DEFAULT 0.00999 COMMENT 'AI 최대 변동성 (0.999%)',
     status ENUM('ACTIVE', 'PAUSED', 'DELISTED') DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
