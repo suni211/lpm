@@ -253,17 +253,16 @@ const BeatmapEditor: React.FC<BeatmapEditorProps> = ({ songFile, bpm: initialBpm
         
         // 활성 롱노트들의 duration 실시간 업데이트
         if (isRecording) {
-          const activeKeys = Array.from(activeLongNotesRef.current.keys());
+          const activeKeys = Object.keys(activeLongNotesRef.current);
           if (activeKeys.length > 0) {
             setNotes(prev => {
               const updatedNotes = prev.map(note => {
-                const activeKey = activeKeys.find(key => {
+                const activeKey = activeKeys.find((key: string) => {
                   const longNote = activeLongNotesRef.current[key];
                   return longNote && longNote.id === note.id;
                 });
                 
                 if (activeKey) {
-                  const longNote = activeLongNotesRef.current[activeKey];
                   const pressStartTime = keyPressStartTimeRef.current[activeKey];
                   if (pressStartTime !== undefined) {
                     const holdDuration = time - pressStartTime;
