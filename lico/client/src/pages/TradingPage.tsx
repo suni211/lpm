@@ -351,18 +351,60 @@ const TradingPage = () => {
         // 전체 데이터 포맷팅
         const formattedData: CandlestickData<UTCTimestamp>[] = [];
         for (const candle of candles) {
-          const o = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
-          const h = typeof candle.high_price === 'string' ? parseFloat(candle.high_price) : (candle.high_price || 0);
-          const l = typeof candle.low_price === 'string' ? parseFloat(candle.low_price) : (candle.low_price || 0);
-          const c = typeof candle.close_price === 'string' ? parseFloat(candle.close_price) : (candle.close_price || 0);
+          // 데이터 타입 확인 및 변환
+          let o: number;
+          let h: number;
+          let l: number;
+          let c: number;
+
+          if (typeof candle.open_price === 'string') {
+            o = parseFloat(candle.open_price);
+          } else if (typeof candle.open_price === 'number') {
+            o = candle.open_price;
+          } else {
+            o = 0;
+          }
+
+          if (typeof candle.high_price === 'string') {
+            h = parseFloat(candle.high_price);
+          } else if (typeof candle.high_price === 'number') {
+            h = candle.high_price;
+          } else {
+            h = 0;
+          }
+
+          if (typeof candle.low_price === 'string') {
+            l = parseFloat(candle.low_price);
+          } else if (typeof candle.low_price === 'number') {
+            l = candle.low_price;
+          } else {
+            l = 0;
+          }
+
+          if (typeof candle.close_price === 'string') {
+            c = parseFloat(candle.close_price);
+          } else if (typeof candle.close_price === 'number') {
+            c = candle.close_price;
+          } else {
+            c = 0;
+          }
           
+          // 유효성 검사
           if (isNaN(o) || isNaN(h) || isNaN(l) || isNaN(c) || 
               o <= 0 || h <= 0 || l <= 0 || c <= 0) {
+            console.warn('Invalid candle data:', candle);
             continue;
+          }
+
+          // high >= low 검증
+          if (h < l) {
+            console.warn('High < Low, swapping:', { h, l });
+            [h, l] = [l, h];
           }
 
           const t = new Date(candle.open_time).getTime() / 1000;
           if (isNaN(t) || t <= 0) {
+            console.warn('Invalid timestamp:', candle.open_time);
             continue;
           }
 
@@ -377,16 +419,29 @@ const TradingPage = () => {
 
         if (formattedData.length > 0) {
           // 데이터 검증 및 로그
+          const priceMin = Math.min(...formattedData.map(d => d.low));
+          const priceMax = Math.max(...formattedData.map(d => d.high));
+          
           console.log('Chart data loaded:', formattedData.length, 'candles');
           console.log('First candle:', formattedData[0]);
           console.log('Last candle:', formattedData[formattedData.length - 1]);
-          console.log('Price range:', {
-            min: Math.min(...formattedData.map(d => d.low)),
-            max: Math.max(...formattedData.map(d => d.high)),
-          });
+          console.log('Price range:', { min: priceMin, max: priceMax });
+          console.log('Current coin price:', selectedCoin?.current_price);
           
+          // 차트에 데이터 설정
           candlestickSeriesRef.current.setData(formattedData);
-          chartRef.current.timeScale().fitContent();
+          
+          // 가격 스케일 강제 업데이트
+          setTimeout(() => {
+            if (chartRef.current && candlestickSeriesRef.current) {
+              chartRef.current.timeScale().fitContent();
+              // priceScale 강제 업데이트
+              candlestickSeriesRef.current.priceScale().applyOptions({
+                autoScale: true,
+              });
+            }
+          }, 100);
+          
           isInitialDataLoadRef.current = false; // 초기 로드 완료
         }
       } else {
