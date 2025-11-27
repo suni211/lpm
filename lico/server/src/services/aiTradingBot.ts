@@ -129,14 +129,17 @@ export class AITradingBot {
     // WebSocket으로 가격 업데이트 브로드캐스트
     if (websocketInstance && websocketInstance.broadcastPriceUpdate) {
       const updatedCoin = (await query('SELECT * FROM coins WHERE id = ?', [coin.id]))[0];
-      websocketInstance.broadcastPriceUpdate(coin.id, {
+      const priceUpdateData = {
         coin_id: coin.id,
+        symbol: updatedCoin.symbol,
+        name: updatedCoin.name,
         current_price: updatedCoin.current_price,
         price_change_24h: updatedCoin.price_change_24h,
         volume_24h: updatedCoin.volume_24h,
         market_cap: updatedCoin.market_cap,
         updated_at: new Date().toISOString(),
-      });
+      };
+      websocketInstance.broadcastPriceUpdate(coin.id, priceUpdateData);
     }
 
     // AI 로그 기록
