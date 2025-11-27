@@ -12,7 +12,8 @@
       "Bash(npm create:*)",
       "Bash(git rm:*)",
       "Bash(test:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(ren:*)"
     ],
     "deny": [],
     "ask": []
