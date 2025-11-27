@@ -108,22 +108,57 @@ const TradingPage = () => {
           };
         });
         
-        // 현재 가격을 실시간으로 캔들에 반영
+        // 현재 가격을 실시간으로 캔들에 반영 (1분봉은 실시간 계산)
         if (priceNum > 0) {
           setCandles((prevCandles) => {
-            if (prevCandles.length === 0) return prevCandles;
-            
             const now = new Date();
-            const currentCandleTime = Math.floor(now.getTime() / (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400)) * (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400);
+            
+            // 현재 캔들 시간 계산 (간격별)
+            let currentCandleTime: number;
+            if (chartInterval === '1m') {
+              // 1분봉: 현재 분의 시작 시간 (초 단위)
+              currentCandleTime = Math.floor(now.getTime() / 1000 / 60) * 60;
+            } else if (chartInterval === '1h') {
+              // 1시간봉: 현재 시간의 시작 시간 (초 단위)
+              currentCandleTime = Math.floor(now.getTime() / 1000 / 3600) * 3600;
+            } else {
+              // 1일봉: 현재 일의 시작 시간 (초 단위)
+              currentCandleTime = Math.floor(now.getTime() / 1000 / 86400) * 86400;
+            }
+            
+            if (prevCandles.length === 0) {
+              // 캔들이 없으면 현재 가격으로 새 캔들 생성
+              return [{
+                id: `realtime-${Date.now()}`,
+                coin_id: selectedCoin.id,
+                open_time: new Date(currentCandleTime * 1000).toISOString(),
+                close_time: now.toISOString(),
+                open_price: priceNum,
+                high_price: priceNum,
+                low_price: priceNum,
+                close_price: priceNum,
+                volume: 0,
+                trade_count: 0,
+              } as Candle];
+            }
+            
             const lastCandle = prevCandles[prevCandles.length - 1];
             const lastCandleTime = Math.floor(new Date(lastCandle.open_time).getTime() / 1000);
-            const lastCandleTimeFloor = Math.floor(lastCandleTime / (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400)) * (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400);
+            
+            // 마지막 캔들의 시간대 계산
+            let lastCandleTimeFloor: number;
+            if (chartInterval === '1m') {
+              lastCandleTimeFloor = Math.floor(lastCandleTime / 60) * 60;
+            } else if (chartInterval === '1h') {
+              lastCandleTimeFloor = Math.floor(lastCandleTime / 3600) * 3600;
+            } else {
+              lastCandleTimeFloor = Math.floor(lastCandleTime / 86400) * 86400;
+            }
             
             const newCandles = [...prevCandles];
             
             if (lastCandleTimeFloor === currentCandleTime) {
-              // 같은 시간대면 마지막 캔들 업데이트
-              const lastClose = typeof lastCandle.close_price === 'string' ? parseFloat(lastCandle.close_price) : (lastCandle.close_price || 0);
+              // 같은 시간대면 마지막 캔들 실시간 업데이트
               const lastHigh = typeof lastCandle.high_price === 'string' ? parseFloat(lastCandle.high_price) : (lastCandle.high_price || 0);
               const lastLow = typeof lastCandle.low_price === 'string' ? parseFloat(lastCandle.low_price) : (lastCandle.low_price || 0);
               
@@ -132,9 +167,10 @@ const TradingPage = () => {
                 close_price: priceNum,
                 high_price: Math.max(lastHigh, priceNum),
                 low_price: Math.min(lastLow, priceNum),
+                close_time: now.toISOString(), // 실시간으로 close_time 업데이트
               };
             } else {
-              // 새 캔들 추가
+              // 새 시간대면 새 캔들 추가
               const lastClose = typeof lastCandle.close_price === 'string' ? parseFloat(lastCandle.close_price) : (lastCandle.close_price || 0);
               newCandles.push({
                 id: `realtime-${Date.now()}`,
@@ -248,7 +284,6 @@ const TradingPage = () => {
         // 캔들 데이터가 없거나 오래된 경우, 현재 가격으로 최신 캔들 생성
         if (newCandles.length === 0 || currentPrice > 0) {
           const now = new Date();
-          const currentTime = Math.floor(now.getTime() / 1000);
           
           // 마지막 캔들 확인
           let lastCandleTime = null;
