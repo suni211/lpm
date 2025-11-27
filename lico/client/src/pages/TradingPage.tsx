@@ -88,11 +88,14 @@ const TradingPage = () => {
     // 가격 업데이트 수신
     socket.on('price:update', (priceData: any) => {
       if (priceData.coin_id === selectedCoin.id) {
+        const newPrice = priceData.current_price || selectedCoin.current_price;
+        const priceNum = typeof newPrice === 'string' ? parseFloat(newPrice) : (newPrice || 0);
+        
         setSelectedCoin((prevCoin) => {
           if (!prevCoin) return prevCoin;
           return {
             ...prevCoin,
-            current_price: priceData.current_price || prevCoin.current_price,
+            current_price: priceNum,
             price_change_24h: priceData.price_change_24h !== undefined 
               ? priceData.price_change_24h 
               : prevCoin.price_change_24h,
@@ -104,6 +107,57 @@ const TradingPage = () => {
               : prevCoin.market_cap,
           };
         });
+        
+        // 현재 가격을 실시간으로 캔들에 반영
+        if (priceNum > 0) {
+          setCandles((prevCandles) => {
+            if (prevCandles.length === 0) return prevCandles;
+            
+            const now = new Date();
+            const currentCandleTime = Math.floor(now.getTime() / (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400)) * (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400);
+            const lastCandle = prevCandles[prevCandles.length - 1];
+            const lastCandleTime = Math.floor(new Date(lastCandle.open_time).getTime() / 1000);
+            const lastCandleTimeFloor = Math.floor(lastCandleTime / (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400)) * (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400);
+            
+            const newCandles = [...prevCandles];
+            
+            if (lastCandleTimeFloor === currentCandleTime) {
+              // 같은 시간대면 마지막 캔들 업데이트
+              const lastClose = typeof lastCandle.close_price === 'string' ? parseFloat(lastCandle.close_price) : (lastCandle.close_price || 0);
+              const lastHigh = typeof lastCandle.high_price === 'string' ? parseFloat(lastCandle.high_price) : (lastCandle.high_price || 0);
+              const lastLow = typeof lastCandle.low_price === 'string' ? parseFloat(lastCandle.low_price) : (lastCandle.low_price || 0);
+              
+              newCandles[newCandles.length - 1] = {
+                ...lastCandle,
+                close_price: priceNum,
+                high_price: Math.max(lastHigh, priceNum),
+                low_price: Math.min(lastLow, priceNum),
+              };
+            } else {
+              // 새 캔들 추가
+              const lastClose = typeof lastCandle.close_price === 'string' ? parseFloat(lastCandle.close_price) : (lastCandle.close_price || 0);
+              newCandles.push({
+                id: `realtime-${Date.now()}`,
+                coin_id: selectedCoin.id,
+                open_time: new Date(currentCandleTime * 1000).toISOString(),
+                close_time: now.toISOString(),
+                open_price: lastClose > 0 ? lastClose : priceNum,
+                high_price: Math.max(lastClose, priceNum),
+                low_price: Math.min(lastClose, priceNum),
+                close_price: priceNum,
+                volume: 0,
+                trade_count: 0,
+              } as Candle);
+              
+              // 최대 100개만 유지
+              if (newCandles.length > 100) {
+                newCandles.shift();
+              }
+            }
+            
+            return newCandles;
+          });
+        }
       }
     });
 
@@ -183,8 +237,77 @@ const TradingPage = () => {
         const response = await api.get(`/coins/${selectedCoin.id}/candles/${chartInterval}`, {
           params: { limit: 100 }
         });
-        const newCandles = response.data.candles || [];
+        let newCandles = response.data.candles || [];
         console.log('Fetched candles:', newCandles.length);
+        
+        // 현재 가격 가져오기
+        const currentPrice = typeof selectedCoin.current_price === 'string' 
+          ? parseFloat(selectedCoin.current_price) 
+          : (selectedCoin.current_price || 0);
+        
+        // 캔들 데이터가 없거나 오래된 경우, 현재 가격으로 최신 캔들 생성
+        if (newCandles.length === 0 || currentPrice > 0) {
+          const now = new Date();
+          const currentTime = Math.floor(now.getTime() / 1000);
+          
+          // 마지막 캔들 확인
+          let lastCandleTime = null;
+          if (newCandles.length > 0) {
+            const lastCandle = newCandles[newCandles.length - 1];
+            lastCandleTime = new Date(lastCandle.open_time).getTime() / 1000;
+            const lastCandleClose = typeof lastCandle.close_price === 'string' 
+              ? parseFloat(lastCandle.close_price) 
+              : (lastCandle.close_price || 0);
+            
+            // 마지막 캔들 가격과 현재 가격 차이가 20% 이상이면 현재 가격으로 보정
+            if (lastCandleClose > 0 && Math.abs((currentPrice - lastCandleClose) / lastCandleClose) > 0.2) {
+              console.warn('Candle price mismatch detected. Last candle:', lastCandleClose, 'Current price:', currentPrice);
+              
+              // 현재 시간의 캔들 생성 또는 업데이트
+              const currentCandleTime = Math.floor(now.getTime() / (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400)) * (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400);
+              
+              if (lastCandleTime && Math.floor(lastCandleTime) === currentCandleTime) {
+                // 같은 시간대면 마지막 캔들 업데이트
+                newCandles[newCandles.length - 1] = {
+                  ...lastCandle,
+                  close_price: currentPrice,
+                  high_price: Math.max(lastCandleClose, currentPrice),
+                  low_price: Math.min(lastCandleClose, currentPrice),
+                };
+              } else {
+                // 새 캔들 추가
+                newCandles.push({
+                  id: `current-${Date.now()}`,
+                  coin_id: selectedCoin.id,
+                  open_time: new Date(currentCandleTime * 1000).toISOString(),
+                  close_time: now.toISOString(),
+                  open_price: lastCandleClose > 0 ? lastCandleClose : currentPrice,
+                  high_price: Math.max(lastCandleClose, currentPrice),
+                  low_price: Math.min(lastCandleClose, currentPrice),
+                  close_price: currentPrice,
+                  volume: 0,
+                  trade_count: 0,
+                } as Candle);
+              }
+            }
+          } else {
+            // 캔들 데이터가 없으면 현재 가격으로 초기 캔들 생성
+            const currentCandleTime = Math.floor(now.getTime() / (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400)) * (chartInterval === '1m' ? 60 : chartInterval === '1h' ? 3600 : 86400);
+            newCandles = [{
+              id: `current-${Date.now()}`,
+              coin_id: selectedCoin.id,
+              open_time: new Date(currentCandleTime * 1000).toISOString(),
+              close_time: now.toISOString(),
+              open_price: currentPrice,
+              high_price: currentPrice,
+              low_price: currentPrice,
+              close_price: currentPrice,
+              volume: 0,
+              trade_count: 0,
+            } as Candle];
+          }
+        }
+        
         if (newCandles.length > 0) {
           console.log('First candle from API:', newCandles[0]);
           console.log('Last candle from API:', newCandles[newCandles.length - 1]);
