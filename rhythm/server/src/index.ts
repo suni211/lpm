@@ -20,9 +20,23 @@ const PORT = process.env.PORT || 5003;
 
 // Middleware
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? process.env.CLIENT_URL || 'https://rhythm.berrple.com'
-    : 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // 허용할 origin 목록
+    const allowedOrigins = [
+      'http://rhythm.berrple.com',
+      'https://rhythm.berrple.com',
+      'http://localhost:5173',
+      'http://localhost:3003'
+    ];
+
+    // Origin이 없거나 (같은 도메인) 허용 목록에 있으면 OK
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
