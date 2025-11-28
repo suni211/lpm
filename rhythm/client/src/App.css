@@ -318,3 +318,33 @@ body {
     padding: 0 1rem;
   }
 }
+
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+  body {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* 가로 모드 최적화 */
+  @media (orientation: landscape) {
+    .navbar {
+      display: none; /* 게임 중에는 네비게이션 숨김 */
+    }
+
+    canvas {
+      width: 100vw !important;
+      height: 100vh !important;
+      touch-action: none;
+    }
+  }
+}
+
+/* iOS Safari 전체화면 지원 */
+@supports (-webkit-touch-callout: none) {
+  .game-fullscreen {
+    height: -webkit-fill-available;
+  }
+}

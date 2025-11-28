@@ -73,6 +73,10 @@ export class GameEngine {
   private processedNotes: Set<number> = new Set();
   private activeLongNotes: Map<number, { noteIndex: number; startTime: number }> = new Map();
 
+  // Touch states (모바일 지원)
+  private touchLanes: Map<number, number> = new Map(); // touchId -> lane
+  private isMobile: boolean = false;
+
   // Callbacks
   private onScoreUpdate?: (score: number, combo: number, judgments: Judgments) => void;
   private onGameEnd?: (finalScore: number, judgments: Judgments, maxCombo: number) => void;
@@ -98,6 +102,9 @@ export class GameEngine {
     // Calculate positions
     this.gearY = canvas.height * 0.9;
     this.hitZoneY = this.gearY;
+
+    // 모바일 감지
+    this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     this.setupEventListeners();
   }
@@ -130,6 +137,51 @@ export class GameEngine {
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+
+    // 터치 이벤트 (모바일)
+    if (this.isMobile) {
+      const handleTouchStart = (e: TouchEvent) => {
+        e.preventDefault();
+        if (!this.isPlaying || this.isPaused) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const centerX = this.canvas.width / 2;
+        const gearWidth = this.calculateGearWidth();
+        const laneWidth = gearWidth / this.keyCount;
+        const gearLeft = centerX - gearWidth / 2;
+
+        Array.from(e.changedTouches).forEach(touch => {
+          const x = (touch.clientX - rect.left) * (this.canvas.width / rect.width);
+          const y = (touch.clientY - rect.top) * (this.canvas.height / rect.height);
+
+          // 터치가 gear 영역 내에 있는지 확인
+          if (x >= gearLeft && x <= gearLeft + gearWidth) {
+            const lane = Math.floor((x - gearLeft) / laneWidth);
+            if (lane >= 0 && lane < this.keyCount) {
+              this.touchLanes.set(touch.identifier, lane);
+              this.handleKeyPress(lane);
+            }
+          }
+        });
+      };
+
+      const handleTouchEnd = (e: TouchEvent) => {
+        e.preventDefault();
+        if (!this.isPlaying || this.isPaused) return;
+
+        Array.from(e.changedTouches).forEach(touch => {
+          const lane = this.touchLanes.get(touch.identifier);
+          if (lane !== undefined) {
+            this.handleKeyRelease(lane);
+            this.touchLanes.delete(touch.identifier);
+          }
+        });
+      };
+
+      this.canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+      this.canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+      this.canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+    }
   }
 
   private getKeyBindings(): string[] {

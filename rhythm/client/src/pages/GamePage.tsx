@@ -13,6 +13,7 @@ export default function GamePage() {
   const [selectedBeatmap, setSelectedBeatmap] = useState<Beatmap | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isLandscape, setIsLandscape] = useState(true);
 
   // Game state
   const [gameState, setGameState] = useState<'select' | 'playing' | 'result'>('select');
@@ -29,6 +30,20 @@ export default function GamePage() {
     if (songId) {
       loadSongAndBeatmaps();
     }
+
+    // 모바일 가로 모드 감지
+    const checkOrientation = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
   }, [songId]);
 
   const loadSongAndBeatmaps = async () => {
@@ -71,10 +86,20 @@ export default function GamePage() {
   // 게임 시작 시 GameEngine 초기화 및 전체화면
   useEffect(() => {
     if (gameState === 'playing' && selectedBeatmap && song && canvasRef.current && audioRef.current) {
+      // 모바일 감지
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
       // 전체화면 진입
       if (document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(err => {
           console.warn('전체화면 진입 실패:', err);
+        });
+      }
+
+      // 모바일: 화면 회전 잠금 (가로 모드)
+      if (isMobile && (screen.orientation as any)?.lock) {
+        (screen.orientation as any).lock('landscape').catch((err: any) => {
+          console.warn('화면 회전 잠금 실패:', err);
         });
       }
 
@@ -318,6 +343,35 @@ export default function GamePage() {
 
   // 게임 플레이 화면
   if (gameState === 'playing') {
+    // 모바일 세로 모드 경고
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile && !isLandscape) {
+      return (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: '#000',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          color: '#fff',
+          textAlign: 'center',
+          padding: '2rem'
+        }}>
+          <div style={{ fontSize: '3rem', marginBottom: '2rem' }}>📱</div>
+          <h2 style={{ marginBottom: '1rem' }}>화면을 가로로 돌려주세요</h2>
+          <p style={{ opacity: 0.8 }}>
+            최적의 게임 경험을 위해 가로 모드를 사용해주세요
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div style={{
         position: 'fixed',
@@ -341,8 +395,10 @@ export default function GamePage() {
           width={1280}
           height={720}
           style={{
-            maxWidth: '100%',
-            maxHeight: '100%',
+            width: '100vw',
+            height: '100vh',
+            objectFit: 'contain',
+            touchAction: 'none', // 터치 스크롤 방지
             border: '2px solid #333'
           }}
         />
