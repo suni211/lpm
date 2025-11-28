@@ -85,6 +85,7 @@ import blockchainRoutes from './routes/blockchain';
 import adminRoutes from './routes/admin';
 import newsRoutes from './routes/news';
 import newsCommentsRoutes from './routes/newsComments';
+import fixRoutes from './routes/fix';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questionnaire', questionnaireRoutes);
@@ -95,6 +96,7 @@ app.use('/api/blockchain', blockchainRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/news-comments', newsCommentsRoutes);
+app.use('/api/fix', fixRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {
