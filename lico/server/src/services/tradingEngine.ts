@@ -143,13 +143,14 @@ export class TradingEngine {
       ? parseFloat(coin.current_price) 
       : (coin.current_price || 0);
 
-    // 최저가 매도 주문들 조회 (유저 매도 주문)
+    // 최저가 매도 주문들 조회 (유저 매도 주문, 자기 자신 제외)
     const sellOrders = await query(
       `SELECT * FROM orders
        WHERE coin_id = ? AND order_type = 'SELL' AND status IN ('PENDING', 'PARTIAL')
        AND is_admin_order = FALSE
+       AND wallet_id != ?
        ORDER BY price ASC, created_at ASC`,
-      [coinId]
+      [coinId, walletId]
     );
 
     let remainingQty = quantity;
@@ -350,12 +351,13 @@ export class TradingEngine {
       throw new Error('잔액 잠금 실패: 동시성 문제 발생');
     }
 
-    // 최고가 매수 주문들 조회
+    // 최고가 매수 주문들 조회 (자기 자신 제외)
     const buyOrders = await query(
       `SELECT * FROM orders
        WHERE coin_id = ? AND order_type = 'BUY' AND status IN ('PENDING', 'PARTIAL')
+       AND wallet_id != ?
        ORDER BY price DESC, created_at ASC`,
-      [coinId]
+      [coinId, walletId]
     );
 
     let remainingQty = quantity;
@@ -389,13 +391,14 @@ export class TradingEngine {
     const buyOrder = buyOrders[0];
     let remainingQty = buyOrder.remaining_quantity;
 
-    // 지정가 이하의 유저 매도 주문 찾기
+    // 지정가 이하의 유저 매도 주문 찾기 (자기 자신 제외)
     const sellOrders = await query(
       `SELECT * FROM orders
        WHERE coin_id = ? AND order_type = 'SELL' AND price <= ? AND status IN ('PENDING', 'PARTIAL')
        AND is_admin_order = FALSE
+       AND wallet_id != ?
        ORDER BY price ASC, created_at ASC`,
-      [coinId, buyPrice]
+      [coinId, buyPrice, buyOrder.wallet_id]
     );
 
     // 1. 유저 매도 주문과 매칭
@@ -488,16 +491,17 @@ export class TradingEngine {
 
   // 지정가 매도 매칭
   private async matchLimitSellOrder(sellOrderId: string, coinId: string, sellPrice: number) {
-    // 지정가 이상의 매수 주문 찾기
+    const sellOrder = (await query('SELECT * FROM orders WHERE id = ?', [sellOrderId]))[0];
+    let remainingQty = sellOrder.remaining_quantity;
+
+    // 지정가 이상의 매수 주문 찾기 (자기 자신 제외)
     const buyOrders = await query(
       `SELECT * FROM orders
        WHERE coin_id = ? AND order_type = 'BUY' AND price >= ? AND status IN ('PENDING', 'PARTIAL')
+       AND wallet_id != ?
        ORDER BY price DESC, created_at ASC`,
-      [coinId, sellPrice]
+      [coinId, sellPrice, sellOrder.wallet_id]
     );
-
-    const sellOrder = (await query('SELECT * FROM orders WHERE id = ?', [sellOrderId]))[0];
-    let remainingQty = sellOrder.remaining_quantity;
 
     for (const buyOrder of buyOrders) {
       if (remainingQty <= 0) break;
