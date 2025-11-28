@@ -641,29 +641,30 @@ export class TradingEngine {
     );
     const volume24h = parseFloat(volume24hResult[0]?.total_volume || '0');
 
-    // 24시간 최고가/최저가 업데이트
-    const coinData = await query('SELECT high_24h, low_24h, high_24h_updated_at, low_24h_updated_at FROM coins WHERE id = ?', [coinId]);
-    const coinHighLow = coinData[0];
+    // 24시간 최고가/최저가 계산 (실제 거래 데이터 기반)
+    const high24hResult = await query(
+      `SELECT MAX(price) as high_price FROM trades
+       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+      [coinId]
+    );
+    const low24hResult = await query(
+      `SELECT MIN(price) as low_price FROM trades
+       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+      [coinId]
+    );
 
-    let updateHighLow = '';
-    const now = new Date();
-
-    // 최고가 갱신 확인 (24시간 이내 기록이 없거나, 현재 가격이 더 높을 때)
-    if (!coinHighLow.high_24h || !coinHighLow.high_24h_updated_at ||
-        finalPrice > parseFloat(coinHighLow.high_24h.toString()) ||
-        (now.getTime() - new Date(coinHighLow.high_24h_updated_at).getTime()) > 24 * 60 * 60 * 1000) {
-      updateHighLow += ', high_24h = ' + finalPrice + ', high_24h_updated_at = NOW()';
-    }
-
-    // 최저가 갱신 확인 (24시간 이내 기록이 없거나, 현재 가격이 더 낮을 때)
-    if (!coinHighLow.low_24h || !coinHighLow.low_24h_updated_at ||
-        finalPrice < parseFloat(coinHighLow.low_24h.toString()) ||
-        (now.getTime() - new Date(coinHighLow.low_24h_updated_at).getTime()) > 24 * 60 * 60 * 1000) {
-      updateHighLow += ', low_24h = ' + finalPrice + ', low_24h_updated_at = NOW()';
-    }
+    const high24h = high24hResult[0]?.high_price
+      ? parseFloat(high24hResult[0].high_price.toString())
+      : finalPrice;
+    const low24h = low24hResult[0]?.low_price
+      ? parseFloat(low24hResult[0].low_price.toString())
+      : finalPrice;
 
     // 코인 현재가, 24시간 변동률, 24시간 거래량, 최고가/최저가 업데이트
-    await query('UPDATE coins SET current_price = ?, price_change_24h = ?, volume_24h = ?' + updateHighLow + ' WHERE id = ?', [finalPrice, finalPriceChange24h, volume24h, coinId]);
+    await query(
+      'UPDATE coins SET current_price = ?, price_change_24h = ?, volume_24h = ?, high_24h = ?, low_24h = ? WHERE id = ?',
+      [finalPrice, finalPriceChange24h, volume24h, high24h, low24h, coinId]
+    );
 
     // 캔들스틱 데이터 업데이트
     await this.updateCandlestick(coinId, finalPrice, quantity);
