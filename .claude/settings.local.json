@@ -19,7 +19,8 @@
       "Bash(chmod +x rhythm/deploy.sh)",
       "Bash(tree:*)",
       "Bash(npm run dev)",
-      "Bash(timeout 10 npm run dev:*)"
+      "Bash(timeout 10 npm run dev:*)",
+      "Bash(npx ts-node:*)"
     ],
     "deny": [],
     "ask": []

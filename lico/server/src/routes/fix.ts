@@ -31,6 +31,83 @@ router.get('/negative-balances', isAdmin, async (req: Request, res: Response) =>
   }
 });
 
+// locked 잔액을 available로 병합 (관리자 전용)
+router.post('/merge-locked-balances', isAdmin, async (req: Request, res: Response) => {
+  try {
+    console.log('🔧 locked 잔액을 available로 병합 시작...');
+
+    // 1. locked가 있는 모든 잔액 조회
+    const lockedBalances = await query(`
+      SELECT
+        ucb.id,
+        uw.minecraft_username,
+        c.symbol,
+        ucb.available_amount,
+        ucb.locked_amount,
+        (ucb.available_amount + ucb.locked_amount) as total
+      FROM user_coin_balances ucb
+      JOIN user_wallets uw ON ucb.wallet_id = uw.id
+      JOIN coins c ON ucb.coin_id = c.id
+      WHERE ucb.locked_amount > 0
+    `);
+
+    if (lockedBalances.length === 0) {
+      return res.json({
+        success: true,
+        message: 'locked 잔액이 없습니다',
+        merged: [],
+      });
+    }
+
+    const merged = [];
+
+    // 2. 각 locked 잔액을 available로 병합
+    for (const balance of lockedBalances) {
+      const available = parseFloat(balance.available_amount || 0);
+      const locked = parseFloat(balance.locked_amount || 0);
+      const total = available + locked;
+
+      const before = {
+        username: balance.minecraft_username,
+        symbol: balance.symbol,
+        available,
+        locked,
+      };
+
+      // locked를 available로 병합
+      await query(
+        `UPDATE user_coin_balances
+         SET available_amount = ?,
+             locked_amount = 0
+         WHERE id = ?`,
+        [total, balance.id]
+      );
+
+      merged.push({
+        ...before,
+        after: { available: total, locked: 0 },
+      });
+    }
+
+    // 3. 병합 후 확인
+    const remainingLocked = await query(`
+      SELECT COUNT(*) as count
+      FROM user_coin_balances
+      WHERE locked_amount > 0
+    `);
+
+    res.json({
+      success: true,
+      message: `${merged.length}개의 locked 잔액을 available로 병합했습니다`,
+      merged,
+      remaining: remainingLocked[0].count,
+    });
+  } catch (error: any) {
+    console.error('locked 잔액 병합 오류:', error);
+    res.status(500).json({ error: '병합 실패', message: error.message });
+  }
+});
+
 // 음수 잔액 수정 (관리자 전용)
 router.post('/negative-balances', isAdmin, async (req: Request, res: Response) => {
   try {

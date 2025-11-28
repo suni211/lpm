@@ -536,7 +536,15 @@ export class TradingEngine {
 
     // 매도자: Gold 증가 (수수료 차감), 코인 차감
     await this.updateWalletBalance(sellerWalletId, totalAmount - sellFee);
-    await this.updateCoinBalance(sellerWalletId, coinId, -quantity);
+
+    // 매도자 코인 차감 - sellOrderId가 있으면 locked에서, 없으면 available에서
+    if (sellOrderId) {
+      // 매도 주문이 있는 경우: locked_amount에서 차감 (이미 주문 생성 시 잠김)
+      await this.updateCoinBalanceFromLocked(sellerWalletId, coinId, quantity);
+    } else {
+      // 즉시 매도 (AI 봇 등): available_amount에서 차감
+      await this.updateCoinBalance(sellerWalletId, coinId, -quantity);
+    }
 
     // 주문 상태 업데이트
     if (buyOrderId) await this.updateOrderStatus(buyOrderId, quantity);
@@ -721,7 +729,7 @@ export class TradingEngine {
   private async updateCoinBalance(walletId: string, coinId: string, amount: number) {
     // 소수점 8자리까지 정밀도 유지
     const preciseAmount = parseFloat(amount.toFixed(8));
-    
+
     const existing = await query(
       'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
       [walletId, coinId]
@@ -740,6 +748,20 @@ export class TradingEngine {
         [uuidv4(), walletId, coinId, preciseAmount]
       );
     }
+  }
+
+  // 코인 잔액 업데이트 (locked에서 차감)
+  private async updateCoinBalanceFromLocked(walletId: string, coinId: string, quantity: number) {
+    // 소수점 8자리까지 정밀도 유지
+    const preciseQuantity = parseFloat(quantity.toFixed(8));
+
+    // locked_amount에서 차감 (체결된 매도 주문)
+    await query(
+      'UPDATE user_coin_balances SET locked_amount = locked_amount - ? WHERE wallet_id = ? AND coin_id = ?',
+      [preciseQuantity, walletId, coinId]
+    );
+
+    console.log(`🔓 locked 해제: wallet=${walletId}, coin=${coinId}, qty=${preciseQuantity}`);
   }
 
   // 주문 상태 업데이트
