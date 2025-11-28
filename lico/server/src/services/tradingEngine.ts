@@ -101,10 +101,10 @@ export class TradingEngine {
     }
     const wallet = wallets[0];
 
-    // 코인 정보 조회 (현재가 확인)
-    const coins = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
+    // 코인 정보 조회 (현재가 확인) - ACTIVE 상태만
+    const coins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coinId]);
     if (coins.length === 0) {
-      throw new Error('코인을 찾을 수 없습니다');
+      throw new Error('코인을 찾을 수 없거나 거래가 중지되었습니다');
     }
     const coin = coins[0];
     const currentPrice = typeof coin.current_price === 'string' 
@@ -345,8 +345,8 @@ export class TradingEngine {
 
     // 2. 남은 수량이 있고 지정가가 현재가 이상이면 유통량 기준으로 판매
     if (remainingQty > 0) {
-      // 코인 정보 조회 (현재가 및 유통량 확인)
-      const coins = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
+      // 코인 정보 조회 (현재가 및 유통량 확인) - ACTIVE 상태만
+      const coins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coinId]);
       if (coins.length > 0) {
         const coin = coins[0];
         const currentPrice = typeof coin.current_price === 'string' 
@@ -485,9 +485,13 @@ export class TradingEngine {
        ORDER BY open_time DESC LIMIT 1`,
       [coinId]
     );
-    
-    // 코인 정보 조회
-    const coins = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
+
+    // 코인 정보 조회 - ACTIVE 상태만
+    const coins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coinId]);
+    if (coins.length === 0) {
+      console.warn(`⚠️ 코인 ${coinId}는 ACTIVE 상태가 아니므로 가격 업데이트를 건너뜁니다`);
+      return;
+    }
     const coin = coins[0];
     
     // 24시간 전 가격이 없으면 initial_price 사용
@@ -574,17 +578,20 @@ export class TradingEngine {
     try {
       await aiTradingBot.adjustPriceForCoin(coinId);
       
-      // WebSocket으로 가격 업데이트 브로드캐스트
+      // WebSocket으로 가격 업데이트 브로드캐스트 - ACTIVE 상태만
       if (websocketInstance && websocketInstance.broadcastPriceUpdate) {
-        const updatedCoin = (await query('SELECT * FROM coins WHERE id = ?', [coinId]))[0];
-        websocketInstance.broadcastPriceUpdate(coinId, {
-          coin_id: coinId,
-          current_price: updatedCoin.current_price,
-          price_change_24h: updatedCoin.price_change_24h,
-          volume_24h: updatedCoin.volume_24h,
-          market_cap: updatedCoin.market_cap,
-          updated_at: new Date().toISOString(),
-        });
+        const updatedCoins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coinId]);
+        if (updatedCoins.length > 0) {
+          const updatedCoin = updatedCoins[0];
+          websocketInstance.broadcastPriceUpdate(coinId, {
+            coin_id: coinId,
+            current_price: updatedCoin.current_price,
+            price_change_24h: updatedCoin.price_change_24h,
+            volume_24h: updatedCoin.volume_24h,
+            market_cap: updatedCoin.market_cap,
+            updated_at: new Date().toISOString(),
+          });
+        }
       }
     } catch (error) {
       console.error('실시간 가격 조정 오류:', error);

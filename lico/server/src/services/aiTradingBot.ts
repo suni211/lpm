@@ -126,20 +126,23 @@ export class AITradingBot {
     // 캔들 데이터 저장 (차트에 표시)
     await updateCandleData(coin.id, newPrice, 0);
 
-    // WebSocket으로 가격 업데이트 브로드캐스트
+    // WebSocket으로 가격 업데이트 브로드캐스트 - ACTIVE 상태만
     if (websocketInstance && websocketInstance.broadcastPriceUpdate) {
-      const updatedCoin = (await query('SELECT * FROM coins WHERE id = ?', [coin.id]))[0];
-      const priceUpdateData = {
-        coin_id: coin.id,
-        symbol: updatedCoin.symbol,
-        name: updatedCoin.name,
-        current_price: updatedCoin.current_price,
-        price_change_24h: updatedCoin.price_change_24h,
-        volume_24h: updatedCoin.volume_24h,
-        market_cap: updatedCoin.market_cap,
-        updated_at: new Date().toISOString(),
-      };
-      websocketInstance.broadcastPriceUpdate(coin.id, priceUpdateData);
+      const updatedCoins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coin.id]);
+      if (updatedCoins.length > 0) {
+        const updatedCoin = updatedCoins[0];
+        const priceUpdateData = {
+          coin_id: coin.id,
+          symbol: updatedCoin.symbol,
+          name: updatedCoin.name,
+          current_price: updatedCoin.current_price,
+          price_change_24h: updatedCoin.price_change_24h,
+          volume_24h: updatedCoin.volume_24h,
+          market_cap: updatedCoin.market_cap,
+          updated_at: new Date().toISOString(),
+        };
+        websocketInstance.broadcastPriceUpdate(coin.id, priceUpdateData);
+      }
     }
 
     // AI 로그 기록
@@ -305,11 +308,13 @@ export class AITradingBot {
 
   // ADMIN 가격 수동 조정
   async adminAdjustPrice(coinId: string, newPrice: number, reason: string) {
-    const coin = (await query('SELECT * FROM coins WHERE id = ?', [coinId]))[0];
+    const coins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coinId]);
 
-    if (!coin) {
-      throw new Error('코인을 찾을 수 없습니다');
+    if (coins.length === 0) {
+      throw new Error('코인을 찾을 수 없거나 거래가 중지되었습니다');
     }
+
+    const coin = coins[0];
 
     // current_price를 숫자로 변환
     const oldPrice = typeof coin.current_price === 'string' 
