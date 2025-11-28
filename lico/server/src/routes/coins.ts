@@ -568,11 +568,19 @@ router.delete('/:id', isAdmin, async (req: Request, res: Response) => {
       console.warn('  ⚠️ 코인 잔액 삭제 실패:', e);
     }
 
-    // 5. 코인 자체 삭제
+    // 5. AI 거래 로그 삭제
+    try {
+      await query('DELETE FROM ai_trade_logs WHERE coin_id = ?', [id]);
+      console.log('  ✓ AI 거래 로그 삭제 완료');
+    } catch (e) {
+      console.warn('  ⚠️ AI 거래 로그 삭제 실패:', e);
+    }
+
+    // 6. 코인 자체 삭제
     await query('DELETE FROM coins WHERE id = ?', [id]);
     console.log('  ✓ 코인 삭제 완료');
 
-    // 6. 로고 이미지 파일 삭제 (선택사항)
+    // 7. 로고 이미지 파일 삭제 (선택사항)
     if (coin.logo_url) {
       try {
         const logoPath = path.join(process.cwd(), 'public', coin.logo_url);
