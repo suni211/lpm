@@ -29,6 +29,8 @@ export class GameEngine {
   private isPlaying: boolean = false;
   private isPaused: boolean = false;
   private leadTime: number = 5000; // 5초 준비 시간 (노트가 내려오는 시간)
+  private countdown: number = 5; // 카운트다운 숫자
+  private showCountdown: boolean = true; // 카운트다운 표시 여부
 
   // Game state
   private score: number = 0;
@@ -343,8 +345,20 @@ export class GameEngine {
 
   public start() {
     this.isPlaying = true;
+    this.showCountdown = true;
+    this.countdown = 5;
+
     // 시작 시간을 leadTime만큼 과거로 설정 (노트가 미리 내려오도록)
     this.startTime = performance.now() - this.leadTime;
+
+    // 1초마다 카운트다운
+    const countdownInterval = setInterval(() => {
+      this.countdown--;
+      if (this.countdown <= 0) {
+        clearInterval(countdownInterval);
+        this.showCountdown = false;
+      }
+    }, 1000);
 
     // 5초 후 오디오 재생
     setTimeout(() => {
@@ -592,6 +606,9 @@ export class GameEngine {
 
     // Draw judgment text
     this.drawJudgment();
+
+    // Draw countdown
+    this.drawCountdown();
 
     // Update and fade out effects
     if (this.judgmentAlpha > 0) {
@@ -885,6 +902,32 @@ export class GameEngine {
       this.ctx.strokeStyle = '#ffffff';
       this.ctx.lineWidth = 2;
       this.ctx.strokeText(this.judmentText, this.canvas.width / 2, this.canvas.height / 2 - 100);
+
+      this.ctx.restore();
+    }
+  }
+
+  private drawCountdown() {
+    if (this.showCountdown && this.countdown > 0) {
+      this.ctx.save();
+
+      // 매우 큰 폰트로 중앙에 카운트다운 표시
+      this.ctx.font = 'bold 150px Arial';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+
+      // 빛나는 효과
+      this.ctx.shadowColor = '#ffd700';
+      this.ctx.shadowBlur = 40;
+
+      // 텍스트 그리기
+      this.ctx.fillStyle = '#ffd700';
+      this.ctx.fillText(this.countdown.toString(), this.canvas.width / 2, this.canvas.height / 2);
+
+      // 테두리 그리기
+      this.ctx.strokeStyle = '#ffffff';
+      this.ctx.lineWidth = 4;
+      this.ctx.strokeText(this.countdown.toString(), this.canvas.width / 2, this.canvas.height / 2);
 
       this.ctx.restore();
     }
