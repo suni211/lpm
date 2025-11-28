@@ -320,7 +320,7 @@ export default function GamePage() {
         zIndex: 9999
       }}>
         {/* 오디오 */}
-        <audio ref={audioRef} src={`http://localhost:3003${song.audio_file_path}`} />
+        <audio ref={audioRef} src={song.audio_file_path} />
 
         {/* 게임 캔버스 */}
         <canvas

@@ -377,7 +377,7 @@ export default function BeatmapRecorder({ song, keyCount, onSave, onCancel }: Be
       {/* 오디오 */}
       <audio
         ref={audioRef}
-        src={`http://localhost:3003${song.audio_file_path}`}
+        src={song.audio_file_path}
         onEnded={handleStop}
       />
 
