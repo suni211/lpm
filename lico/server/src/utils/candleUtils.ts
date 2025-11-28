@@ -6,6 +6,17 @@ import { v4 as uuidv4 } from 'uuid';
  * AI 봇 가격 변동 및 실제 거래 모두에서 사용
  */
 
+// Date를 MySQL DATETIME 포맷으로 변환 (YYYY-MM-DD HH:MM:SS)
+function toMySQLDateTime(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 // 1분봉 캔들 데이터 저장/업데이트
 export async function updateCandleData(
   coinId: string,
@@ -22,10 +33,14 @@ export async function updateCandleData(
     const closeTime = new Date(openTime);
     closeTime.setMinutes(closeTime.getMinutes() + 1);
 
+    // MySQL DATETIME 포맷으로 변환
+    const openTimeStr = toMySQLDateTime(openTime);
+    const closeTimeStr = toMySQLDateTime(closeTime);
+
     // 기존 캔들 확인
     const existing = await query(
       'SELECT * FROM candles_1m WHERE coin_id = ? AND open_time = ?',
-      [coinId, openTime]
+      [coinId, openTimeStr]
     );
 
     if (existing.length > 0) {
@@ -38,14 +53,14 @@ export async function updateCandleData(
              volume = volume + ?,
              trade_count = trade_count + 1
          WHERE coin_id = ? AND open_time = ?`,
-        [price, price, price, volume, coinId, openTime]
+        [price, price, price, volume, coinId, openTimeStr]
       );
     } else {
       // 새 캔들 생성
       await query(
         `INSERT INTO candles_1m (id, coin_id, open_time, close_time, open_price, high_price, low_price, close_price, volume, trade_count)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [uuidv4(), coinId, openTime, closeTime, price, price, price, price, volume]
+        [uuidv4(), coinId, openTimeStr, closeTimeStr, price, price, price, price, volume]
       );
     }
 
@@ -75,12 +90,16 @@ async function updateHourlyCandleData(
     const closeTime = new Date(openTime);
     closeTime.setHours(closeTime.getHours() + 1);
 
-    console.log(`[1시간봉] 현재시간: ${now.toLocaleString('ko-KR')}, open_time: ${openTime.toLocaleString('ko-KR')}`);
+    // MySQL DATETIME 포맷으로 변환
+    const openTimeStr = toMySQLDateTime(openTime);
+    const closeTimeStr = toMySQLDateTime(closeTime);
+
+    console.log(`[1시간봉] 현재시간: ${now.toLocaleString('ko-KR')}, open_time: ${openTime.toLocaleString('ko-KR')}, DB저장: ${openTimeStr}`);
 
     // 기존 캔들 확인
     const existing = await query(
       'SELECT * FROM candles_1h WHERE coin_id = ? AND open_time = ?',
-      [coinId, openTime]
+      [coinId, openTimeStr]
     );
 
     if (existing.length > 0) {
@@ -93,14 +112,14 @@ async function updateHourlyCandleData(
              volume = volume + ?,
              trade_count = trade_count + 1
          WHERE coin_id = ? AND open_time = ?`,
-        [price, price, price, volume, coinId, openTime]
+        [price, price, price, volume, coinId, openTimeStr]
       );
     } else {
       // 새 캔들 생성
       await query(
         `INSERT INTO candles_1h (id, coin_id, open_time, close_time, open_price, high_price, low_price, close_price, volume, trade_count)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [uuidv4(), coinId, openTime, closeTime, price, price, price, price, volume]
+        [uuidv4(), coinId, openTimeStr, closeTimeStr, price, price, price, price, volume]
       );
     }
   } catch (error) {
@@ -124,12 +143,16 @@ async function updateDailyCandleData(
     const closeTime = new Date(openTime);
     closeTime.setDate(closeTime.getDate() + 1);
 
-    console.log(`[1일봉] 현재시간: ${now.toLocaleString('ko-KR')}, open_time: ${openTime.toLocaleString('ko-KR')}`);
+    // MySQL DATETIME 포맷으로 변환
+    const openTimeStr = toMySQLDateTime(openTime);
+    const closeTimeStr = toMySQLDateTime(closeTime);
+
+    console.log(`[1일봉] 현재시간: ${now.toLocaleString('ko-KR')}, open_time: ${openTime.toLocaleString('ko-KR')}, DB저장: ${openTimeStr}`);
 
     // 기존 캔들 확인
     const existing = await query(
       'SELECT * FROM candles_1d WHERE coin_id = ? AND open_time = ?',
-      [coinId, openTime]
+      [coinId, openTimeStr]
     );
 
     if (existing.length > 0) {
@@ -142,14 +165,14 @@ async function updateDailyCandleData(
              volume = volume + ?,
              trade_count = trade_count + 1
          WHERE coin_id = ? AND open_time = ?`,
-        [price, price, price, volume, coinId, openTime]
+        [price, price, price, volume, coinId, openTimeStr]
       );
     } else {
       // 새 캔들 생성
       await query(
         `INSERT INTO candles_1d (id, coin_id, open_time, close_time, open_price, high_price, low_price, close_price, volume, trade_count)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [uuidv4(), coinId, openTime, closeTime, price, price, price, price, volume]
+        [uuidv4(), coinId, openTimeStr, closeTimeStr, price, price, price, price, volume]
       );
     }
   } catch (error) {
