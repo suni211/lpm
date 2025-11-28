@@ -734,6 +734,9 @@ export class GameEngine {
   }
 
   private drawNotes(elapsedTime: number) {
+    // 카운트다운 중에는 노트를 그리지 않음
+    if (this.showCountdown) return;
+
     const centerX = this.canvas.width / 2;
     const gearWidth = this.calculateGearWidth();
     const laneWidth = gearWidth / this.keyCount;
