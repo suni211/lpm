@@ -15,8 +15,15 @@ html, body, #root {
 body {
   font-family: 'Malgun Gothic', 'Noto Sans KR', 'Segoe UI', sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-attachment: fixed;
   min-height: 100vh;
   color: #fff;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .app {
@@ -31,6 +38,18 @@ body {
   backdrop-filter: blur(10px);
   padding: 1rem 0;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .nav-container {
@@ -47,11 +66,14 @@ body {
   font-weight: bold;
   color: #fff;
   text-decoration: none;
-  transition: color 0.3s;
+  transition: all 0.3s ease;
+  display: inline-block;
 }
 
 .nav-logo:hover {
   color: #ffd700;
+  transform: scale(1.1) rotate(-2deg);
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
 }
 
 .nav-menu {
@@ -64,12 +86,31 @@ body {
 .nav-menu a {
   color: #fff;
   text-decoration: none;
-  transition: color 0.3s;
+  transition: all 0.3s ease;
   font-size: 1.1rem;
+  position: relative;
+  display: inline-block;
+}
+
+.nav-menu a::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: #ffd700;
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
 }
 
 .nav-menu a:hover {
   color: #ffd700;
+  transform: translateY(-2px);
+}
+
+.nav-menu a:hover::after {
+  width: 100%;
 }
 
 .btn-logout {
@@ -103,6 +144,21 @@ body {
   align-items: center;
   min-height: 100vh;
   font-size: 2rem;
+  animation: fadeIn 0.5s ease-in;
+}
+
+.loading h2 {
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 /* Footer */
@@ -123,24 +179,70 @@ body {
   margin-bottom: 2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 215, 0, 0.5);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Buttons */
 .btn {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-size: 200% 200%;
   color: #fff;
   border: none;
   padding: 0.75rem 2rem;
   border-radius: 25px;
   font-size: 1rem;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 .btn:hover {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.05);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: translateY(-2px) scale(1.05); }
+  50% { transform: translateY(-2px) scale(1.08); }
 }
 
 .btn-secondary {
@@ -151,7 +253,12 @@ body {
 /* Forms */
 .form-group {
   margin-bottom: 1.5rem;
+  animation: fadeInUp 0.6s ease-out backwards;
 }
+
+.form-group:nth-child(2) { animation-delay: 0.1s; }
+.form-group:nth-child(3) { animation-delay: 0.2s; }
+.form-group:nth-child(4) { animation-delay: 0.3s; }
 
 .form-group label {
   display: block;
@@ -169,6 +276,16 @@ body {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
   font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #ffd700;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  transform: scale(1.02);
 }
 
 .form-group input::placeholder,
