@@ -544,19 +544,32 @@ export class GameEngine {
     this.ctx.fillStyle = gradient;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Draw BGA
-    if (this.bgaVideo) {
-      const centerX = this.canvas.width / 2;
-      const gearWidth = this.calculateGearWidth();
-      const bgaLeft = centerX - gearWidth / 2 - 40;
-      const bgaRight = centerX + gearWidth / 2 + 40;
+    // Draw BGA (전체 화면 배경)
+    if (this.bgaVideo && this.bgaVideo.readyState >= 2) {
+      this.ctx.save();
+      this.ctx.globalAlpha = 0.4; // 배경 투명도
 
-      // Draw BGA on left side
-      this.ctx.globalAlpha = 0.5;
-      this.ctx.drawImage(this.bgaVideo, 0, 0, bgaLeft, this.canvas.height);
-      // Draw BGA on right side
-      this.ctx.drawImage(this.bgaVideo, bgaRight, 0, this.canvas.width - bgaRight, this.canvas.height);
-      this.ctx.globalAlpha = 1.0;
+      // 비디오를 캔버스 크기에 맞게 조정
+      const videoAspect = this.bgaVideo.videoWidth / this.bgaVideo.videoHeight;
+      const canvasAspect = this.canvas.width / this.canvas.height;
+
+      let drawWidth = this.canvas.width;
+      let drawHeight = this.canvas.height;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (videoAspect > canvasAspect) {
+        // 비디오가 더 넓음 - 높이 기준으로 맞춤
+        drawWidth = this.canvas.height * videoAspect;
+        offsetX = (this.canvas.width - drawWidth) / 2;
+      } else {
+        // 비디오가 더 좁음 - 너비 기준으로 맞춤
+        drawHeight = this.canvas.width / videoAspect;
+        offsetY = (this.canvas.height - drawHeight) / 2;
+      }
+
+      this.ctx.drawImage(this.bgaVideo, offsetX, offsetY, drawWidth, drawHeight);
+      this.ctx.restore();
     }
 
     // Draw gear (note lanes)

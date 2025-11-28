@@ -24,6 +24,7 @@ export default function GamePage() {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const bgaVideoRef = useRef<HTMLVideoElement>(null);
   const gameEngineRef = useRef<GameEngine | null>(null);
 
   useEffect(() => {
@@ -139,7 +140,7 @@ export default function GamePage() {
         parseInt(selectedBeatmap.key_count),
         audioRef.current,
         customNoteSpeed,  // 사용자가 선택한 속도 사용
-        undefined,  // bgaVideo
+        bgaVideoRef.current || undefined,  // bgaVideo
         effectsData  // 효과 데이터
       );
 
@@ -388,6 +389,17 @@ export default function GamePage() {
       }}>
         {/* 오디오 */}
         <audio ref={audioRef} src={song.audio_file_path} />
+
+        {/* BGA 비디오 (숨김 처리, GameEngine에서 사용) */}
+        {song.bga_video_url && (
+          <video
+            ref={bgaVideoRef}
+            src={song.bga_video_url}
+            style={{ display: 'none' }}
+            muted
+            loop
+          />
+        )}
 
         {/* 게임 캔버스 */}
         <canvas
