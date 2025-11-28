@@ -363,13 +363,14 @@ export class GameEngine {
       if (this.countdown <= 0) {
         clearInterval(countdownInterval);
         this.showCountdown = false;
-        // 카운트다운이 끝나면 시작 시간을 재설정 (노트가 떨어지도록)
-        this.startTime = performance.now();
       }
     }, 1000);
 
-    // 5초 후 오디오 재생
+    // 5초 후 오디오 재생 및 게임 시작 시간 재설정
     setTimeout(() => {
+      // 노트가 위에서부터 내려오도록 leadTime만큼 과거로 설정
+      this.startTime = performance.now() - this.leadTime;
+
       this.audio.play();
 
       if (this.bgaVideo) {
