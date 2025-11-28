@@ -6,8 +6,15 @@ import type { Song } from '../types';
 export default function SongsPage() {
   const navigate = useNavigate();
   const [songs, setSongs] = useState<Song[]>([]);
+  const [filteredSongs, setFilteredSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // 필터 상태
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGenre, setSelectedGenre] = useState('all');
+  const [selectedKeyCount, setSelectedKeyCount] = useState('all');
+  const [sortBy, setSortBy] = useState<'title' | 'bpm' | 'duration' | 'difficulty'>('title');
 
   useEffect(() => {
     loadSongs();
@@ -17,12 +24,62 @@ export default function SongsPage() {
     try {
       const response = await songsAPI.getAll();
       setSongs(response.data);
+      setFilteredSongs(response.data);
     } catch (err: any) {
       setError(err.message || '곡 목록을 불러올 수 없습니다');
     } finally {
       setLoading(false);
     }
   };
+
+  // 필터링 및 정렬
+  useEffect(() => {
+    let result = [...songs];
+
+    // 검색 필터
+    if (searchQuery) {
+      result = result.filter(song =>
+        song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        song.artist.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // 장르 필터
+    if (selectedGenre !== 'all') {
+      result = result.filter(song => song.genre === selectedGenre);
+    }
+
+    // 키 개수 필터 (비트맵 기준)
+    if (selectedKeyCount !== 'all') {
+      result = result.filter(song =>
+        song.beatmaps?.some(beatmap => beatmap.key_count === selectedKeyCount)
+      );
+    }
+
+    // 정렬
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'bpm':
+          return b.bpm - a.bpm;
+        case 'duration':
+          return b.duration - a.duration;
+        case 'difficulty':
+          // 최고 난이도 기준 정렬
+          const aMaxDiff = Math.max(...(a.beatmaps?.map(b => b.difficulty_level) || [0]));
+          const bMaxDiff = Math.max(...(b.beatmaps?.map(b => b.difficulty_level) || [0]));
+          return bMaxDiff - aMaxDiff;
+        default:
+          return 0;
+      }
+    });
+
+    setFilteredSongs(result);
+  }, [songs, searchQuery, selectedGenre, selectedKeyCount, sortBy]);
+
+  // 장르 목록 추출
+  const genres = Array.from(new Set(songs.map(song => song.genre).filter(Boolean)));
 
   if (loading) {
     return <div className="card"><h2>곡 목록 로딩 중...</h2></div>;
@@ -47,8 +104,127 @@ export default function SongsPage() {
     <div className="songs-page">
       <h1 style={{ marginBottom: '2rem' }}>곡 목록</h1>
 
-      <div className="grid grid-2">
-        {songs.map((song) => (
+      {/* 필터 및 검색 */}
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          {/* 검색 */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', opacity: 0.8 }}>
+              검색
+            </label>
+            <input
+              type="text"
+              placeholder="곡명, 아티스트 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '5px',
+                color: '#fff',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+
+          {/* 장르 필터 */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', opacity: 0.8 }}>
+              장르
+            </label>
+            <select
+              value={selectedGenre}
+              onChange={(e) => setSelectedGenre(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '5px',
+                color: '#fff',
+                fontSize: '1rem',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="all">전체</option>
+              {genres.map(genre => (
+                <option key={genre} value={genre}>{genre}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 키 개수 필터 */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', opacity: 0.8 }}>
+              키 개수
+            </label>
+            <select
+              value={selectedKeyCount}
+              onChange={(e) => setSelectedKeyCount(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '5px',
+                color: '#fff',
+                fontSize: '1rem',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="all">전체</option>
+              <option value="4">4K</option>
+              <option value="5">5K</option>
+              <option value="6">6K</option>
+              <option value="8">8K</option>
+            </select>
+          </div>
+
+          {/* 정렬 */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', opacity: 0.8 }}>
+              정렬
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '5px',
+                color: '#fff',
+                fontSize: '1rem',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="title">제목순</option>
+              <option value="bpm">BPM 높은순</option>
+              <option value="duration">길이 긴순</option>
+              <option value="difficulty">난이도 높은순</option>
+            </select>
+          </div>
+        </div>
+
+        {/* 결과 개수 */}
+        <div style={{ marginTop: '1rem', opacity: 0.7, fontSize: '0.9rem' }}>
+          전체 {songs.length}곡 중 {filteredSongs.length}곡 표시
+        </div>
+      </div>
+
+      {filteredSongs.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <h2 style={{ marginBottom: '1rem' }}>검색 결과가 없습니다</h2>
+          <p style={{ opacity: 0.8 }}>
+            다른 필터 조건을 시도해보세요
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-2">
+          {filteredSongs.map((song) => (
           <div key={song.id} className="card song-card">
             {song.cover_image_url && (
               <img
@@ -92,7 +268,8 @@ export default function SongsPage() {
             </button>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
