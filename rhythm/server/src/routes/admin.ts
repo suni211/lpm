@@ -12,14 +12,16 @@ const router = express.Router();
 // File upload configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    const uploadsBase = path.join(__dirname, '../../uploads');
+
     if (file.fieldname === 'audio') {
-      cb(null, 'uploads/audio');
+      cb(null, path.join(uploadsBase, 'audio'));
     } else if (file.fieldname === 'cover') {
-      cb(null, 'uploads/covers');
+      cb(null, path.join(uploadsBase, 'covers'));
     } else if (file.fieldname === 'bga') {
-      cb(null, 'uploads/bga');
+      cb(null, path.join(uploadsBase, 'bga'));
     } else {
-      cb(null, 'uploads');
+      cb(null, uploadsBase);
     }
   },
   filename: (req, file, cb) => {
