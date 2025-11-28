@@ -1,4 +1,4 @@
-import type { Note, Judgments } from '../types';
+import type { Note, Judgments, Effect } from '../types';
 
 export interface JudgmentTiming {
   perfect: number;
@@ -19,6 +19,7 @@ export class GameEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private notes: Note[];
+  private effects: Effect[];
   private keyCount: number;
   private audio: HTMLAudioElement;
   private noteSpeed: number;
@@ -82,11 +83,13 @@ export class GameEngine {
     keyCount: number,
     audio: HTMLAudioElement,
     noteSpeed: number = 5.0,
-    bgaVideo?: HTMLVideoElement
+    bgaVideo?: HTMLVideoElement,
+    effects: Effect[] = []
   ) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.notes = notes.sort((a, b) => a.time - b.time);
+    this.effects = effects.sort((a, b) => a.startTime - b.startTime);
     this.keyCount = keyCount;
     this.audio = audio;
     this.noteSpeed = noteSpeed;
@@ -381,9 +384,101 @@ export class GameEngine {
     });
   }
 
+  private applyEffects(elapsedTime: number) {
+    // 현재 활성화된 효과들 찾기
+    const activeEffects = this.effects.filter(effect => {
+      const effectStart = effect.startTime;
+      const effectEnd = effect.startTime + effect.duration;
+      return elapsedTime >= effectStart && elapsedTime <= effectEnd;
+    });
+
+    // 각 효과 적용
+    activeEffects.forEach(effect => {
+      const progress = (elapsedTime - effect.startTime) / effect.duration;
+      const intensity = (effect.intensity || 100) / 100;
+
+      switch (effect.type) {
+        case 'blackout':
+          this.ctx.fillStyle = `rgba(0, 0, 0, ${intensity})`;
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+          break;
+
+        case 'fadeout':
+          const fadeOutAlpha = this.easeValue(progress, effect.easing) * intensity;
+          this.ctx.fillStyle = `rgba(0, 0, 0, ${fadeOutAlpha})`;
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+          break;
+
+        case 'fadein':
+          const fadeInAlpha = (1 - this.easeValue(progress, effect.easing)) * intensity;
+          this.ctx.fillStyle = `rgba(0, 0, 0, ${fadeInAlpha})`;
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+          break;
+
+        case 'blur':
+          this.ctx.filter = `blur(${intensity * 10}px)`;
+          break;
+
+        case 'distortion':
+          const distortAmount = Math.sin(progress * Math.PI * 4) * intensity * 20;
+          this.ctx.setTransform(1, Math.sin(progress * Math.PI * 2) * 0.1 * intensity, 0, 1, distortAmount, 0);
+          break;
+
+        case 'shake':
+          const shakeX = (Math.random() - 0.5) * intensity * 20;
+          const shakeY = (Math.random() - 0.5) * intensity * 20;
+          this.ctx.translate(shakeX, shakeY);
+          break;
+
+        case 'zoom':
+          const scale = 1 + (this.easeValue(progress, effect.easing) * intensity * 0.5);
+          const centerX = this.canvas.width / 2;
+          const centerY = this.canvas.height / 2;
+          this.ctx.translate(centerX, centerY);
+          this.ctx.scale(scale, scale);
+          this.ctx.translate(-centerX, -centerY);
+          break;
+
+        case 'spin':
+          const angle = this.easeValue(progress, effect.easing) * Math.PI * 2 * intensity;
+          const cx = this.canvas.width / 2;
+          const cy = this.canvas.height / 2;
+          this.ctx.translate(cx, cy);
+          this.ctx.rotate(angle);
+          this.ctx.translate(-cx, -cy);
+          break;
+
+        case 'invert':
+          this.ctx.filter = `invert(${intensity * 100}%)`;
+          break;
+      }
+    });
+  }
+
+  private easeValue(t: number, easing?: string): number {
+    switch (easing) {
+      case 'easeIn':
+        return t * t;
+      case 'easeOut':
+        return 1 - (1 - t) * (1 - t);
+      case 'easeInOut':
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      default: // linear
+        return t;
+    }
+  }
+
+  private resetEffects() {
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.filter = 'none';
+  }
+
   private render(elapsedTime: number) {
     // Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // 효과 적용 전 상태 저장
+    this.ctx.save();
 
     // Background gradient
     const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
@@ -438,6 +533,15 @@ export class GameEngine {
 
     // Update hit effects
     this.updateHitEffects();
+
+    // 효과 적용
+    this.applyEffects(elapsedTime);
+
+    // 효과 적용 후 상태 복원
+    this.ctx.restore();
+
+    // 효과 리셋 (다음 프레임을 위해)
+    this.resetEffects();
   }
 
   private calculateGearWidth(): number {

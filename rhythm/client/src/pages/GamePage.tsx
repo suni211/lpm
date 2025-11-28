@@ -97,12 +97,25 @@ export default function GamePage() {
         return;
       }
 
+      // effects_data 파싱
+      let effectsData = selectedBeatmap.effects_data || [];
+      if (typeof effectsData === 'string') {
+        try {
+          effectsData = JSON.parse(effectsData);
+        } catch (err) {
+          console.error('효과 데이터 파싱 실패:', err);
+          effectsData = [];
+        }
+      }
+
       const engine = new GameEngine(
         canvasRef.current,
         notesData,
         parseInt(selectedBeatmap.key_count),
         audioRef.current,
-        customNoteSpeed  // 사용자가 선택한 속도 사용
+        customNoteSpeed,  // 사용자가 선택한 속도 사용
+        undefined,  // bgaVideo
+        effectsData  // 효과 데이터
       );
 
       engine.setOnScoreUpdate(() => {

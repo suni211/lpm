@@ -38,6 +38,7 @@ export interface Beatmap {
   max_combo: number;
   note_speed: number;
   notes_data: Note[];
+  effects_data?: Effect[];
   status: 'ACTIVE' | 'TESTING' | 'HIDDEN';
   title?: string;
   artist?: string;
@@ -50,6 +51,14 @@ export interface Note {
   lane: number;
   type: 'normal' | 'long';
   duration?: number;
+}
+
+export interface Effect {
+  type: 'blackout' | 'fadeout' | 'fadein' | 'blur' | 'distortion' | 'shake' | 'zoom' | 'spin' | 'invert';
+  startTime: number;
+  duration: number;
+  intensity?: number; // 0-100, 효과 강도
+  easing?: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut';
 }
 
 export interface PlayRecord {
