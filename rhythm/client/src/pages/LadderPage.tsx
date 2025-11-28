@@ -139,7 +139,7 @@ export default function LadderPage() {
             <div>
               <p style={{ opacity: 0.7, marginBottom: '0.5rem' }}>전적</p>
               <h2 style={{ fontSize: '2rem' }}>{myRating.wins}승 {myRating.losses}패</h2>
-              <p style={{ opacity: 0.8 }}>승률: {myRating.winrate.toFixed(1)}%</p>
+              <p style={{ opacity: 0.8 }}>승률: {Number(myRating.winrate || 0).toFixed(1)}%</p>
             </div>
             <div>
               <p style={{ opacity: 0.7, marginBottom: '0.5rem' }}>최고 레이팅</p>
@@ -212,7 +212,7 @@ export default function LadderPage() {
                     {player.wins}W {player.losses}L
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    {player.winrate.toFixed(1)}%
+                    {Number(player.winrate || 0).toFixed(1)}%
                   </td>
                 </tr>
               ))}
