@@ -354,8 +354,8 @@ export class GameEngine {
     this.showCountdown = true;
     this.countdown = 5;
 
-    // 시작 시간을 leadTime만큼 과거로 설정 (노트가 미리 내려오도록)
-    this.startTime = performance.now() - this.leadTime;
+    // 시작 시간을 현재로 설정 (카운트다운 시작)
+    this.startTime = performance.now();
 
     // 1초마다 카운트다운
     const countdownInterval = setInterval(() => {
@@ -363,6 +363,8 @@ export class GameEngine {
       if (this.countdown <= 0) {
         clearInterval(countdownInterval);
         this.showCountdown = false;
+        // 카운트다운이 끝나면 시작 시간을 재설정 (노트가 떨어지도록)
+        this.startTime = performance.now();
       }
     }, 1000);
 
