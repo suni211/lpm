@@ -54,8 +54,19 @@ export class TradingEngine {
       [walletId, coinId]
     );
 
-    if (balances.length === 0 || balances[0].available_amount < quantity) {
-      throw new Error('보유 코인이 부족합니다');
+    if (balances.length === 0) {
+      throw new Error('보유 코인이 없습니다');
+    }
+
+    // available_amount를 숫자로 변환하여 비교
+    const availableAmount = typeof balances[0].available_amount === 'string'
+      ? parseFloat(balances[0].available_amount)
+      : (balances[0].available_amount || 0);
+
+    console.log(`💰 매도 잔액 체크: 보유=${availableAmount.toFixed(8)}, 판매 시도=${quantity}`);
+
+    if (availableAmount < quantity) {
+      throw new Error(`보유 코인이 부족합니다 (보유: ${availableAmount.toFixed(8)}, 필요: ${quantity})`);
     }
 
     // 시장가 매도: 현재 최고가 매수 주문과 매칭
@@ -276,8 +287,19 @@ export class TradingEngine {
       [walletId, coinId]
     );
 
-    if (balances.length === 0 || balances[0].available_amount < quantity) {
-      throw new Error('보유 코인이 부족합니다');
+    if (balances.length === 0) {
+      throw new Error('보유 코인이 없습니다');
+    }
+
+    // available_amount를 숫자로 변환하여 비교
+    const availableAmount = typeof balances[0].available_amount === 'string'
+      ? parseFloat(balances[0].available_amount)
+      : (balances[0].available_amount || 0);
+
+    console.log(`💰 시장가 매도 잔액 체크: 보유=${availableAmount.toFixed(8)}, 판매 시도=${quantity}`);
+
+    if (availableAmount < quantity) {
+      throw new Error(`보유 코인이 부족합니다 (보유: ${availableAmount.toFixed(8)}, 필요: ${quantity})`);
     }
 
     // 코인 잠금
