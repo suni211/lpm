@@ -3,6 +3,8 @@ import cors from 'cors';
 import session from 'express-session';
 import dotenv from 'dotenv';
 import path from 'path';
+import http from 'http';
+import { Server } from 'socket.io';
 
 // Routes
 import authRoutes from './routes/auth';
@@ -12,10 +14,19 @@ import gameRoutes from './routes/game';
 import rankingRoutes from './routes/rankings';
 import adminRoutes from './routes/admin';
 import userRoutes from './routes/user';
+import pvpRoutes from './routes/pvp';
 
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: ['http://rhythm.berrple.com', 'https://rhythm.berrple.com', 'http://localhost:5173', 'http://localhost:3003'],
+    credentials: true
+  }
+});
+
 const PORT = process.env.PORT || 5003;
 
 // Middleware
@@ -67,6 +78,7 @@ app.use('/api/game', gameRoutes);
 app.use('/api/rankings', rankingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/pvp', pvpRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -79,7 +91,34 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
-app.listen(PORT, () => {
+// WebSocket 연결 처리
+io.on('connection', (socket) => {
+  console.log('🔌 WebSocket client connected:', socket.id);
+
+  // 매치 룸 참가
+  socket.on('join-match', (matchId: string) => {
+    socket.join(`match-${matchId}`);
+    console.log(`✅ Socket ${socket.id} joined match-${matchId}`);
+  });
+
+  // 실시간 게임 진행 상황
+  socket.on('game-progress', (data: { matchId: string; score: number; combo: number; judgments: any }) => {
+    socket.to(`match-${data.matchId}`).emit('opponent-progress', data);
+  });
+
+  // 라운드 완료
+  socket.on('round-complete', (data: { matchId: string; score: number; judgments: any; maxCombo: number }) => {
+    socket.to(`match-${data.matchId}`).emit('opponent-round-complete', data);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('❌ WebSocket client disconnected:', socket.id);
+  });
+});
+
+// HTTP 서버 시작 (app.listen 대신 server.listen)
+server.listen(PORT, () => {
   console.log(`🎵 Rhythm Game Server running on port ${PORT}`);
+  console.log(`🔌 WebSocket Server ready`);
   console.log(`📁 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

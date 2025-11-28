@@ -100,3 +100,19 @@ export const adminAPI = {
   getStats: () =>
     api.get('/admin/stats')
 };
+
+// PvP API
+export const pvpAPI = {
+  joinQueue: () =>
+    api.post('/pvp/queue/join'),
+  leaveQueue: () =>
+    api.post('/pvp/queue/leave'),
+  getMatch: (matchId: string) =>
+    api.get(`/pvp/match/${matchId}`),
+  banSong: (matchId: string, songPoolId: string) =>
+    api.post(`/pvp/match/${matchId}/ban`, { songPoolId }),
+  getLadderRankings: (params?: { limit?: number; offset?: number }) =>
+    api.get('/pvp/ladder/rankings', { params }),
+  getMyRating: () =>
+    api.get('/pvp/ladder/my-rating')
+};

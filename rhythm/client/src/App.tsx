@@ -12,6 +12,7 @@ import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminPage from './pages/AdminPage';
+import LadderPage from './pages/LadderPage';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -61,6 +62,7 @@ function App() {
               <li><Link to="/">홈</Link></li>
               <li><Link to="/songs">곡 목록</Link></li>
               <li><Link to="/rankings">랭킹</Link></li>
+              <li><Link to="/ladder">⚔️ 레더</Link></li>
               {user ? (
                 <>
                   <li><Link to="/profile">프로필</Link></li>
