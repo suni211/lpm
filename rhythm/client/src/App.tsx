@@ -55,7 +55,7 @@ function App() {
         <nav className="navbar">
           <div className="nav-container">
             <Link to="/" className="nav-logo">
-              🎵 RHYTHM GAME
+              🎵 RMF
             </Link>
             <ul className="nav-menu">
               <li><Link to="/">홈</Link></li>
