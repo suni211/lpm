@@ -199,6 +199,9 @@ export class GameEngine {
   }
 
   private handleKeyPress(lane: number) {
+    // 카운트다운 중에는 키 입력 무시
+    if (this.showCountdown) return;
+
     // Find nearest note in this lane
     let nearestNote: NearestNote | null = null;
 
@@ -232,6 +235,9 @@ export class GameEngine {
   }
 
   private handleKeyRelease(lane: number) {
+    // 카운트다운 중에는 키 입력 무시
+    if (this.showCountdown) return;
+
     const activeLongNote = this.activeLongNotes.get(lane);
 
     if (activeLongNote) {
@@ -423,6 +429,9 @@ export class GameEngine {
   };
 
   private checkMissedNotes(elapsedTime: number) {
+    // 카운트다운 중에는 miss 체크 안 함
+    if (this.showCountdown) return;
+
     this.notes.forEach((note, index) => {
       if (this.processedNotes.has(index)) return;
 
