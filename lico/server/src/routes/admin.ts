@@ -189,5 +189,130 @@ router.get('/coins/:coin_id/price-history', isAdmin, async (req: Request, res: R
   }
 });
 
+// 거래 데이터 초기화 (관리자 전용)
+router.post('/reset-trading-data', isAdmin, async (req: Request, res: Response) => {
+  try {
+    console.log('🔧 거래 데이터 초기화 시작...');
+
+    // 초기화 전 데이터 확인
+    const beforeStats = {
+      trades: await query('SELECT COUNT(*) as count FROM trades'),
+      orders: await query('SELECT COUNT(*) as count FROM orders'),
+      balances: await query('SELECT COUNT(*) as count FROM user_coin_balances'),
+      wallets: await query('SELECT COUNT(*) as count FROM user_wallets'),
+    };
+
+    console.log('📊 초기화 전 데이터:', {
+      trades: beforeStats.trades[0].count,
+      orders: beforeStats.orders[0].count,
+      balances: beforeStats.balances[0].count,
+      wallets: beforeStats.wallets[0].count,
+    });
+
+    // 1. 거래 내역 삭제
+    await query('TRUNCATE TABLE trades');
+    console.log('✓ trades 테이블 초기화 완료');
+
+    // 2. 주문 삭제
+    await query('TRUNCATE TABLE orders');
+    console.log('✓ orders 테이블 초기화 완료');
+
+    // 3. 사용자 코인 잔액 삭제
+    await query('TRUNCATE TABLE user_coin_balances');
+    console.log('✓ user_coin_balances 테이블 초기화 완료');
+
+    // 4. 캔들 데이터 삭제
+    await query('TRUNCATE TABLE candles_1m');
+    await query('TRUNCATE TABLE candles_1h');
+    await query('TRUNCATE TABLE candles_1d');
+    console.log('✓ 캔들 데이터 초기화 완료');
+
+    // 5. AI 로그 삭제
+    await query('TRUNCATE TABLE ai_trade_logs');
+    console.log('✓ AI 로그 초기화 완료');
+
+    // 6. 코인 가격 초기화
+    await query(`
+      UPDATE coins
+      SET current_price = initial_price,
+          price_change_24h = 0,
+          volume_24h = 0,
+          market_cap = initial_price * circulating_supply
+      WHERE status = 'ACTIVE'
+    `);
+    console.log('✓ 코인 가격 초기화 완료');
+
+    // 7. AI 봇 지갑 찾기
+    const aiWallet = await query(
+      "SELECT id FROM user_wallets WHERE minecraft_username = 'AI_BOT' LIMIT 1"
+    );
+
+    if (aiWallet.length > 0) {
+      const aiWalletId = aiWallet[0].id;
+
+      // AI 봇의 기존 잔액 삭제
+      await query('DELETE FROM user_coin_balances WHERE wallet_id = ?', [aiWalletId]);
+
+      // 각 코인마다 AI 봇에게 전체 발행량 재배포
+      await query(`
+        INSERT INTO user_coin_balances (id, wallet_id, coin_id, available_amount, locked_amount, average_buy_price)
+        SELECT
+          UUID(),
+          ?,
+          id,
+          circulating_supply,
+          0,
+          initial_price
+        FROM coins
+        WHERE status = 'ACTIVE'
+      `, [aiWalletId]);
+
+      console.log('✓ AI 봇 코인 재배포 완료');
+    }
+
+    // 초기화 후 데이터 확인
+    const afterStats = {
+      trades: await query('SELECT COUNT(*) as count FROM trades'),
+      orders: await query('SELECT COUNT(*) as count FROM orders'),
+      balances: await query('SELECT COUNT(*) as count FROM user_coin_balances'),
+      wallets: await query('SELECT COUNT(*) as count FROM user_wallets'),
+      coins: await query('SELECT COUNT(*) as count FROM coins WHERE status = "ACTIVE"'),
+    };
+
+    console.log('📊 초기화 후 데이터:', {
+      trades: afterStats.trades[0].count,
+      orders: afterStats.orders[0].count,
+      balances: afterStats.balances[0].count,
+      wallets: afterStats.wallets[0].count,
+      coins: afterStats.coins[0].count,
+    });
+
+    res.json({
+      success: true,
+      message: '✅ LICO 거래 데이터 초기화 완료!',
+      note: '⚠️ 유저 지갑은 유지되었습니다 (골드 잔액 포함)',
+      before: {
+        trades: beforeStats.trades[0].count,
+        orders: beforeStats.orders[0].count,
+        balances: beforeStats.balances[0].count,
+        wallets: beforeStats.wallets[0].count,
+      },
+      after: {
+        trades: afterStats.trades[0].count,
+        orders: afterStats.orders[0].count,
+        balances: afterStats.balances[0].count,
+        wallets: afterStats.wallets[0].count,
+        activeCoins: afterStats.coins[0].count,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ 거래 데이터 초기화 오류:', error);
+    res.status(500).json({
+      error: '거래 데이터 초기화 실패',
+      message: error.message,
+    });
+  }
+});
+
 export default router;
 
