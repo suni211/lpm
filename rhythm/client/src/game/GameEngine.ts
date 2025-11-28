@@ -152,7 +152,6 @@ export class GameEngine {
 
         Array.from(e.changedTouches).forEach(touch => {
           const x = (touch.clientX - rect.left) * (this.canvas.width / rect.width);
-          const y = (touch.clientY - rect.top) * (this.canvas.height / rect.height);
 
           // 터치가 gear 영역 내에 있는지 확인
           if (x >= gearLeft && x <= gearLeft + gearWidth) {
