@@ -716,9 +716,7 @@ export class GameEngine {
       if (this.processedNotes.has(index)) return;
 
       const noteTiming = note.time;
-      // leadTime을 빼서 노트가 일찍 떨어지도록
-      const adjustedElapsedTime = elapsedTime - this.leadTime;
-      const timeUntilHit = noteTiming - adjustedElapsedTime;
+      const timeUntilHit = noteTiming - elapsedTime;
 
       // Calculate note Y position based on time and speed
       const fallDistance = this.hitZoneY;
