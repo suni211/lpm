@@ -137,11 +137,17 @@ router.get('/:wallet_address/balances', isAuthenticated, async (req: Request, re
 
     // 코인 보유 현황 조회
     const balances = await query(
-      `SELECT ucb.*, c.symbol, c.name, c.current_price, c.logo_url
+      `SELECT
+         ucb.*,
+         (ucb.available_amount + ucb.locked_amount) as total_amount,
+         c.symbol,
+         c.name,
+         c.current_price,
+         c.logo_url
        FROM user_coin_balances ucb
        JOIN coins c ON ucb.coin_id = c.id
-       WHERE ucb.wallet_id = ? AND ucb.total_amount > 0
-       ORDER BY (ucb.total_amount * c.current_price) DESC`,
+       WHERE ucb.wallet_id = ? AND (ucb.available_amount + ucb.locked_amount) > 0
+       ORDER BY ((ucb.available_amount + ucb.locked_amount) * c.current_price) DESC`,
       [wallet.id]
     );
 
