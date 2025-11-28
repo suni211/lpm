@@ -4,6 +4,33 @@ import { isAdmin } from '../middleware/auth';
 
 const router = express.Router();
 
+// 음수 잔액 확인 (관리자 전용)
+router.get('/negative-balances', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const negativeBalances = await query(`
+      SELECT
+        ucb.id,
+        uw.minecraft_username,
+        c.symbol,
+        ucb.available_amount,
+        ucb.locked_amount,
+        (ucb.available_amount + ucb.locked_amount) as total
+      FROM user_coin_balances ucb
+      JOIN user_wallets uw ON ucb.wallet_id = uw.id
+      JOIN coins c ON ucb.coin_id = c.id
+      WHERE ucb.available_amount < 0 OR ucb.locked_amount < 0
+    `);
+
+    res.json({
+      count: negativeBalances.length,
+      balances: negativeBalances,
+    });
+  } catch (error: any) {
+    console.error('음수 잔액 조회 오류:', error);
+    res.status(500).json({ error: '조회 실패', message: error.message });
+  }
+});
+
 // 음수 잔액 수정 (관리자 전용)
 router.post('/negative-balances', isAdmin, async (req: Request, res: Response) => {
   try {
