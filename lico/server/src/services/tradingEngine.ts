@@ -806,7 +806,12 @@ export class TradingEngine {
 
     const order = (await query('SELECT * FROM orders WHERE id = ?', [orderId]))[0];
 
-    if (order.filled_quantity >= order.quantity) {
+    // remaining_quantity로 완전 체결 여부 확인
+    const remainingQty = typeof order.remaining_quantity === 'string'
+      ? parseFloat(order.remaining_quantity)
+      : (order.remaining_quantity || 0);
+
+    if (remainingQty <= 0.00000001) { // 부동소수점 오차 고려
       await query('UPDATE orders SET status = "FILLED" WHERE id = ?', [orderId]);
 
       // WebSocket: 주문 체결 알림 전송
@@ -824,6 +829,7 @@ export class TradingEngine {
       }
     } else if (order.filled_quantity > 0) {
       await query('UPDATE orders SET status = "PARTIAL" WHERE id = ?', [orderId]);
+      console.log(`📊 부분 체결: ${order.id} - 체결 ${order.filled_quantity}/${order.quantity}, 남은 수량 ${remainingQty}`);
     }
   }
 
