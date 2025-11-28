@@ -134,7 +134,7 @@ const ExchangePage = () => {
         payload.toCoinId = toCoinId;
       }
 
-      const response = await api.post('/exchange', payload);
+      await api.post('/exchange', payload);
       setMessage({ type: 'success', text: '환전이 완료되었습니다!' });
       setAmount('');
       fetchUserCoins();
