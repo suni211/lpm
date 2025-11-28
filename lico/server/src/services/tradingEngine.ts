@@ -82,11 +82,32 @@ export class TradingEngine {
     const totalAmount = price * quantity;
     const fee = Math.floor(totalAmount * 0.05);
 
-    // 코인 잠금 (주문 체결될 때까지)
+    // 코인 잠금 (주문 체결될 때까지) - 음수 방지
     await query(
-      'UPDATE user_coin_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND coin_id = ?',
-      [quantity, quantity, walletId, coinId]
+      `UPDATE user_coin_balances
+       SET available_amount = available_amount - ?,
+           locked_amount = locked_amount + ?
+       WHERE wallet_id = ? AND coin_id = ? AND available_amount >= ?`,
+      [quantity, quantity, walletId, coinId, quantity]
     );
+
+    // 잠금 성공 여부 확인
+    const lockedBalances = await query(
+      'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+      [walletId, coinId]
+    );
+    const newAvailable = typeof lockedBalances[0].available_amount === 'string'
+      ? parseFloat(lockedBalances[0].available_amount)
+      : (lockedBalances[0].available_amount || 0);
+
+    if (newAvailable < 0) {
+      // 롤백
+      await query(
+        'UPDATE user_coin_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND coin_id = ?',
+        [quantity, quantity, walletId, coinId]
+      );
+      throw new Error('잔액 잠금 실패: 동시성 문제 발생');
+    }
 
     const orderId = uuidv4();
 
@@ -302,11 +323,32 @@ export class TradingEngine {
       throw new Error(`보유 코인이 부족합니다 (보유: ${availableAmount.toFixed(8)}, 필요: ${quantity})`);
     }
 
-    // 코인 잠금
+    // 코인 잠금 (음수 방지)
     await query(
-      'UPDATE user_coin_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND coin_id = ?',
-      [quantity, quantity, walletId, coinId]
+      `UPDATE user_coin_balances
+       SET available_amount = available_amount - ?,
+           locked_amount = locked_amount + ?
+       WHERE wallet_id = ? AND coin_id = ? AND available_amount >= ?`,
+      [quantity, quantity, walletId, coinId, quantity]
     );
+
+    // 잠금 성공 여부 확인
+    const lockedBalances = await query(
+      'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+      [walletId, coinId]
+    );
+    const newAvailable = typeof lockedBalances[0].available_amount === 'string'
+      ? parseFloat(lockedBalances[0].available_amount)
+      : (lockedBalances[0].available_amount || 0);
+
+    if (newAvailable < 0) {
+      // 롤백
+      await query(
+        'UPDATE user_coin_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND coin_id = ?',
+        [quantity, quantity, walletId, coinId]
+      );
+      throw new Error('잔액 잠금 실패: 동시성 문제 발생');
+    }
 
     // 최고가 매수 주문들 조회
     const buyOrders = await query(
