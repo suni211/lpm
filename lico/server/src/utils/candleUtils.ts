@@ -6,14 +6,20 @@ import { v4 as uuidv4 } from 'uuid';
  * AI 봇 가격 변동 및 실제 거래 모두에서 사용
  */
 
+// UTC 시간을 KST(한국 표준시, UTC+9)로 변환
+function toKST(date: Date): Date {
+  const kst = new Date(date.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+  return kst;
+}
+
 // Date를 MySQL DATETIME 포맷으로 변환 (YYYY-MM-DD HH:MM:SS)
 function toMySQLDateTime(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
@@ -25,13 +31,14 @@ export async function updateCandleData(
 ): Promise<void> {
   try {
     const now = new Date();
+    const kstNow = toKST(now); // UTC → KST 변환
 
     // 1분 단위로 내림 (초/밀리초를 0으로)
-    const openTime = new Date(now);
-    openTime.setSeconds(0, 0);
+    const openTime = new Date(kstNow);
+    openTime.setUTCSeconds(0, 0);
 
     const closeTime = new Date(openTime);
-    closeTime.setMinutes(closeTime.getMinutes() + 1);
+    closeTime.setUTCMinutes(closeTime.getUTCMinutes() + 1);
 
     // MySQL DATETIME 포맷으로 변환
     const openTimeStr = toMySQLDateTime(openTime);
@@ -82,19 +89,20 @@ async function updateHourlyCandleData(
 ): Promise<void> {
   try {
     const now = new Date();
+    const kstNow = toKST(now); // UTC → KST 변환
 
     // 1시간 단위로 내림 (분/초/밀리초를 0으로)
-    const openTime = new Date(now);
-    openTime.setMinutes(0, 0, 0);
+    const openTime = new Date(kstNow);
+    openTime.setUTCMinutes(0, 0, 0);
 
     const closeTime = new Date(openTime);
-    closeTime.setHours(closeTime.getHours() + 1);
+    closeTime.setUTCHours(closeTime.getUTCHours() + 1);
 
     // MySQL DATETIME 포맷으로 변환
     const openTimeStr = toMySQLDateTime(openTime);
     const closeTimeStr = toMySQLDateTime(closeTime);
 
-    console.log(`[1시간봉] 현재시간: ${now.toLocaleString('ko-KR')}, open_time: ${openTime.toLocaleString('ko-KR')}, DB저장: ${openTimeStr}`);
+    console.log(`[1시간봉] UTC: ${now.toISOString()}, KST: ${kstNow.toISOString()}, open_time: ${openTimeStr}`);
 
     // 기존 캔들 확인
     const existing = await query(
@@ -135,19 +143,20 @@ async function updateDailyCandleData(
 ): Promise<void> {
   try {
     const now = new Date();
+    const kstNow = toKST(now); // UTC → KST 변환
 
     // 1일 단위로 내림 (시/분/초/밀리초를 0으로)
-    const openTime = new Date(now);
-    openTime.setHours(0, 0, 0, 0);
+    const openTime = new Date(kstNow);
+    openTime.setUTCHours(0, 0, 0, 0);
 
     const closeTime = new Date(openTime);
-    closeTime.setDate(closeTime.getDate() + 1);
+    closeTime.setUTCDate(closeTime.getUTCDate() + 1);
 
     // MySQL DATETIME 포맷으로 변환
     const openTimeStr = toMySQLDateTime(openTime);
     const closeTimeStr = toMySQLDateTime(closeTime);
 
-    console.log(`[1일봉] 현재시간: ${now.toLocaleString('ko-KR')}, open_time: ${openTime.toLocaleString('ko-KR')}, DB저장: ${openTimeStr}`);
+    console.log(`[1일봉] UTC: ${now.toISOString()}, KST: ${kstNow.toISOString()}, open_time: ${openTimeStr}`);
 
     // 기존 캔들 확인
     const existing = await query(
