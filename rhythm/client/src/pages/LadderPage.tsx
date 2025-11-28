@@ -29,6 +29,7 @@ export default function LadderPage() {
   const [myRating, setMyRating] = useState<MyRating | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     loadData();
@@ -45,6 +46,7 @@ export default function LadderPage() {
       setMyRating(myRatingRes.data);
     } catch (error: any) {
       console.error('Load data error:', error);
+      setError(error.response?.data?.error || error.message || '데이터를 불러올 수 없습니다');
     } finally {
       setLoading(false);
     }
@@ -112,6 +114,17 @@ export default function LadderPage() {
   return (
     <div className="ladder-page">
       <h1 style={{ marginBottom: '2rem', textAlign: 'center' }}>🏆 랭크 레더 (4K 전용)</h1>
+
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="card" style={{ marginBottom: '2rem', background: 'rgba(255,74,74,0.2)', border: '1px solid #ff4a4a' }}>
+          <h3 style={{ color: '#ff4a4a' }}>오류</h3>
+          <p style={{ marginTop: '1rem' }}>{error}</p>
+          <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', opacity: 0.8 }}>
+            로그인이 필요하거나 서버에 문제가 있을 수 있습니다.
+          </p>
+        </div>
+      )}
 
       {/* 내 레이팅 */}
       {myRating && (
