@@ -14,6 +14,8 @@ export interface Coin {
   status: 'ACTIVE' | 'PAUSED' | 'DELISTED';
   min_volatility?: number;
   max_volatility?: number;
+  coin_type?: 'MAJOR' | 'MEME';
+  base_currency_id?: string | null;
   created_at: string;
   updated_at: string;
 }

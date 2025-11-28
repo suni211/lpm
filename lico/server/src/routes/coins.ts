@@ -298,6 +298,8 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
       current_price,
       min_volatility,
       max_volatility,
+      coin_type,
+      base_currency_id,
     } = req.body;
 
     // 입력 검증
@@ -339,12 +341,28 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
       return res.status(400).json({ error: '이미 존재하는 코인 심볼입니다' });
     }
 
+    // 코인 타입 검증
+    const finalCoinType = coin_type || 'MEME';
+    if (!['MAJOR', 'MEME'].includes(finalCoinType)) {
+      return res.status(400).json({ error: '코인 타입은 MAJOR 또는 MEME만 가능합니다' });
+    }
+
+    // MEME 코인인 경우 base_currency_id 필수 검증
+    if (finalCoinType === 'MEME' && !base_currency_id) {
+      return res.status(400).json({ error: 'MEME 코인은 거래 기준 코인(base_currency_id)이 필요합니다' });
+    }
+
+    // MAJOR 코인인 경우 base_currency_id가 있으면 안됨
+    if (finalCoinType === 'MAJOR' && base_currency_id) {
+      return res.status(400).json({ error: 'MAJOR 코인은 거래 기준 코인(base_currency_id)을 가질 수 없습니다' });
+    }
+
     const coinId = uuidv4();
     // initial_supply는 circulating_supply와 동일하게 설정, initial_price는 current_price와 동일하게 설정
     await query(
       `INSERT INTO coins
-       (id, symbol, name, logo_url, description, initial_supply, circulating_supply, initial_price, current_price, min_volatility, max_volatility, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')`,
+       (id, symbol, name, logo_url, description, initial_supply, circulating_supply, initial_price, current_price, min_volatility, max_volatility, coin_type, base_currency_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')`,
       [
         coinId,
         symbol.toUpperCase(),
@@ -357,6 +375,8 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
         current_price,
         min_volatility || null,
         max_volatility || null,
+        finalCoinType,
+        finalCoinType === 'MEME' ? base_currency_id : null,
       ]
     );
 

@@ -23,6 +23,8 @@ const AdminDashboard = () => {
     current_price: '',
     min_volatility: '',
     max_volatility: '',
+    coin_type: 'MEME' as 'MAJOR' | 'MEME',
+    base_currency_id: '',
   });
 
   useEffect(() => {
@@ -120,6 +122,12 @@ const AdminDashboard = () => {
         payload.max_volatility = parseFloat(formData.max_volatility) / 100;
       }
 
+      // 코인 타입 추가
+      payload.coin_type = formData.coin_type;
+      if (formData.coin_type === 'MEME' && formData.base_currency_id) {
+        payload.base_currency_id = formData.base_currency_id;
+      }
+
       await api.post('/coins', payload);
       alert('코인이 성공적으로 생성되었습니다!');
       setShowCreateModal(false);
@@ -193,6 +201,8 @@ const AdminDashboard = () => {
       current_price: '',
       min_volatility: '0.001',
       max_volatility: '0.1',
+      coin_type: 'MEME',
+      base_currency_id: '',
     });
   };
 
@@ -281,6 +291,7 @@ const AdminDashboard = () => {
               <tr>
                 <th>심볼</th>
                 <th>이름</th>
+                <th>타입</th>
                 <th>현재 가격</th>
                 <th>유통량</th>
                 <th>시가총액</th>
@@ -292,13 +303,13 @@ const AdminDashboard = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
                     로딩 중...
                   </td>
                 </tr>
               ) : coins.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
                     등록된 코인이 없습니다
                   </td>
                 </tr>
@@ -314,6 +325,15 @@ const AdminDashboard = () => {
                       </div>
                     </td>
                     <td>{coin.name}</td>
+                    <td>
+                      <span className={`status-badge ${coin.coin_type === 'MAJOR' ? 'major' : 'meme'}`} style={{
+                        background: coin.coin_type === 'MAJOR' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(147, 51, 234, 0.2)',
+                        color: coin.coin_type === 'MAJOR' ? '#60a5fa' : '#c084fc',
+                        border: `1px solid ${coin.coin_type === 'MAJOR' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(147, 51, 234, 0.4)'}`,
+                      }}>
+                        {coin.coin_type || 'MEME'}
+                      </span>
+                    </td>
                     <td>{formatNumber(coin.current_price)} G</td>
                     <td>{formatNumber(coin.circulating_supply)}</td>
                     <td>{formatNumber(coin.market_cap)} G</td>
@@ -531,6 +551,40 @@ const AdminDashboard = () => {
                   placeholder="코인에 대한 설명"
                 />
               </div>
+              <div className="form-group">
+                <label>코인 타입 *</label>
+                <select
+                  value={formData.coin_type}
+                  onChange={(e) => setFormData({ ...formData, coin_type: e.target.value as 'MAJOR' | 'MEME', base_currency_id: '' })}
+                  required
+                >
+                  <option value="MEME">MEME (밈코인 - MAJOR로 거래)</option>
+                  <option value="MAJOR">MAJOR (기축코인 - Gold로 거래)</option>
+                </select>
+                <small style={{ color: '#9ca3af', fontSize: '12px' }}>
+                  MEME: 밈코인, MAJOR 코인으로 거래 | MAJOR: 기축코인, Gold로 거래
+                </small>
+              </div>
+              {formData.coin_type === 'MEME' && (
+                <div className="form-group">
+                  <label>거래 기준 코인 (MAJOR) *</label>
+                  <select
+                    value={formData.base_currency_id}
+                    onChange={(e) => setFormData({ ...formData, base_currency_id: e.target.value })}
+                    required
+                  >
+                    <option value="">선택하세요</option>
+                    {coins.filter(c => c.coin_type === 'MAJOR').map((coin) => (
+                      <option key={coin.id} value={coin.id}>
+                        {coin.symbol} - {coin.name}
+                      </option>
+                    ))}
+                  </select>
+                  <small style={{ color: '#9ca3af', fontSize: '12px' }}>
+                    이 밈코인을 거래할 때 사용할 MAJOR 코인을 선택하세요
+                  </small>
+                </div>
+              )}
               <div className="form-group">
                 <label>유통량 *</label>
                 <input
