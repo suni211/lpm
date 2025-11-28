@@ -568,11 +568,26 @@ export class TradingEngine {
 
     // 2. AI 봇이 매수한 코인 즉시 소각 (유통량 감소)
     if (isAIBotBuyer && !isAIBotSeller) {
-      // AI 봇이 유저에게서 코인을 매수함 → 코인 소각
-      await this.updateCoinBalance(buyerWalletId, coinId, -quantity); // AI 봇의 코인 제거
-      await this.burnCoins(coinId, quantity, 'AI_BOT_BURN', tradeId, `AI 봇 매수로 인한 소각 (${quantity} 코인)`);
-      totalBurned += quantity;
-      console.log(`🔥 AI 봇 매수 소각: ${quantity} 코인`);
+      // 현재 유통량 확인
+      const coinInfo = await query('SELECT circulating_supply FROM coins WHERE id = ?', [coinId]);
+      const circulatingSupply = coinInfo.length > 0
+        ? (typeof coinInfo[0].circulating_supply === 'string'
+            ? parseFloat(coinInfo[0].circulating_supply)
+            : (coinInfo[0].circulating_supply || 0))
+        : 0;
+
+      // 유통량이 충분할 때만 소각
+      if (circulatingSupply >= quantity) {
+        // AI 봇이 유저에게서 코인을 매수함 → 코인 소각
+        await this.updateCoinBalance(buyerWalletId, coinId, -quantity); // AI 봇의 코인 제거
+        await this.burnCoins(coinId, quantity, 'AI_BOT_BURN', tradeId, `AI 봇 매수로 인한 소각 (${quantity} 코인)`);
+        totalBurned += quantity;
+        console.log(`🔥 AI 봇 매수 소각: ${quantity} 코인 (남은 유통량: ${circulatingSupply - quantity})`);
+      } else {
+        console.log(`⚠️  AI 봇 매수 소각 건너뜀: 유통량 부족 (현재: ${circulatingSupply}, 필요: ${quantity})`);
+        // AI 봇은 코인을 보유하지 않고 바로 제거만 함
+        await this.updateCoinBalance(buyerWalletId, coinId, -quantity);
+      }
     }
 
     if (totalBurned > 0) {
