@@ -20,7 +20,8 @@
       "Bash(tree:*)",
       "Bash(npm run dev)",
       "Bash(timeout 10 npm run dev:*)",
-      "Bash(npx ts-node:*)"
+      "Bash(npx ts-node:*)",
+      "Bash(git revert:*)"
     ],
     "deny": [],
     "ask": []

@@ -530,6 +530,11 @@ export class TradingEngine {
       [tradeId, coinId, buyOrderId || null, sellOrderId || null, buyerWalletId, sellerWalletId, price, quantity, buyFee, sellFee]
     );
 
+    // AI 봇 지갑 확인
+    const aiWallets = await query('SELECT * FROM user_wallets WHERE minecraft_username = "AI_BOT"');
+    const isAIBotSeller = aiWallets.length > 0 && sellerWalletId === aiWallets[0].id;
+    const isAIBotBuyer = aiWallets.length > 0 && buyerWalletId === aiWallets[0].id;
+
     // 매수자: Gold 차감 (수수료 포함), 코인 증가
     await this.updateWalletBalance(buyerWalletId, -(totalAmount + buyFee));
     await this.updateCoinBalance(buyerWalletId, coinId, quantity);
@@ -544,6 +549,33 @@ export class TradingEngine {
     } else {
       // 즉시 매도 (AI 봇 등): available_amount에서 차감
       await this.updateCoinBalance(sellerWalletId, coinId, -quantity);
+    }
+
+    // 🔥 소각 시스템
+    let totalBurned = 0;
+
+    // 1. 거래 수수료의 50% 소각
+    const burnFromBuyFee = buyFee * 0.5;
+    const burnFromSellFee = sellFee * 0.5;
+    const feeBurn = burnFromBuyFee + burnFromSellFee;
+
+    if (feeBurn > 0) {
+      await this.burnCoins(coinId, feeBurn, 'FEE_BURN', tradeId, `거래 수수료 소각 (매수 ${burnFromBuyFee.toFixed(2)} + 매도 ${burnFromSellFee.toFixed(2)})`);
+      totalBurned += feeBurn;
+      console.log(`🔥 수수료 소각: ${feeBurn.toFixed(2)} Gold`);
+    }
+
+    // 2. AI 봇이 매수한 코인 즉시 소각 (유통량 감소)
+    if (isAIBotBuyer && !isAIBotSeller) {
+      // AI 봇이 유저에게서 코인을 매수함 → 코인 소각
+      await this.updateCoinBalance(buyerWalletId, coinId, -quantity); // AI 봇의 코인 제거
+      await this.burnCoins(coinId, quantity, 'AI_BOT_BURN', tradeId, `AI 봇 매수로 인한 소각 (${quantity} 코인)`);
+      totalBurned += quantity;
+      console.log(`🔥 AI 봇 매수 소각: ${quantity} 코인`);
+    }
+
+    if (totalBurned > 0) {
+      console.log(`🔥 총 소각량: ${totalBurned.toFixed(8)}`);
     }
 
     // 주문 상태 업데이트
@@ -792,6 +824,33 @@ export class TradingEngine {
     } else if (order.filled_quantity > 0) {
       await query('UPDATE orders SET status = "PARTIAL" WHERE id = ?', [orderId]);
     }
+  }
+
+  // 코인 소각 함수
+  private async burnCoins(
+    coinId: string,
+    amount: number,
+    burnType: 'FEE_BURN' | 'AI_BOT_BURN' | 'MANUAL_BURN',
+    tradeId: string | null,
+    description: string
+  ) {
+    const burnId = uuidv4();
+    const preciseAmount = parseFloat(amount.toFixed(8));
+
+    // 소각 로그 기록
+    await query(
+      `INSERT INTO coin_burn_logs (id, coin_id, burn_type, amount, trade_id, description)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [burnId, coinId, burnType, preciseAmount, tradeId, description]
+    );
+
+    // 코인 유통량 감소
+    await query(
+      'UPDATE coins SET circulating_supply = circulating_supply - ? WHERE id = ?',
+      [preciseAmount, coinId]
+    );
+
+    console.log(`🔥 소각 완료: ${burnType} - ${preciseAmount} (${description})`);
   }
 
   // 캔들스틱 데이터 업데이트 (1분봉, 1시간봉, 1일봉)
