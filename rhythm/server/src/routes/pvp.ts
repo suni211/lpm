@@ -18,7 +18,32 @@ router.post('/queue/join', requireAuth, async (req, res) => {
     );
 
     if (Array.isArray(existing) && existing.length > 0) {
-      return res.status(400).json({ error: '이미 매칭 중입니다' });
+      // 이미 큐에 있는 경우, 매칭이 되었는지 확인
+      const matched: any = await query(
+        'SELECT * FROM matchmaking_queue WHERE user_id = ? AND status = "MATCHED"',
+        [userId]
+      );
+
+      if (Array.isArray(matched) && matched.length > 0) {
+        // 매칭된 매치 찾기
+        const match: any = await query(
+          'SELECT id FROM matches WHERE (player1_id = ? OR player2_id = ?) AND status != "COMPLETED" ORDER BY created_at DESC LIMIT 1',
+          [userId, userId]
+        );
+
+        if (Array.isArray(match) && match.length > 0) {
+          return res.json({
+            matched: true,
+            matchId: match[0].id
+          });
+        }
+      }
+
+      // 아직 매칭 안 됨
+      return res.json({
+        matched: false,
+        message: '매칭 상대를 찾는 중...'
+      });
     }
 
     // 사용자의 현재 레이팅 가져오기
