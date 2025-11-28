@@ -77,6 +77,12 @@ router.post('/login', async (req, res) => {
     req.session.adminId = admin.id;
     req.session.username = admin.username;
 
+    console.log('✅ Admin login successful:', {
+      adminId: admin.id,
+      username: admin.username,
+      sessionID: req.sessionID
+    });
+
     res.json({
       message: 'Admin login successful',
       admin: {
