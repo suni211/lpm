@@ -53,10 +53,7 @@ CREATE TABLE match_song_pool (
     FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
     FOREIGN KEY (beatmap_id) REFERENCES beatmaps(id) ON DELETE CASCADE,
     FOREIGN KEY (banned_by) REFERENCES users(id) ON DELETE SET NULL,
-    INDEX idx_match (match_id),
-    CONSTRAINT chk_4k_only CHECK (
-        beatmap_id IN (SELECT id FROM beatmaps WHERE key_count = 4)
-    )
+    INDEX idx_match (match_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='랭크 매치는 4K 전용';
 
 -- 매치 라운드 기록
