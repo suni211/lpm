@@ -641,8 +641,29 @@ export class TradingEngine {
     );
     const volume24h = parseFloat(volume24hResult[0]?.total_volume || '0');
 
-    // 코인 현재가, 24시간 변동률, 24시간 거래량 업데이트
-    await query('UPDATE coins SET current_price = ?, price_change_24h = ?, volume_24h = ? WHERE id = ?', [finalPrice, finalPriceChange24h, volume24h, coinId]);
+    // 24시간 최고가/최저가 업데이트
+    const coinData = await query('SELECT high_24h, low_24h, high_24h_updated_at, low_24h_updated_at FROM coins WHERE id = ?', [coinId]);
+    const coin = coinData[0];
+
+    let updateHighLow = '';
+    const now = new Date();
+
+    // 최고가 갱신 확인 (24시간 이내 기록이 없거나, 현재 가격이 더 높을 때)
+    if (!coin.high_24h || !coin.high_24h_updated_at ||
+        finalPrice > parseFloat(coin.high_24h.toString()) ||
+        (now.getTime() - new Date(coin.high_24h_updated_at).getTime()) > 24 * 60 * 60 * 1000) {
+      updateHighLow += ', high_24h = ' + finalPrice + ', high_24h_updated_at = NOW()';
+    }
+
+    // 최저가 갱신 확인 (24시간 이내 기록이 없거나, 현재 가격이 더 낮을 때)
+    if (!coin.low_24h || !coin.low_24h_updated_at ||
+        finalPrice < parseFloat(coin.low_24h.toString()) ||
+        (now.getTime() - new Date(coin.low_24h_updated_at).getTime()) > 24 * 60 * 60 * 1000) {
+      updateHighLow += ', low_24h = ' + finalPrice + ', low_24h_updated_at = NOW()';
+    }
+
+    // 코인 현재가, 24시간 변동률, 24시간 거래량, 최고가/최저가 업데이트
+    await query('UPDATE coins SET current_price = ?, price_change_24h = ?, volume_24h = ?' + updateHighLow + ' WHERE id = ?', [finalPrice, finalPriceChange24h, volume24h, coinId]);
 
     // 캔들스틱 데이터 업데이트
     await this.updateCandlestick(coinId, finalPrice, quantity);
@@ -662,6 +683,8 @@ export class TradingEngine {
             price_change_24h: updatedCoin.price_change_24h,
             volume_24h: updatedCoin.volume_24h,
             market_cap: updatedCoin.market_cap,
+            high_24h: updatedCoin.high_24h,
+            low_24h: updatedCoin.low_24h,
             updated_at: new Date().toISOString(),
           });
         }
