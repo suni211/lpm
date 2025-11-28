@@ -411,7 +411,8 @@ export class GameEngine {
     if (!this.isPlaying || this.isPaused) return;
 
     this.currentTime = performance.now();
-    const elapsedTime = this.currentTime - this.startTime;
+    // 카운트다운 중에는 elapsedTime을 음수로 유지
+    const elapsedTime = this.showCountdown ? -1000 : this.currentTime - this.startTime;
 
     // Check for missed notes
     this.checkMissedNotes(elapsedTime);
