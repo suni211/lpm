@@ -61,7 +61,7 @@ export default function PvPGamePage() {
     judgments: { perfect: 0, great: 0, good: 0, bad: 0, miss: 0 }
   });
 
-  const [roundResult, setRoundResult] = useState<any>(null);
+  const [, setRoundResult] = useState<any>(null);
   const [isOpponentFinished, setIsOpponentFinished] = useState(false);
   const [myFinalScore, setMyFinalScore] = useState(0);
 
