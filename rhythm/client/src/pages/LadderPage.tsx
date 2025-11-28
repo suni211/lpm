@@ -37,13 +37,20 @@ export default function LadderPage() {
 
   const loadData = async () => {
     try {
-      const [rankingsRes, myRatingRes] = await Promise.all([
-        pvpAPI.getLadderRankings({ limit: 100 }),
-        pvpAPI.getMyRating()
-      ]);
-
+      // 랭킹은 항상 로드
+      const rankingsRes = await pvpAPI.getLadderRankings({ limit: 100 });
       setRankings(rankingsRes.data);
-      setMyRating(myRatingRes.data);
+
+      // 내 레이팅은 로그인한 경우에만 로드
+      try {
+        const myRatingRes = await pvpAPI.getMyRating();
+        setMyRating(myRatingRes.data);
+      } catch (ratingError: any) {
+        // 로그인하지 않은 경우 무시
+        if (ratingError.response?.status !== 401) {
+          console.error('My rating error:', ratingError);
+        }
+      }
     } catch (error: any) {
       console.error('Load data error:', error);
       setError(error.response?.data?.error || error.message || '데이터를 불러올 수 없습니다');
@@ -78,10 +85,15 @@ export default function LadderPage() {
           alert('매칭 상대를 찾지 못했습니다');
         }, 30000);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Find match error:', error);
       setSearching(false);
-      alert('매칭 실패');
+      if (error.response?.status === 401) {
+        alert('로그인이 필요합니다');
+        navigate('/login');
+      } else {
+        alert(error.response?.data?.error || '매칭 실패');
+      }
     }
   };
 
