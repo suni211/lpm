@@ -55,7 +55,7 @@ const ExchangePage = () => {
   const fetchCoins = async () => {
     try {
       const response = await api.get('/coins');
-      setCoins(response.data);
+      setCoins(response.data.coins || []);
     } catch (error) {
       console.error('코인 목록 조회 실패:', error);
     }
