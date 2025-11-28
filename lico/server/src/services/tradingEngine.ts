@@ -520,19 +520,8 @@ export class TradingEngine {
   ) {
     const tradeId = uuidv4();
     const totalAmount = price * quantity;
-
-    // LGOLD 스테이블 코인 확인 (수수료 0%)
-    const coinInfo = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
-    const isStableCoin = coinInfo.length > 0 && coinInfo[0].is_stable_coin === true;
-
-    // 스테이블 코인은 수수료 0%, 일반 코인은 5%
-    const feeRate = isStableCoin ? 0 : 0.05;
-    const buyFee = Math.floor(totalAmount * feeRate);
-    const sellFee = Math.floor(totalAmount * feeRate);
-
-    if (isStableCoin) {
-      console.log(`💎 스테이블 코인 거래 (수수료 0%): ${coinInfo[0].symbol}`);
-    }
+    const buyFee = Math.floor(totalAmount * 0.05);
+    const sellFee = Math.floor(totalAmount * 0.05);
 
     // 거래 기록 생성 (buy_order_id, sell_order_id는 NULL 허용)
     await query(
@@ -715,16 +704,14 @@ export class TradingEngine {
       console.error('실시간 유동성 공급 오류:', error);
     }
 
-    // 거래 체결 브로드캐스트 (스테이블 코인은 프라이버시 보호를 위해 브로드캐스트 안함)
-    if (!isStableCoin && websocketInstance && websocketInstance.broadcastTrade) {
+    // 거래 체결 브로드캐스트
+    if (websocketInstance && websocketInstance.broadcastTrade) {
       websocketInstance.broadcastTrade(coinId, {
         id: tradeId,
         price: finalPrice,
         quantity: quantity,
         created_at: new Date().toISOString(),
       });
-    } else if (isStableCoin) {
-      console.log(`🔒 스테이블 코인 거래 프라이버시 보호: 브로드캐스트 생략`);
     }
 
     return tradeId;

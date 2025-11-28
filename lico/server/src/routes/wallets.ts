@@ -171,7 +171,7 @@ router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) =
   const LICO_API_SECRET = process.env.LICO_API_SECRET || 'lico-internal-secret-key-change-in-production';
 
   try {
-    const { wallet_address, amount, transaction_id, convert_to_lgold } = req.body;
+    const { wallet_address, amount, transaction_id } = req.body;
 
     // ========== 1단계: 입력 검증 ==========
     if (!wallet_address || !amount || !transaction_id) {
@@ -303,67 +303,11 @@ router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) =
 
       console.log(`✅ 입금 완료: ${wallet.minecraft_username} - ${depositAmount} Gold (Transaction: ${transaction_id})`);
 
-      // LGOLD 자동 전환 옵션이 활성화된 경우
-      let lgoldConverted = 0;
-      if (convert_to_lgold === true) {
-        try {
-          // LGOLD 코인 조회
-          const lgoldCoins = await query('SELECT * FROM coins WHERE symbol = "LGOLD" AND is_stable_coin = TRUE');
-          if (lgoldCoins.length > 0) {
-            const lgoldCoin = lgoldCoins[0];
-
-            await query('START TRANSACTION');
-
-            // Gold를 LGOLD로 전환 (1:1 비율)
-            await query(
-              'UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?',
-              [depositAmount, wallet.id]
-            );
-
-            // LGOLD 발행
-            const existing = await query(
-              'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
-              [wallet.id, lgoldCoin.id]
-            );
-
-            if (existing.length > 0) {
-              await query(
-                'UPDATE user_coin_balances SET available_amount = available_amount + ? WHERE wallet_id = ? AND coin_id = ?',
-                [depositAmount, wallet.id, lgoldCoin.id]
-              );
-            } else {
-              await query(
-                'INSERT INTO user_coin_balances (id, wallet_id, coin_id, available_amount, locked_amount, average_buy_price) VALUES (?, ?, ?, ?, 0, 1)',
-                [uuidv4(), wallet.id, lgoldCoin.id, depositAmount]
-              );
-            }
-
-            // LGOLD 총 발행량 증가
-            await query(
-              'UPDATE coins SET circulating_supply = circulating_supply + ? WHERE id = ?',
-              [depositAmount, lgoldCoin.id]
-            );
-
-            await query('COMMIT');
-            lgoldConverted = depositAmount;
-
-            console.log(`💎 LGOLD 자동 전환: ${wallet.minecraft_username} - ${depositAmount} Gold → ${lgoldConverted} LGOLD`);
-          }
-        } catch (lgoldError) {
-          await query('ROLLBACK');
-          console.error('⚠️ LGOLD 자동 전환 실패:', lgoldError);
-          // LGOLD 전환 실패해도 입금은 성공 처리
-        }
-      }
-
       res.json({
         success: true,
-        message: lgoldConverted > 0
-          ? `${depositAmount} Gold가 입금되어 ${lgoldConverted} LGOLD로 전환되었습니다`
-          : `${depositAmount} Gold가 입금되었습니다`,
+        message: `${depositAmount} Gold가 입금되었습니다`,
         transaction_id: transaction_id,
-        amount: depositAmount,
-        lgold_converted: lgoldConverted
+        amount: depositAmount
       });
 
     } catch (txError) {
