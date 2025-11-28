@@ -314,5 +314,49 @@ router.post('/reset-trading-data', isAdmin, async (req: Request, res: Response) 
   }
 });
 
+/**
+ * PATCH /api/admin/coins/:coinId/type
+ * 코인 타입 변경 (MAJOR 또는 MEME)
+ */
+router.patch('/coins/:coinId/type', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { coinId } = req.params;
+    const { coinType, baseCurrencyId } = req.body;
+
+    if (!coinType || !['MAJOR', 'MEME'].includes(coinType)) {
+      return res.status(400).json({ error: '코인 타입은 MAJOR 또는 MEME이어야 합니다' });
+    }
+
+    // MEME 코인인 경우 baseCurrencyId 필수
+    if (coinType === 'MEME' && !baseCurrencyId) {
+      return res.status(400).json({ error: 'MEME 코인은 기준 화폐(MAJOR 코인)가 필요합니다' });
+    }
+
+    // MAJOR 코인인 경우 baseCurrencyId는 NULL
+    if (coinType === 'MAJOR') {
+      await query(
+        'UPDATE coins SET coin_type = ?, base_currency_id = NULL WHERE id = ?',
+        [coinType, coinId]
+      );
+    } else {
+      await query(
+        'UPDATE coins SET coin_type = ?, base_currency_id = ? WHERE id = ?',
+        [coinType, baseCurrencyId, coinId]
+      );
+    }
+
+    const updatedCoin = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
+
+    res.json({
+      success: true,
+      message: '코인 타입이 업데이트되었습니다',
+      data: updatedCoin[0],
+    });
+  } catch (error: any) {
+    console.error('코인 타입 업데이트 오류:', error);
+    res.status(500).json({ error: '코인 타입 업데이트에 실패했습니다' });
+  }
+});
+
 export default router;
 
