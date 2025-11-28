@@ -354,8 +354,8 @@ export class GameEngine {
     this.showCountdown = true;
     this.countdown = 5;
 
-    // 시작 시간을 현재로 설정 (카운트다운 시작)
-    this.startTime = performance.now();
+    // 게임 시작 시간을 leadTime만큼 과거로 설정 (노트가 위에서부터 내려오도록)
+    this.startTime = performance.now() - this.leadTime;
 
     // 1초마다 카운트다운
     const countdownInterval = setInterval(() => {
@@ -366,11 +366,8 @@ export class GameEngine {
       }
     }, 1000);
 
-    // 5초 후 오디오 재생 및 게임 시작 시간 재설정
+    // 5초 후 오디오 재생
     setTimeout(() => {
-      // 노트가 위에서부터 내려오도록 leadTime만큼 과거로 설정
-      this.startTime = performance.now() - this.leadTime;
-
       this.audio.play();
 
       if (this.bgaVideo) {
