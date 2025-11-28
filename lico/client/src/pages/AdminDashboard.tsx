@@ -188,6 +188,8 @@ const AdminDashboard = () => {
       current_price: coin.current_price.toString(),
       min_volatility: coin.min_volatility ? (coin.min_volatility * 100).toFixed(3) : '0.001',
       max_volatility: coin.max_volatility ? (coin.max_volatility * 100).toFixed(3) : '0.1',
+      coin_type: coin.coin_type || 'MEME',
+      base_currency_id: coin.base_currency_id || '',
     });
   };
 

@@ -23,6 +23,7 @@ interface ToastNotification {
 const TradingPage = () => {
   const { coinSymbol } = useParams<{ coinSymbol?: string }>();
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
+  const [baseCurrency, setBaseCurrency] = useState<Coin | null>(null); // MEME 코인의 기준 화폐
   const [loading, setLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [goldBalance, setGoldBalance] = useState<number>(0);
@@ -74,10 +75,34 @@ const TradingPage = () => {
         if (coinSymbol) {
           const coin = await coinService.getCoinBySymbol(coinSymbol);
           setSelectedCoin(coin);
+
+          // MEME 코인인 경우 base currency 정보 가져오기
+          if (coin.coin_type === 'MEME' && coin.base_currency_id) {
+            try {
+              const response = await api.get(`/coins/${coin.base_currency_id}`);
+              setBaseCurrency(response.data.coin);
+            } catch (error) {
+              console.error('Failed to fetch base currency:', error);
+            }
+          } else {
+            setBaseCurrency(null);
+          }
         } else {
           const coins = await coinService.getCoins('ACTIVE');
           if (coins.length > 0) {
             setSelectedCoin(coins[0]);
+
+            // MEME 코인인 경우 base currency 정보 가져오기
+            if (coins[0].coin_type === 'MEME' && coins[0].base_currency_id) {
+              try {
+                const response = await api.get(`/coins/${coins[0].base_currency_id}`);
+                setBaseCurrency(response.data.coin);
+              } catch (error) {
+                console.error('Failed to fetch base currency:', error);
+              }
+            } else {
+              setBaseCurrency(null);
+            }
           }
         }
       } catch (error) {
@@ -1180,11 +1205,26 @@ const TradingPage = () => {
                   <span className="coin-symbol">{selectedCoin.symbol}</span>
                   <span className="coin-divider">/</span>
                   <span className="coin-quote">GOLD</span>
+                  {selectedCoin.coin_type === 'MEME' && baseCurrency && (
+                    <>
+                      <span className="coin-divider" style={{ margin: '0 0.25rem' }}>,</span>
+                      <span className="coin-quote" style={{ color: '#60a5fa' }}>{baseCurrency.symbol}</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
             <div className="coin-header-right">
               <div className="coin-price-large">{formatPrice(selectedCoin.current_price)} G</div>
+              {selectedCoin.coin_type === 'MEME' && baseCurrency && (
+                <div className="coin-price-secondary" style={{
+                  fontSize: '1.2rem',
+                  color: '#94a3b8',
+                  marginTop: '0.25rem'
+                }}>
+                  ≈ {formatPrice(selectedCoin.current_price / baseCurrency.current_price)} {baseCurrency.symbol}
+                </div>
+              )}
               <div className={'coin-change-large ' + (selectedCoin.price_change_24h >= 0 ? 'positive' : 'negative')}>
                 {formatChange(selectedCoin.price_change_24h)}
               </div>
