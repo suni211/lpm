@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminPage from './pages/AdminPage';
 import LadderPage from './pages/LadderPage';
+import PvPMatchPage from './pages/PvPMatchPage';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -89,6 +90,8 @@ function App() {
             <Route path="/songs" element={<SongsPage />} />
             <Route path="/game/:songId" element={<GamePage />} />
             <Route path="/rankings" element={<RankingsPage />} />
+            <Route path="/ladder" element={<LadderPage />} />
+            <Route path="/pvp/match/:matchId" element={<PvPMatchPage />} />
             <Route path="/profile" element={<ProfilePage user={user} />} />
             <Route path="/login" element={<LoginPage onLogin={checkAuth} />} />
             <Route path="/register" element={<RegisterPage />} />
