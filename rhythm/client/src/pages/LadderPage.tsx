@@ -106,6 +106,16 @@ export default function LadderPage() {
     }
   };
 
+  const getTier = (rating: number): string => {
+    if (rating >= 2400) return 'GRANDMASTER';
+    if (rating >= 2000) return 'MASTER';
+    if (rating >= 1600) return 'DIAMOND';
+    if (rating >= 1300) return 'PLATINUM';
+    if (rating >= 1100) return 'GOLD';
+    if (rating >= 900) return 'SILVER';
+    return 'BRONZE';
+  };
+
   const getTierColor = (tier: string) => {
     const colors: { [key: string]: string } = {
       BRONZE: '#cd7f32',
@@ -140,22 +150,44 @@ export default function LadderPage() {
 
       {/* 내 레이팅 */}
       {myRating && (
-        <div className="card" style={{ marginBottom: '2rem', textAlign: 'center' }}>
-          <h2>내 레이팅</h2>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem', marginTop: '1.5rem' }}>
+        <div className="card" style={{ marginBottom: '2rem', textAlign: 'center', background: 'linear-gradient(135deg, rgba(139,69,255,0.1), rgba(74,144,255,0.1))' }}>
+          <h2>내 레이팅 정보</h2>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
             <div>
               <p style={{ opacity: 0.7, marginBottom: '0.5rem' }}>현재 레이팅</p>
-              <h1 style={{ fontSize: '3rem', color: getTierColor(myRating.rank_tier) }}>{myRating.rating}</h1>
-              <p style={{ color: getTierColor(myRating.rank_tier), fontWeight: 'bold' }}>{myRating.rank_tier}</p>
+              <h1 style={{ fontSize: '3rem', color: getTierColor(myRating.rank_tier), textShadow: `0 0 20px ${getTierColor(myRating.rank_tier)}` }}>
+                {myRating.rating}
+              </h1>
+              <p style={{ color: getTierColor(myRating.rank_tier), fontWeight: 'bold', fontSize: '1.2rem' }}>
+                {myRating.rank_tier}
+              </p>
             </div>
             <div>
               <p style={{ opacity: 0.7, marginBottom: '0.5rem' }}>전적</p>
-              <h2 style={{ fontSize: '2rem' }}>{myRating.wins}승 {myRating.losses}패</h2>
-              <p style={{ opacity: 0.8 }}>승률: {Number(myRating.winrate || 0).toFixed(1)}%</p>
+              <h2 style={{ fontSize: '2rem' }}>
+                <span style={{ color: '#4ade80' }}>{myRating.wins}승</span>{' '}
+                <span style={{ color: '#f87171' }}>{myRating.losses}패</span>
+              </h2>
+              <p style={{ opacity: 0.8 }}>
+                승률: <span style={{ color: myRating.winrate >= 50 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>
+                  {Number(myRating.winrate || 0).toFixed(1)}%
+                </span>
+              </p>
             </div>
             <div>
               <p style={{ opacity: 0.7, marginBottom: '0.5rem' }}>최고 레이팅</p>
-              <h2 style={{ fontSize: '2rem', color: '#ffd700' }}>{myRating.highest_rating}</h2>
+              <h2 style={{ fontSize: '2rem', color: '#ffd700', textShadow: '0 0 15px #ffd700' }}>
+                {myRating.highest_rating}
+              </h2>
+              <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>
+                {getTier(myRating.highest_rating)}
+              </p>
+            </div>
+            <div>
+              <p style={{ opacity: 0.7, marginBottom: '0.5rem' }}>총 경기 수</p>
+              <h2 style={{ fontSize: '2rem', color: '#60a5fa' }}>
+                {myRating.wins + myRating.losses}
+              </h2>
             </div>
           </div>
 
@@ -167,7 +199,9 @@ export default function LadderPage() {
               marginTop: '2rem',
               fontSize: '1.2rem',
               padding: '1rem 3rem',
-              background: searching ? 'rgba(255,0,0,0.7)' : undefined
+              background: searching ? 'rgba(255,0,0,0.7)' : 'linear-gradient(135deg, #8b45ff, #4a90ff)',
+              boxShadow: searching ? undefined : '0 0 20px rgba(139,69,255,0.5)',
+              transition: 'all 0.3s ease'
             }}
           >
             {searching ? '🔍 매칭 중... (취소하려면 클릭)' : '⚔️ 랭크 매치 시작'}

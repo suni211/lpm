@@ -405,8 +405,25 @@ router.post('/match/:matchId/finalize-round', requireAuth, async (req, res) => {
 async function updateEloRatings(winnerId: string, loserId: string) {
   try {
     // 승자와 패자의 현재 레이팅 가져오기
-    const winnerRating: any = await query('SELECT * FROM ladder_ratings WHERE user_id = ?', [winnerId]);
-    const loserRating: any = await query('SELECT * FROM ladder_ratings WHERE user_id = ?', [loserId]);
+    let winnerRating: any = await query('SELECT * FROM ladder_ratings WHERE user_id = ?', [winnerId]);
+    let loserRating: any = await query('SELECT * FROM ladder_ratings WHERE user_id = ?', [loserId]);
+
+    // 레이팅이 없으면 생성
+    if (!Array.isArray(winnerRating) || winnerRating.length === 0) {
+      await query(
+        'INSERT INTO ladder_ratings (id, user_id, rating, wins, losses, winrate, highest_rating, rank_tier) VALUES (?, ?, 1000, 0, 0, 0, 1000, "BRONZE")',
+        [uuidv4(), winnerId]
+      );
+      winnerRating = [{ rating: 1000, wins: 0, losses: 0, winrate: 0, highest_rating: 1000 }];
+    }
+
+    if (!Array.isArray(loserRating) || loserRating.length === 0) {
+      await query(
+        'INSERT INTO ladder_ratings (id, user_id, rating, wins, losses, winrate, highest_rating, rank_tier) VALUES (?, ?, 1000, 0, 0, 0, 1000, "BRONZE")',
+        [uuidv4(), loserId]
+      );
+      loserRating = [{ rating: 1000, wins: 0, losses: 0, winrate: 0, highest_rating: 1000 }];
+    }
 
     const K = 32; // K-factor
     const winnerElo = winnerRating[0].rating;
@@ -417,18 +434,21 @@ async function updateEloRatings(winnerId: string, loserId: string) {
     const expectedLoser = 1 / (1 + Math.pow(10, (winnerElo - loserElo) / 400));
 
     // 새 레이팅 계산
-    const newWinnerElo = Math.round(winnerElo + K * (1 - expectedWinner));
-    const newLoserElo = Math.round(loserElo + K * (0 - expectedLoser));
+    let newWinnerElo = Math.round(winnerElo + K * (1 - expectedWinner));
+    let newLoserElo = Math.round(loserElo + K * (0 - expectedLoser));
+
+    // 최소 레이팅 보호 (100점 이하로 떨어지지 않음)
+    newLoserElo = Math.max(100, newLoserElo);
 
     // 승자 업데이트
     const newWinnerWins = winnerRating[0].wins + 1;
     const newWinnerTotal = newWinnerWins + winnerRating[0].losses;
-    const newWinnerWinrate = (newWinnerWins / newWinnerTotal) * 100;
-    const newWinnerHighest = Math.max(newWinnerElo, winnerRating[0].highest_rating);
+    const newWinnerWinrate = newWinnerTotal > 0 ? (newWinnerWins / newWinnerTotal) * 100 : 0;
+    const newWinnerHighest = Math.max(newWinnerElo, winnerRating[0].highest_rating || 1000);
 
     await query(
       `UPDATE ladder_ratings
-       SET rating = ?, wins = ?, winrate = ?, highest_rating = ?, rank_tier = ?
+       SET rating = ?, wins = ?, winrate = ?, highest_rating = ?, rank_tier = ?, updated_at = NOW()
        WHERE user_id = ?`,
       [newWinnerElo, newWinnerWins, newWinnerWinrate, newWinnerHighest, getTier(newWinnerElo), winnerId]
     );
@@ -436,14 +456,16 @@ async function updateEloRatings(winnerId: string, loserId: string) {
     // 패자 업데이트
     const newLoserLosses = loserRating[0].losses + 1;
     const newLoserTotal = loserRating[0].wins + newLoserLosses;
-    const newLoserWinrate = (loserRating[0].wins / newLoserTotal) * 100;
+    const newLoserWinrate = newLoserTotal > 0 ? (loserRating[0].wins / newLoserTotal) * 100 : 0;
 
     await query(
       `UPDATE ladder_ratings
-       SET rating = ?, losses = ?, winrate = ?, rank_tier = ?
+       SET rating = ?, losses = ?, winrate = ?, rank_tier = ?, updated_at = NOW()
        WHERE user_id = ?`,
       [newLoserElo, newLoserLosses, newLoserWinrate, getTier(newLoserElo), loserId]
     );
+
+    console.log(`✅ ELO Updated - Winner: ${winnerElo} → ${newWinnerElo} (+${newWinnerElo - winnerElo}), Loser: ${loserElo} → ${newLoserElo} (${newLoserElo - loserElo})`);
   } catch (error) {
     console.error('Update ELO error:', error);
   }
