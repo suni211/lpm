@@ -354,8 +354,8 @@ export class GameEngine {
     this.showCountdown = true;
     this.countdown = 5;
 
-    // 게임 시작 시간을 leadTime만큼 과거로 설정 (노트가 위에서부터 내려오도록)
-    this.startTime = performance.now() - this.leadTime;
+    // 카운트다운 동안은 게임 시작 안 함
+    this.startTime = performance.now();
 
     // 1초마다 카운트다운
     const countdownInterval = setInterval(() => {
@@ -363,17 +363,17 @@ export class GameEngine {
       if (this.countdown <= 0) {
         clearInterval(countdownInterval);
         this.showCountdown = false;
+
+        // 카운트다운 끝나면 게임 시작 (노트가 떨어지기 시작)
+        this.startTime = performance.now();
+
+        // 음악 즉시 재생
+        this.audio.play();
+        if (this.bgaVideo) {
+          this.bgaVideo.play();
+        }
       }
     }, 1000);
-
-    // 5초 후 오디오 재생
-    setTimeout(() => {
-      this.audio.play();
-
-      if (this.bgaVideo) {
-        this.bgaVideo.play();
-      }
-    }, this.leadTime);
 
     this.gameLoop();
   }
@@ -732,6 +732,9 @@ export class GameEngine {
   }
 
   private drawNotes(elapsedTime: number) {
+    // 카운트다운 중에는 노트를 그리지 않음
+    if (this.showCountdown) return;
+
     const centerX = this.canvas.width / 2;
     const gearWidth = this.calculateGearWidth();
     const laneWidth = gearWidth / this.keyCount;
