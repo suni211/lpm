@@ -15,13 +15,12 @@ export async function updateCandleData(
   try {
     const now = new Date();
 
-    // 1분 단위로 내림 (타임스탬프 기반, 더 정확함)
-    const timestamp = now.getTime();
-    const minuteMs = 60 * 1000; // 1분 = 60,000ms
-    const openTimestamp = Math.floor(timestamp / minuteMs) * minuteMs;
-    const openTime = new Date(openTimestamp);
+    // 1분 단위로 내림 (초/밀리초를 0으로)
+    const openTime = new Date(now);
+    openTime.setSeconds(0, 0);
 
-    const closeTime = new Date(openTimestamp + minuteMs);
+    const closeTime = new Date(openTime);
+    closeTime.setMinutes(closeTime.getMinutes() + 1);
 
     // 기존 캔들 확인
     const existing = await query(
@@ -69,13 +68,14 @@ async function updateHourlyCandleData(
   try {
     const now = new Date();
 
-    // 1시간 단위로 내림 (타임스탬프 기반, 더 정확함)
-    const timestamp = now.getTime();
-    const hourMs = 60 * 60 * 1000; // 1시간 = 3,600,000ms
-    const openTimestamp = Math.floor(timestamp / hourMs) * hourMs;
-    const openTime = new Date(openTimestamp);
+    // 1시간 단위로 내림 (분/초/밀리초를 0으로)
+    const openTime = new Date(now);
+    openTime.setMinutes(0, 0, 0);
 
-    const closeTime = new Date(openTimestamp + hourMs);
+    const closeTime = new Date(openTime);
+    closeTime.setHours(closeTime.getHours() + 1);
+
+    console.log(`[1시간봉] 현재시간: ${now.toLocaleString('ko-KR')}, open_time: ${openTime.toLocaleString('ko-KR')}`);
 
     // 기존 캔들 확인
     const existing = await query(
@@ -117,13 +117,14 @@ async function updateDailyCandleData(
   try {
     const now = new Date();
 
-    // 1일 단위로 내림 (타임스탬프 기반, 더 정확함)
-    const timestamp = now.getTime();
-    const dayMs = 24 * 60 * 60 * 1000; // 1일 = 86,400,000ms
-    const openTimestamp = Math.floor(timestamp / dayMs) * dayMs;
-    const openTime = new Date(openTimestamp);
+    // 1일 단위로 내림 (시/분/초/밀리초를 0으로)
+    const openTime = new Date(now);
+    openTime.setHours(0, 0, 0, 0);
 
-    const closeTime = new Date(openTimestamp + dayMs);
+    const closeTime = new Date(openTime);
+    closeTime.setDate(closeTime.getDate() + 1);
+
+    console.log(`[1일봉] 현재시간: ${now.toLocaleString('ko-KR')}, open_time: ${openTime.toLocaleString('ko-KR')}`);
 
     // 기존 캔들 확인
     const existing = await query(
