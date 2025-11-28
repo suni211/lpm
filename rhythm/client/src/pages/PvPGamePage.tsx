@@ -408,7 +408,7 @@ export default function PvPGamePage() {
             </div>
 
             <div>
-              <div style={{ fontSize: '0.9rem', opacity: 0.7', marginBottom: '0.3rem' }}>PERFECT</div>
+              <div style={{ fontSize: '0.9rem', opacity: 0.7, marginBottom: '0.3rem' }}>PERFECT</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem' }}>
                 <span style={{ color: '#00ff00' }}>{myJudgments.perfect}</span>
                 <span style={{ color: '#00ff00' }}>{opponentProgress.judgments.perfect}</span>
