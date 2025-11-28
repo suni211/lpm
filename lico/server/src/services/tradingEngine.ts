@@ -834,31 +834,60 @@ export class TradingEngine {
     // 공통 유틸리티 함수 사용 (1분봉, 1시간봉, 1일봉 모두 업데이트)
     await updateCandleData(coinId, price, volume);
 
-    // WebSocket으로 캔들 업데이트 브로드캐스트
+    if (!websocketInstance || !websocketInstance.broadcastCandleUpdate) return;
+
+    // UTC → KST 변환 함수
+    const toKST = (date: Date) => new Date(date.getTime() + (9 * 60 * 60 * 1000));
+    const toMySQLDateTime = (date: Date) => {
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      const hours = String(date.getUTCHours()).padStart(2, '0');
+      const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+      const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
     const now = new Date();
-    const openTime = new Date(now);
-    openTime.setSeconds(0);
-    openTime.setMilliseconds(0);
+    const kstNow = toKST(now);
 
-    const candleData = await query(
+    // 1분봉 전송
+    const openTime1m = new Date(kstNow);
+    openTime1m.setUTCSeconds(0, 0);
+    const openTime1mStr = toMySQLDateTime(openTime1m);
+
+    const candleData1m = await query(
       'SELECT * FROM candles_1m WHERE coin_id = ? AND open_time = ?',
-      [coinId, openTime]
+      [coinId, openTime1mStr]
     );
+    if (candleData1m.length > 0) {
+      websocketInstance.broadcastCandleUpdate(coinId, '1m', candleData1m[0]);
+    }
 
-    if (websocketInstance && websocketInstance.broadcastCandleUpdate && candleData.length > 0) {
-      const candle = candleData[0];
-      websocketInstance.broadcastCandleUpdate(coinId, '1m', {
-        coin_id: coinId,
-        id: candle.id,
-        open_time: candle.open_time,
-        close_time: candle.close_time,
-        open_price: candle.open_price,
-        high_price: candle.high_price,
-        low_price: candle.low_price,
-        close_price: candle.close_price,
-        volume: candle.volume,
-        trade_count: candle.trade_count,
-      });
+    // 1시간봉 전송
+    const openTime1h = new Date(kstNow);
+    openTime1h.setUTCMinutes(0, 0, 0);
+    const openTime1hStr = toMySQLDateTime(openTime1h);
+
+    const candleData1h = await query(
+      'SELECT * FROM candles_1h WHERE coin_id = ? AND open_time = ?',
+      [coinId, openTime1hStr]
+    );
+    if (candleData1h.length > 0) {
+      websocketInstance.broadcastCandleUpdate(coinId, '1h', candleData1h[0]);
+    }
+
+    // 1일봉 전송
+    const openTime1d = new Date(kstNow);
+    openTime1d.setUTCHours(0, 0, 0, 0);
+    const openTime1dStr = toMySQLDateTime(openTime1d);
+
+    const candleData1d = await query(
+      'SELECT * FROM candles_1d WHERE coin_id = ? AND open_time = ?',
+      [coinId, openTime1dStr]
+    );
+    if (candleData1d.length > 0) {
+      websocketInstance.broadcastCandleUpdate(coinId, '1d', candleData1d[0]);
     }
   }
 }
