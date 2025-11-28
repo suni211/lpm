@@ -28,6 +28,7 @@ export class GameEngine {
   private currentTime: number = 0;
   private isPlaying: boolean = false;
   private isPaused: boolean = false;
+  private leadTime: number = 5000; // 5초 준비 시간 (노트가 내려오는 시간)
 
   // Game state
   private score: number = 0;
@@ -342,12 +343,17 @@ export class GameEngine {
 
   public start() {
     this.isPlaying = true;
-    this.startTime = performance.now();
-    this.audio.play();
+    // 시작 시간을 leadTime만큼 과거로 설정 (노트가 미리 내려오도록)
+    this.startTime = performance.now() - this.leadTime;
 
-    if (this.bgaVideo) {
-      this.bgaVideo.play();
-    }
+    // 5초 후 오디오 재생
+    setTimeout(() => {
+      this.audio.play();
+
+      if (this.bgaVideo) {
+        this.bgaVideo.play();
+      }
+    }, this.leadTime);
 
     this.gameLoop();
   }
