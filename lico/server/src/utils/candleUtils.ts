@@ -15,13 +15,13 @@ export async function updateCandleData(
   try {
     const now = new Date();
 
-    // 1분 단위로 내림 (예: 14:32:45 -> 14:32:00)
-    const openTime = new Date(now);
-    openTime.setSeconds(0);
-    openTime.setMilliseconds(0);
+    // 1분 단위로 내림 (타임스탬프 기반, 더 정확함)
+    const timestamp = now.getTime();
+    const minuteMs = 60 * 1000; // 1분 = 60,000ms
+    const openTimestamp = Math.floor(timestamp / minuteMs) * minuteMs;
+    const openTime = new Date(openTimestamp);
 
-    const closeTime = new Date(openTime);
-    closeTime.setMinutes(closeTime.getMinutes() + 1);
+    const closeTime = new Date(openTimestamp + minuteMs);
 
     // 기존 캔들 확인
     const existing = await query(
@@ -69,14 +69,13 @@ async function updateHourlyCandleData(
   try {
     const now = new Date();
 
-    // 1시간 단위로 내림 (예: 14:32:45 -> 14:00:00)
-    const openTime = new Date(now);
-    openTime.setMinutes(0);
-    openTime.setSeconds(0);
-    openTime.setMilliseconds(0);
+    // 1시간 단위로 내림 (타임스탬프 기반, 더 정확함)
+    const timestamp = now.getTime();
+    const hourMs = 60 * 60 * 1000; // 1시간 = 3,600,000ms
+    const openTimestamp = Math.floor(timestamp / hourMs) * hourMs;
+    const openTime = new Date(openTimestamp);
 
-    const closeTime = new Date(openTime);
-    closeTime.setHours(closeTime.getHours() + 1);
+    const closeTime = new Date(openTimestamp + hourMs);
 
     // 기존 캔들 확인
     const existing = await query(
@@ -118,15 +117,13 @@ async function updateDailyCandleData(
   try {
     const now = new Date();
 
-    // 1일 단위로 내림 (예: 2025-11-27 14:32:45 -> 2025-11-27 00:00:00)
-    const openTime = new Date(now);
-    openTime.setHours(0);
-    openTime.setMinutes(0);
-    openTime.setSeconds(0);
-    openTime.setMilliseconds(0);
+    // 1일 단위로 내림 (타임스탬프 기반, 더 정확함)
+    const timestamp = now.getTime();
+    const dayMs = 24 * 60 * 60 * 1000; // 1일 = 86,400,000ms
+    const openTimestamp = Math.floor(timestamp / dayMs) * dayMs;
+    const openTime = new Date(openTimestamp);
 
-    const closeTime = new Date(openTime);
-    closeTime.setDate(closeTime.getDate() + 1);
+    const closeTime = new Date(openTimestamp + dayMs);
 
     // 기존 캔들 확인
     const existing = await query(
