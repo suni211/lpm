@@ -364,7 +364,8 @@ export class TradingEngine {
       if (remainingQty <= 0) break;
 
       const matchQty = Math.min(remainingQty, buyOrder.remaining_quantity);
-      await this.executeTrade(buyOrder.wallet_id, walletId, coinId, buyOrder.price, matchQty, buyOrder.id, null);
+      // 시장가 매도는 sellOrderId를 'MARKET_SELL'로 표시하여 locked에서 차감하도록 함
+      await this.executeTrade(buyOrder.wallet_id, walletId, coinId, buyOrder.price, matchQty, buyOrder.id, 'MARKET_SELL');
 
       remainingQty -= matchQty;
     }
