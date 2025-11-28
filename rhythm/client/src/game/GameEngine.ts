@@ -93,7 +93,7 @@ export class GameEngine {
     this.bgaVideo = bgaVideo;
 
     // Calculate positions
-    this.gearY = canvas.height * 0.8;
+    this.gearY = canvas.height * 0.9;
     this.hitZoneY = this.gearY;
 
     this.setupEventListeners();

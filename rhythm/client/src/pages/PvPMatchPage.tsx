@@ -266,8 +266,7 @@ export default function PvPMatchPage() {
             className="btn"
             style={{ marginTop: '2rem' }}
             onClick={() => {
-              // TODO: 게임 화면으로 이동
-              alert('게임 화면 구현 중...');
+              navigate(`/pvp/game/${matchId}`);
             }}
           >
             게임 시작

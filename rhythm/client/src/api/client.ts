@@ -111,6 +111,19 @@ export const pvpAPI = {
     api.get(`/pvp/match/${matchId}`),
   banSong: (matchId: string, songPoolId: string) =>
     api.post(`/pvp/match/${matchId}/ban`, { songPoolId }),
+  submitRoundComplete: (matchId: string, data: { score: number; judgments: any; maxCombo: number }) =>
+    api.post(`/pvp/match/${matchId}/round-complete`, data),
+  finalizeRound: (matchId: string, data: {
+    player1Score: number;
+    player2Score: number;
+    player1Judgments: any;
+    player2Judgments: any;
+    player1MaxCombo: number;
+    player2MaxCombo: number;
+    songId: string;
+    beatmapId: string;
+  }) =>
+    api.post(`/pvp/match/${matchId}/finalize-round`, data),
   getLadderRankings: (params?: { limit?: number; offset?: number }) =>
     api.get('/pvp/ladder/rankings', { params }),
   getMyRating: () =>

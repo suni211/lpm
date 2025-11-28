@@ -277,4 +277,162 @@ router.get('/ladder/my-rating', requireAuth, async (req, res) => {
   }
 });
 
+// 라운드 완료 제출
+router.post('/match/:matchId/round-complete', requireAuth, async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const { score, judgments, maxCombo } = req.body;
+    const userId = req.session.userId!;
+
+    // 매치 확인
+    const matches: any = await query(
+      'SELECT * FROM matches WHERE id = ? AND (player1_id = ? OR player2_id = ?)',
+      [matchId, userId, userId]
+    );
+
+    if (!Array.isArray(matches) || matches.length === 0) {
+      return res.status(404).json({ error: '매치를 찾을 수 없습니다' });
+    }
+
+    const match = matches[0];
+
+    if (match.status !== 'PLAYING') {
+      return res.status(400).json({ error: '게임 중이 아닙니다' });
+    }
+
+    res.json({ message: '라운드 결과 수신 완료', score, userId });
+  } catch (error) {
+    console.error('Round complete error:', error);
+    res.status(500).json({ error: '라운드 완료 처리 실패' });
+  }
+});
+
+// 라운드 승자 결정 및 다음 라운드/매치 종료 처리
+router.post('/match/:matchId/finalize-round', requireAuth, async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const { player1Score, player2Score, player1Judgments, player2Judgments, player1MaxCombo, player2MaxCombo, songId, beatmapId } = req.body;
+
+    const matches: any = await query('SELECT * FROM matches WHERE id = ?', [matchId]);
+    if (!Array.isArray(matches) || matches.length === 0) {
+      return res.status(404).json({ error: '매치를 찾을 수 없습니다' });
+    }
+
+    const match = matches[0];
+    const winnerId = player1Score > player2Score ? match.player1_id : match.player2_id;
+
+    // 라운드 기록 저장
+    await query(
+      `INSERT INTO match_rounds (id, match_id, round_number, song_id, beatmap_id, player1_score, player2_score, player1_judgments, player2_judgments, player1_max_combo, player2_max_combo, winner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [uuidv4(), matchId, match.current_round, songId, beatmapId, player1Score, player2Score, JSON.stringify(player1Judgments), JSON.stringify(player2Judgments), player1MaxCombo, player2MaxCombo, winnerId]
+    );
+
+    // 라운드 승자 점수 추가
+    let newPlayer1Score = match.player1_score;
+    let newPlayer2Score = match.player2_score;
+
+    if (winnerId === match.player1_id) {
+      newPlayer1Score++;
+    } else {
+      newPlayer2Score++;
+    }
+
+    // 3판 2선승 체크
+    if (newPlayer1Score === 2 || newPlayer2Score === 2) {
+      // 매치 종료
+      const finalWinnerId = newPlayer1Score === 2 ? match.player1_id : match.player2_id;
+      const loserId = finalWinnerId === match.player1_id ? match.player2_id : match.player1_id;
+
+      await query(
+        'UPDATE matches SET status = "COMPLETED", winner_id = ?, player1_score = ?, player2_score = ?, ended_at = NOW() WHERE id = ?',
+        [finalWinnerId, newPlayer1Score, newPlayer2Score, matchId]
+      );
+
+      // ELO 레이팅 업데이트
+      await updateEloRatings(finalWinnerId, loserId);
+
+      res.json({
+        matchCompleted: true,
+        winnerId: finalWinnerId,
+        finalScore: { player1: newPlayer1Score, player2: newPlayer2Score }
+      });
+    } else {
+      // 다음 라운드
+      await query(
+        'UPDATE matches SET current_round = current_round + 1, player1_score = ?, player2_score = ? WHERE id = ?',
+        [newPlayer1Score, newPlayer2Score, matchId]
+      );
+
+      res.json({
+        matchCompleted: false,
+        nextRound: match.current_round + 1,
+        currentScore: { player1: newPlayer1Score, player2: newPlayer2Score }
+      });
+    }
+  } catch (error) {
+    console.error('Finalize round error:', error);
+    res.status(500).json({ error: '라운드 완료 실패' });
+  }
+});
+
+// ELO 레이팅 업데이트 함수
+async function updateEloRatings(winnerId: string, loserId: string) {
+  try {
+    // 승자와 패자의 현재 레이팅 가져오기
+    const winnerRating: any = await query('SELECT * FROM ladder_ratings WHERE user_id = ?', [winnerId]);
+    const loserRating: any = await query('SELECT * FROM ladder_ratings WHERE user_id = ?', [loserId]);
+
+    const K = 32; // K-factor
+    const winnerElo = winnerRating[0].rating;
+    const loserElo = loserRating[0].rating;
+
+    // 예상 승률 계산
+    const expectedWinner = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
+    const expectedLoser = 1 / (1 + Math.pow(10, (winnerElo - loserElo) / 400));
+
+    // 새 레이팅 계산
+    const newWinnerElo = Math.round(winnerElo + K * (1 - expectedWinner));
+    const newLoserElo = Math.round(loserElo + K * (0 - expectedLoser));
+
+    // 승자 업데이트
+    const newWinnerWins = winnerRating[0].wins + 1;
+    const newWinnerTotal = newWinnerWins + winnerRating[0].losses;
+    const newWinnerWinrate = (newWinnerWins / newWinnerTotal) * 100;
+    const newWinnerHighest = Math.max(newWinnerElo, winnerRating[0].highest_rating);
+
+    await query(
+      `UPDATE ladder_ratings
+       SET rating = ?, wins = ?, winrate = ?, highest_rating = ?, rank_tier = ?
+       WHERE user_id = ?`,
+      [newWinnerElo, newWinnerWins, newWinnerWinrate, newWinnerHighest, getTier(newWinnerElo), winnerId]
+    );
+
+    // 패자 업데이트
+    const newLoserLosses = loserRating[0].losses + 1;
+    const newLoserTotal = loserRating[0].wins + newLoserLosses;
+    const newLoserWinrate = (loserRating[0].wins / newLoserTotal) * 100;
+
+    await query(
+      `UPDATE ladder_ratings
+       SET rating = ?, losses = ?, winrate = ?, rank_tier = ?
+       WHERE user_id = ?`,
+      [newLoserElo, newLoserLosses, newLoserWinrate, getTier(newLoserElo), loserId]
+    );
+  } catch (error) {
+    console.error('Update ELO error:', error);
+  }
+}
+
+// 티어 계산 함수
+function getTier(rating: number): string {
+  if (rating >= 2400) return 'GRANDMASTER';
+  if (rating >= 2000) return 'MASTER';
+  if (rating >= 1600) return 'DIAMOND';
+  if (rating >= 1300) return 'PLATINUM';
+  if (rating >= 1100) return 'GOLD';
+  if (rating >= 900) return 'SILVER';
+  return 'BRONZE';
+}
+
 export default router;
