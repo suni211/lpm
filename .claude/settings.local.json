@@ -16,7 +16,10 @@
       "Bash(ren:*)",
       "Bash(mkdir:*)",
       "Bash(npm init:*)",
-      "Bash(chmod +x rhythm/deploy.sh)"
+      "Bash(chmod +x rhythm/deploy.sh)",
+      "Bash(tree:*)",
+      "Bash(npm run dev)",
+      "Bash(timeout 10 npm run dev:*)"
     ],
     "deny": [],
     "ask": []
