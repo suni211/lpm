@@ -16,6 +16,7 @@ import WalletRecoveryPage from './pages/WalletRecoveryPage';
 import WalletInfoPage from './pages/WalletInfoPage';
 import NewsPage from './pages/NewsPage';
 import NewsDetailPage from './pages/NewsDetailPage';
+import ExchangePage from './pages/ExchangePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -98,6 +99,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DepositWithdrawPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exchange"
+              element={
+                <ProtectedRoute>
+                  <ExchangePage />
                 </ProtectedRoute>
               }
             />

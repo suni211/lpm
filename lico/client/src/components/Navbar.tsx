@@ -36,16 +36,24 @@ const Navbar = () => {
             </Link>
           </li>
           <li>
-            <Link 
-              to="/deposit-withdraw" 
+            <Link
+              to="/deposit-withdraw"
               className={'navbar-link ' + (isActive('/deposit-withdraw') ? 'active' : '')}
             >
               입출금
             </Link>
           </li>
           <li>
-            <Link 
-              to="/investment-history" 
+            <Link
+              to="/exchange"
+              className={'navbar-link ' + (isActive('/exchange') ? 'active' : '')}
+            >
+              환전
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/investment-history"
               className={'navbar-link ' + (isActive('/investment-history') ? 'active' : '')}
             >
               투자내역
