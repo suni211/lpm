@@ -751,8 +751,9 @@ export class GameEngine {
       const timeUntilHit = noteTiming - elapsedTime;
 
       // Calculate note Y position based on time and speed
-      const fallDistance = this.hitZoneY;
-      const noteY = this.hitZoneY - (timeUntilHit / 1000) * (fallDistance / 2) * this.noteSpeed;
+      // 노트가 화면 전체 높이를 떨어지도록 계산
+      const fallSpeed = this.canvas.height / (this.leadTime / 1000); // pixels per second
+      const noteY = this.hitZoneY - (timeUntilHit / 1000) * fallSpeed;
 
       const laneX = gearLeft + note.lane * laneWidth;
       const noteHeight = 25;
@@ -761,9 +762,10 @@ export class GameEngine {
       // 롱노트 처리
       if (note.type === 'long' && note.duration) {
         // 롱노트 끝 지점 계산
+        const fallSpeed = this.canvas.height / (this.leadTime / 1000);
         const noteEndTiming = note.time + note.duration;
         const timeUntilEnd = noteEndTiming - elapsedTime;
-        const noteEndY = this.hitZoneY - (timeUntilEnd / 1000) * (fallDistance / 2) * this.noteSpeed;
+        const noteEndY = this.hitZoneY - (timeUntilEnd / 1000) * fallSpeed;
 
         // 롱노트가 화면에 보이는 경우에만 그리기
         if (noteEndY < this.canvas.height + 50 && noteY > -50) {
