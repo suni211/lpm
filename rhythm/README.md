@@ -1,6 +1,18 @@
-# DJMAX-Style Rhythm Game
+# 리듬 게임 (DJMAX-Inspired Rhythm Game)
 
-DJMAX 스타일의 웹 기반 리듬 게임입니다. React, Express, TypeScript, MariaDB로 구축되었습니다.
+**DJMAX에서 영감받은 비영리 교육용 웹 리듬 게임 프로젝트**
+
+> ⚠️ **법적 고지 / Legal Notice**
+> 이 프로젝트는 **DJMAX에서 영감을 받은 비영리 팬 프로젝트**입니다.
+> **DJMAX™는 NEOWIZ Corporation의 등록 상표**이며, 본 프로젝트는 NEOWIZ와 무관합니다.
+> **상업적 용도 없음 • 교육 목적 • 수익 창출 없음 • No Monetization**
+>
+> This is a **non-commercial fan project** inspired by DJMAX.
+> **DJMAX™ is a trademark of NEOWIZ Corporation**.
+> This project is **NOT affiliated with NEOWIZ**.
+> **Educational Purpose Only • No Commercial Use • No Monetization**
+
+React, Express, TypeScript, MariaDB로 구축되었습니다.
 
 ## 주요 기능
 
@@ -288,9 +300,16 @@ server {
 }
 ```
 
-## 라이선스
+## 라이선스 및 법적 고지
 
-MIT License
+자세한 내용은 [LICENSE.md](./LICENSE.md)를 참조하세요.
+
+### 요약
+- **비영리 교육 프로젝트**: 학습 및 포트폴리오 목적
+- **DJMAX™**: NEOWIZ Corporation의 등록 상표
+- **무관계**: NEOWIZ와 공식적인 관계 없음
+- **수익 창출 없음**: 어떠한 형태의 수익화도 없음
+- **영감 출처**: DJMAX에서 영감을 받았으나 독립적인 프로젝트
 
 ## 개발자
 
@@ -299,3 +318,8 @@ Berrple Development Team
 ## 문의
 
 프로젝트 관련 문의는 이슈를 생성해주세요.
+
+---
+
+**© 2024 - Fan Project Inspired by DJMAX™ (NEOWIZ Corporation)**
+**Non-Commercial • Educational Purpose • No Monetization**

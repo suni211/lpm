@@ -95,7 +95,12 @@ function App() {
         </main>
 
         <footer className="footer">
-          <p>DJMAX 스타일 리듬 게임 • React + Express + MariaDB로 제작</p>
+          <p style={{ marginBottom: '0.5rem' }}>
+            DJMAX에서 영감받은 리듬 게임 • React + Express + MariaDB로 제작
+          </p>
+          <p style={{ fontSize: '0.75rem', opacity: 0.5 }}>
+            비영리 팬 프로젝트 • DJMAX™ is a trademark of NEOWIZ • No affiliation or monetization
+          </p>
         </footer>
       </div>
     </Router>

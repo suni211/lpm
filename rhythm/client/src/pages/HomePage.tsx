@@ -7,9 +7,21 @@ export default function HomePage() {
         <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>
           리듬 게임에 오신 것을 환영합니다
         </h1>
-        <p style={{ fontSize: '1.3rem', marginBottom: '2rem', opacity: 0.9 }}>
-          DJMAX 스타일 웹 리듬 게임 - 4K, 5K, 6K, 8K 모드 지원
+        <p style={{ fontSize: '1.3rem', marginBottom: '1rem', opacity: 0.9 }}>
+          DJMAX에서 영감받은 웹 리듬 게임 - 4K, 5K, 6K, 8K 모드 지원
         </p>
+        <div style={{
+          fontSize: '0.85rem',
+          opacity: 0.6,
+          marginBottom: '2rem',
+          padding: '0.5rem',
+          borderRadius: '5px',
+          background: 'rgba(255,255,255,0.05)'
+        }}>
+          ⓘ 이 프로젝트는 DJMAX에서 영감을 받은 비영리 팬 프로젝트입니다.<br/>
+          DJMAX는 NEOWIZ의 등록 상표이며, 본 프로젝트는 NEOWIZ와 무관합니다.<br/>
+          상업적 용도 없음 • 교육 및 학습 목적 • No Monetization
+        </div>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
           <Link to="/songs">
             <button className="btn">지금 플레이</button>
