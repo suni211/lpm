@@ -6,13 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
  * AI 봇 가격 변동 및 실제 거래 모두에서 사용
  */
 
-// UTC 시간을 KST(한국 표준시, UTC+9)로 변환
-function toKST(date: Date): Date {
-  const kst = new Date(date.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
-  return kst;
-}
-
 // Date를 MySQL DATETIME 포맷으로 변환 (YYYY-MM-DD HH:MM:SS)
+// UTC 시간을 그대로 사용
 function toMySQLDateTime(date: Date): string {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -31,10 +26,9 @@ export async function updateCandleData(
 ): Promise<void> {
   try {
     const now = new Date();
-    const kstNow = toKST(now); // UTC → KST 변환
 
     // 1분 단위로 내림 (초/밀리초를 0으로)
-    const openTime = new Date(kstNow);
+    const openTime = new Date(now);
     openTime.setUTCSeconds(0, 0);
 
     const closeTime = new Date(openTime);
@@ -89,10 +83,9 @@ async function updateHourlyCandleData(
 ): Promise<void> {
   try {
     const now = new Date();
-    const kstNow = toKST(now); // UTC → KST 변환
 
     // 1시간 단위로 내림 (분/초/밀리초를 0으로)
-    const openTime = new Date(kstNow);
+    const openTime = new Date(now);
     openTime.setUTCMinutes(0, 0, 0);
 
     const closeTime = new Date(openTime);
@@ -102,7 +95,7 @@ async function updateHourlyCandleData(
     const openTimeStr = toMySQLDateTime(openTime);
     const closeTimeStr = toMySQLDateTime(closeTime);
 
-    console.log(`[1시간봉] UTC: ${now.toISOString()}, KST: ${kstNow.toISOString()}, open_time: ${openTimeStr}`);
+    console.log(`[1시간봉] UTC: ${now.toISOString()}, open_time: ${openTimeStr}`);
 
     // 기존 캔들 확인
     const existing = await query(
@@ -143,10 +136,9 @@ async function updateDailyCandleData(
 ): Promise<void> {
   try {
     const now = new Date();
-    const kstNow = toKST(now); // UTC → KST 변환
 
     // 1일 단위로 내림 (시/분/초/밀리초를 0으로)
-    const openTime = new Date(kstNow);
+    const openTime = new Date(now);
     openTime.setUTCHours(0, 0, 0, 0);
 
     const closeTime = new Date(openTime);
@@ -156,7 +148,7 @@ async function updateDailyCandleData(
     const openTimeStr = toMySQLDateTime(openTime);
     const closeTimeStr = toMySQLDateTime(closeTime);
 
-    console.log(`[1일봉] UTC: ${now.toISOString()}, KST: ${kstNow.toISOString()}, open_time: ${openTimeStr}`);
+    console.log(`[1일봉] UTC: ${now.toISOString()}, open_time: ${openTimeStr}`);
 
     // 기존 캔들 확인
     const existing = await query(
