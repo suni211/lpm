@@ -577,14 +577,6 @@ const TradingPage = () => {
           },
           width: width,
           height: height,
-          watermark: {
-            visible: true,
-            fontSize: 24,
-            horzAlign: 'left',
-            vertAlign: 'bottom',
-            color: 'rgba(156, 163, 175, 0.3)',
-            text: 'TradingView',
-          },
           localization: {
             timeFormatter: (time: number) => {
               // UTC 타임스탬프를 한국 시간으로 변환
