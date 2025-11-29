@@ -671,13 +671,25 @@ export class TradingEngine {
 
       const baseCurrency = baseCurrencies[0];
 
-      // 매수자: 코인 증가 (기준 화폐는 이미 차감됨)
+      // 매수자: locked된 기준 화폐 차감 + 코인 증가
+      if (buyOrderId) {
+        // 매수 주문이 있는 경우: locked_amount에서 차감
+        await query(
+          'UPDATE user_coin_balances SET locked_amount = GREATEST(0, locked_amount - ?) WHERE wallet_id = ? AND coin_id = ?',
+          [totalAmount + buyFee, buyerWalletId, baseCurrency.id]
+        );
+      } else {
+        // 즉시 매수: available_amount에서 차감
+        await this.updateCoinBalance(buyerWalletId, baseCurrency.id, -(totalAmount + buyFee));
+      }
+
+      // 매수자: 코인 증가
       await this.updateCoinBalance(buyerWalletId, coinId, quantity, price);
 
-      // 매도자: 기준 화폐 증가 (수수료 차감), 코인 차감
+      // 매도자: 기준 화폐 증가 (수수료 차감)
       await this.updateCoinBalance(sellerWalletId, baseCurrency.id, totalAmount - sellFee);
 
-      console.log(`💰 ${coin.symbol} 거래 체결: ${quantity}개 @ ${price} ${baseCurrency.symbol}`);
+      console.log(`💰 ${coin.symbol} 거래 체결: ${quantity}개 @ ${price} ${baseCurrency.symbol} (매수자 ${baseCurrency.symbol} ${totalAmount + buyFee} 차감)`);
     } else {
       // base_currency가 없는 경우: Gold로 거래
       // 매수자: 코인 증가 (Gold는 이미 차감됨)

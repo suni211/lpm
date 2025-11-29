@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './AdminNewsPage.css';
 
@@ -18,7 +17,6 @@ interface News {
 }
 
 const AdminNewsPage = () => {
-  const navigate = useNavigate();
   const [newsList, setNewsList] = useState<News[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
