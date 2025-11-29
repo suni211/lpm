@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import type { Coin } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'coins' | 'users' | 'trades' | 'charts'>('coins');
   const [coins, setCoins] = useState<Coin[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -229,11 +231,20 @@ const AdminDashboard = () => {
     <div className="admin-dashboard">
       <div className="admin-header">
         <h1>관리자 대시보드</h1>
-        {activeTab === 'coins' && (
-          <button className="create-button" onClick={() => setShowCreateModal(true)}>
-            + 코인 생성
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            className="create-button"
+            onClick={() => navigate('/admin/news')}
+            style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)' }}
+          >
+            📰 뉴스 관리
           </button>
-        )}
+          {activeTab === 'coins' && (
+            <button className="create-button" onClick={() => setShowCreateModal(true)}>
+              + 코인 생성
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 탭 메뉴 */}

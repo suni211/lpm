@@ -7,6 +7,7 @@ import InvestmentHistoryPage from './pages/InvestmentHistoryPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminTradesPage from './pages/AdminTradesPage';
+import AdminNewsPage from './pages/AdminNewsPage';
 import LoginPage from './pages/LoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import QuestionnairePage from './pages/QuestionnairePage';
@@ -155,6 +156,14 @@ function App() {
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminTradesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/news"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminNewsPage />
                 </ProtectedRoute>
               }
             />
