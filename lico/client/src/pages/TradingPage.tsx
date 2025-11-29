@@ -11,6 +11,8 @@ import OrderForm from '../components/OrderForm';
 import CoinSidebar from '../components/CoinSidebar';
 import TopRankingsTicker from '../components/TopRankingsTicker';
 import Toast from '../components/Toast';
+import StopOrderPanel from '../components/StopOrderPanel';
+import TechnicalIndicators from '../components/TechnicalIndicators';
 import soundPlayer from '../utils/soundPlayer';
 import { classifyCoin } from '../utils/coinClassification';
 import './TradingPage.css';
@@ -1348,6 +1350,23 @@ const TradingPage = () => {
             baseCurrency={baseCurrency}
             onOrderSuccess={handleOrderSuccess}
           />
+
+          {/* 스탑 주문 패널 */}
+          {walletAddress && (
+            <StopOrderPanel
+              walletAddress={walletAddress}
+              selectedCoin={{
+                id: selectedCoin.id,
+                symbol: selectedCoin.symbol,
+                current_price: typeof selectedCoin.current_price === 'string'
+                  ? parseFloat(selectedCoin.current_price)
+                  : selectedCoin.current_price
+              }}
+            />
+          )}
+
+          {/* 기술적 지표 패널 */}
+          <TechnicalIndicators coinId={selectedCoin.id} interval={chartInterval} />
         </div>
       </div>
 
