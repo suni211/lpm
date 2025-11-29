@@ -91,12 +91,14 @@ const TradingPage = () => {
         } else {
           const coins = await coinService.getCoins('ACTIVE');
           if (coins.length > 0) {
-            setSelectedCoin(coins[0]);
+            // CYC 코인을 기본으로 선택 (없으면 첫 번째 코인)
+            const defaultCoin = coins.find(c => c.symbol === 'CYC') || coins[0];
+            setSelectedCoin(defaultCoin);
 
             // base_currency가 있는 경우 정보 가져오기
-            if (coins[0].base_currency_id) {
+            if (defaultCoin.base_currency_id) {
               try {
-                const response = await api.get(`/coins/${coins[0].base_currency_id}`);
+                const response = await api.get(`/coins/${defaultCoin.base_currency_id}`);
                 setBaseCurrency(response.data.coin);
               } catch (error) {
                 console.error('Failed to fetch base currency:', error);
