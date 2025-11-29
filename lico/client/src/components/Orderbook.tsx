@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { tradingService } from '../services/coinService';
-import type { OrderbookEntry } from '../types';
+import type { OrderbookEntry, Coin } from '../types';
 import './Orderbook.css';
 
 interface OrderbookProps {
   coinId: string;
+  baseCurrency: Coin | null;
 }
 
 type OrderbookMode = 'normal' | 'cumulative';
 
-const Orderbook = ({ coinId }: OrderbookProps) => {
+const Orderbook = ({ coinId, baseCurrency }: OrderbookProps) => {
+  const currencySymbol = baseCurrency?.symbol || 'G';
   const [mode, setMode] = useState<OrderbookMode>('normal');
   const [buyOrders, setBuyOrders] = useState<OrderbookEntry[]>([]);
   const [sellOrders, setSellOrders] = useState<OrderbookEntry[]>([]);
@@ -98,7 +100,7 @@ const Orderbook = ({ coinId }: OrderbookProps) => {
       </div>
 
       <div className="orderbook-table-header">
-        <div className="header-price">가격(GOLD)</div>
+        <div className="header-price">가격({currencySymbol})</div>
         <div className="header-quantity">수량</div>
         <div className="header-count">주문수</div>
       </div>
@@ -135,7 +137,7 @@ const Orderbook = ({ coinId }: OrderbookProps) => {
                   {formatPrice(Math.abs(
                     (typeof sellOrders[0].price === 'string' ? parseFloat(sellOrders[0].price) : (sellOrders[0].price || 0)) -
                     (typeof buyOrders[0].price === 'string' ? parseFloat(buyOrders[0].price) : (buyOrders[0].price || 0))
-                  ))} G
+                  ))} {currencySymbol}
                 </div>
               )}
             </div>

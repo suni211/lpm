@@ -7,12 +7,14 @@ interface OrderFormProps {
   coin: Coin;
   walletAddress: string;
   goldBalance: number;
+  baseCurrency: Coin | null;
   onOrderSuccess: () => void;
 }
 
 type OrderType = 'BUY' | 'SELL';
 
-const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFormProps) => {
+const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSuccess }: OrderFormProps) => {
+  const currencySymbol = baseCurrency?.symbol || 'G';
   const [orderType, setOrderType] = useState<OrderType>('BUY');
   const [inputMode, setInputMode] = useState<'quantity' | 'amount'>('amount'); // 금액 모드 기본
   const [price, setPrice] = useState(() => {
@@ -155,7 +157,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
     if (orderType === 'BUY') {
       const totalRequired = calculateTotalWithFee();
       if (goldBalance < totalRequired) {
-        setError(`잔액 부족 (필요: ${formatNumber(totalRequired)} G, 보유: ${formatNumber(goldBalance)} G)`);
+        setError(`잔액 부족 (필요: ${formatNumber(totalRequired)} ${currencySymbol}, 보유: ${formatNumber(goldBalance)} ${currencySymbol})`);
         return;
       }
     } else {
@@ -423,7 +425,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
         </div>
 
         <div className="form-group">
-          <label>가격 (GOLD)</label>
+          <label>가격 ({currencySymbol})</label>
           <input
             type="number"
             value={price}
@@ -437,7 +439,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
         {inputMode === 'amount' ? (
           <div className="form-group">
             <label>
-              {orderType === 'BUY' ? '구매 금액' : '판매 금액'} (GOLD)
+              {orderType === 'BUY' ? '구매 금액' : '판매 금액'} ({currencySymbol})
               {orderType === 'BUY' && (
                 <button
                   type="button"
@@ -505,7 +507,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
             />
             {quantity && (
               <div className="calculated-info">
-                ≈ {formatNumber(calculateAmountFromQuantity())} G
+                ≈ {formatNumber(calculateAmountFromQuantity())} {currencySymbol}
               </div>
             )}
           </div>
@@ -514,15 +516,15 @@ const OrderForm = ({ coin, walletAddress, goldBalance, onOrderSuccess }: OrderFo
         <div className="order-summary">
           <div className="summary-row">
             <span>주문 금액</span>
-            <span>{formatNumber(calculateTotal())} G</span>
+            <span>{formatNumber(calculateTotal())} {currencySymbol}</span>
           </div>
           <div className="summary-row fee-row">
             <span>수수료 (5%)</span>
-            <span>{formatNumber(calculateFee())} G</span>
+            <span>{formatNumber(calculateFee())} {currencySymbol}</span>
           </div>
           <div className="summary-row total-row">
             <span>{orderType === 'BUY' ? '총 지불 금액' : '총 받을 금액'}</span>
-            <span>{formatNumber(calculateTotalWithFee())} G</span>
+            <span>{formatNumber(calculateTotalWithFee())} {currencySymbol}</span>
           </div>
         </div>
 

@@ -23,18 +23,17 @@ export class AITradingBot {
     if (this.isRunning) return;
     this.isRunning = true;
 
-    // 백업: 매 10초마다 가격 변동 체크 (실시간 업데이트가 주이지만 백업으로 유지)
-    // node-cron은 초 단위를 지원하지 않으므로 setInterval 사용
-    setInterval(async () => {
-      await this.adjustPrices();
-    }, 10000); // 10초마다
+    // 자동 가격 변동 비활성화 - 가격은 실제 거래에서만 변경
+    // setInterval(async () => {
+    //   await this.adjustPrices();
+    // }, 10000);
 
     // 백업: 매 1분마다 유동성 공급 (실시간 업데이트가 주이지만 백업으로 유지)
     cron.schedule('* * * * *', async () => {
       await this.provideLiquidity();
     });
 
-    console.log('✅ AI Trading Bot started (실시간 모드)');
+    console.log('✅ AI Trading Bot started (가격 변동 비활성화, 유동성 공급만 활성화)');
   }
 
   // 특정 코인 가격 조정 (실시간)

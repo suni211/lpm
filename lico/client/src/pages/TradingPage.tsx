@@ -77,8 +77,8 @@ const TradingPage = () => {
           const coin = await coinService.getCoinBySymbol(coinSymbol);
           setSelectedCoin(coin);
 
-          // MEME 코인인 경우 base currency 정보 가져오기
-          if (coin.coin_type === 'MEME' && coin.base_currency_id) {
+          // base_currency가 있는 경우 정보 가져오기
+          if (coin.base_currency_id) {
             try {
               const response = await api.get(`/coins/${coin.base_currency_id}`);
               setBaseCurrency(response.data.coin);
@@ -93,8 +93,8 @@ const TradingPage = () => {
           if (coins.length > 0) {
             setSelectedCoin(coins[0]);
 
-            // MEME 코인인 경우 base currency 정보 가져오기
-            if (coins[0].coin_type === 'MEME' && coins[0].base_currency_id) {
+            // base_currency가 있는 경우 정보 가져오기
+            if (coins[0].base_currency_id) {
               try {
                 const response = await api.get(`/coins/${coins[0].base_currency_id}`);
                 setBaseCurrency(response.data.coin);
@@ -379,7 +379,8 @@ const TradingPage = () => {
       // 내 주문인지 확인
       if (orderData.wallet_address === walletAddress) {
         const orderType = orderData.order_type === 'BUY' ? '매수' : '매도';
-        const message = `${orderType} 주문이 체결되었습니다! 가격: ${Number(orderData.price).toLocaleString()} G, 수량: ${orderData.quantity}`;
+        const currencySym = baseCurrency?.symbol || 'G';
+        const message = `${orderType} 주문이 체결되었습니다! 가격: ${Number(orderData.price).toLocaleString()} ${currencySym}, 수량: ${orderData.quantity}`;
 
         // 팝업 표시
         addToast(message, 'success');
@@ -396,7 +397,8 @@ const TradingPage = () => {
       // 내 주문인지 확인
       if (orderData.wallet_address === walletAddress) {
         const orderType = orderData.order_type === 'BUY' ? '매수' : '매도';
-        const message = `${orderType} 주문이 취소되었습니다. 가격: ${Number(orderData.price).toLocaleString()} G`;
+        const currencySym = baseCurrency?.symbol || 'G';
+        const message = `${orderType} 주문이 취소되었습니다. 가격: ${Number(orderData.price).toLocaleString()} ${currencySym}`;
 
         // 팝업 표시
         addToast(message, 'info');
@@ -1195,6 +1197,9 @@ const TradingPage = () => {
     : (selectedCoin.current_price || 0);
   const coinClassification = classifyCoin(currentPrice, selectedCoin.coin_type);
 
+  // 거래 화폐 심볼 결정 (base_currency가 있으면 해당 심볼, 없으면 GOLD)
+  const currencySymbol = baseCurrency?.symbol || 'G';
+
   return (
     <div className="trading-page">
       <TopRankingsTicker />
@@ -1257,27 +1262,12 @@ const TradingPage = () => {
                 <div className="coin-header-symbols">
                   <span className="coin-symbol">{selectedCoin.symbol}</span>
                   <span className="coin-divider">/</span>
-                  <span className="coin-quote">GOLD</span>
-                  {selectedCoin.coin_type === 'MEME' && baseCurrency && (
-                    <>
-                      <span className="coin-divider" style={{ margin: '0 0.25rem' }}>,</span>
-                      <span className="coin-quote" style={{ color: '#60a5fa' }}>{baseCurrency.symbol}</span>
-                    </>
-                  )}
+                  <span className="coin-quote">{baseCurrency ? baseCurrency.symbol : 'GOLD'}</span>
                 </div>
               </div>
             </div>
             <div className="coin-header-right">
-              <div className="coin-price-large">{formatPrice(selectedCoin.current_price)} G</div>
-              {selectedCoin.coin_type === 'MEME' && baseCurrency && (
-                <div className="coin-price-secondary" style={{
-                  fontSize: '1.2rem',
-                  color: '#94a3b8',
-                  marginTop: '0.25rem'
-                }}>
-                  ≈ {formatPrice(selectedCoin.current_price / baseCurrency.current_price)} {baseCurrency.symbol}
-                </div>
-              )}
+              <div className="coin-price-large">{formatPrice(selectedCoin.current_price)} {currencySymbol}</div>
               <div className={'coin-change-large ' + (selectedCoin.price_change_24h >= 0 ? 'positive' : 'negative')}>
                 {formatChange(selectedCoin.price_change_24h)}
               </div>
@@ -1287,19 +1277,19 @@ const TradingPage = () => {
           <div className="coin-stats">
             <div className="stat-item">
               <span className="stat-label">최고(24H)</span>
-              <span className="stat-value">{formatPrice(selectedCoin.current_price * 1.1)} G</span>
+              <span className="stat-value">{formatPrice(selectedCoin.current_price * 1.1)} {currencySymbol}</span>
             </div>
             <div className="stat-item">
               <span className="stat-label">최저(24H)</span>
-              <span className="stat-value">{formatPrice(selectedCoin.current_price * 0.9)} G</span>
+              <span className="stat-value">{formatPrice(selectedCoin.current_price * 0.9)} {currencySymbol}</span>
             </div>
             <div className="stat-item">
               <span className="stat-label">거래량(24H)</span>
-              <span className="stat-value">{formatPrice(selectedCoin.volume_24h || 0)} G</span>
+              <span className="stat-value">{formatPrice(selectedCoin.volume_24h || 0)} {currencySymbol}</span>
             </div>
             <div className="stat-item">
               <span className="stat-label">시가총액</span>
-              <span className="stat-value">{formatPrice(selectedCoin.market_cap)} G</span>
+              <span className="stat-value">{formatPrice(selectedCoin.market_cap)} {currencySymbol}</span>
             </div>
           </div>
 
@@ -1340,7 +1330,7 @@ const TradingPage = () => {
 
           <div className="trading-panel">
             <div className="orderbook-section">
-              <Orderbook coinId={selectedCoin.id} />
+              <Orderbook coinId={selectedCoin.id} baseCurrency={baseCurrency} />
             </div>
             <div className="coin-sidebar-section">
               <CoinSidebar selectedCoinId={selectedCoin.id} />
@@ -1353,6 +1343,7 @@ const TradingPage = () => {
             coin={selectedCoin}
             walletAddress={walletAddress}
             goldBalance={goldBalance}
+            baseCurrency={baseCurrency}
             onOrderSuccess={handleOrderSuccess}
           />
         </div>
