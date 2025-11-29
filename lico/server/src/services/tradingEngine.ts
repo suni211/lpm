@@ -284,27 +284,76 @@ export class TradingEngine {
         const fee = Math.floor(totalAmount * 0.05);
         const totalRequired = totalAmount + fee;
 
-        // 잔액 확인
-        const walletBalanceCheck = typeof wallet.gold_balance === 'string' 
-          ? parseFloat(wallet.gold_balance) 
-          : (wallet.gold_balance || 0);
-        
-        if (walletBalanceCheck < totalCost + totalRequired) {
-          throw new Error('잔액이 부족합니다');
+        // MEME 코인인 경우: MAJOR 코인 잔액 확인 및 잠금
+        if (coin.coin_type === 'MEME') {
+          if (!coin.base_currency_id) {
+            throw new Error('MEME 코인은 기준 화폐가 설정되어야 합니다');
+          }
+
+          const baseCurrencies = await query(
+            'SELECT * FROM coins WHERE id = ? AND coin_type = "MAJOR"',
+            [coin.base_currency_id]
+          );
+
+          if (baseCurrencies.length === 0) {
+            throw new Error('MEME 코인의 기준 화폐가 MAJOR 코인이 아닙니다');
+          }
+
+          const baseCurrency = baseCurrencies[0];
+
+          // MAJOR 코인 잔액 확인
+          const balances = await query(
+            'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+            [walletId, baseCurrency.id]
+          );
+
+          const availableAmount = balances.length > 0
+            ? (typeof balances[0].available_amount === 'string'
+              ? parseFloat(balances[0].available_amount)
+              : (balances[0].available_amount || 0))
+            : 0;
+
+          if (availableAmount < totalRequired) {
+            throw new Error(`${baseCurrency.symbol} 잔액이 부족합니다 (필요: ${totalRequired}, 보유: ${availableAmount})`);
+          }
+
+          // 예약 주문 생성
+          await query(
+            `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, fee, status, is_admin_order)
+             VALUES (?, ?, ?, 'BUY', 'LIMIT', ?, ?, ?, 'PENDING', FALSE)`,
+            [orderId, walletId, coinId, currentPrice, remainingQty, fee]
+          );
+
+          // MAJOR 코인 잠금
+          await query(
+            'UPDATE user_coin_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND coin_id = ?',
+            [totalRequired, totalRequired, walletId, baseCurrency.id]
+          );
+
+          console.log(`💎 MEME 코인 예약 주문 생성: ${coin.symbol} - ${baseCurrency.symbol} ${totalRequired} 잠금`);
+        } else {
+          // MAJOR/일반 코인: Gold 잔액 확인 및 차감
+          const walletBalanceCheck = typeof wallet.gold_balance === 'string'
+            ? parseFloat(wallet.gold_balance)
+            : (wallet.gold_balance || 0);
+
+          if (walletBalanceCheck < totalCost + totalRequired) {
+            throw new Error('잔액이 부족합니다');
+          }
+
+          // 예약 주문 생성
+          await query(
+            `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, fee, status, is_admin_order)
+             VALUES (?, ?, ?, 'BUY', 'LIMIT', ?, ?, ?, 'PENDING', FALSE)`,
+            [orderId, walletId, coinId, currentPrice, remainingQty, fee]
+          );
+
+          // Gold 잠금
+          await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
+            totalRequired,
+            walletId,
+          ]);
         }
-
-        // 예약 주문 생성 (유통량이 부족한 경우)
-        await query(
-          `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, status, is_admin_order)
-           VALUES (?, ?, ?, 'BUY', 'LIMIT', ?, ?, 'PENDING', FALSE)`,
-          [orderId, walletId, coinId, currentPrice, remainingQty]
-        );
-
-        // 잔액 잠금
-        await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
-          totalRequired,
-          walletId,
-        ]);
 
         return { matched: quantity - remainingQty, remaining: remainingQty };
       }

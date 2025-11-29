@@ -263,9 +263,19 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
         return res.status(400).json({ error: '유효하지 않은 주문 가격입니다' });
       }
 
-      const refundAmount = parseFloat((orderPrice * remainingQty).toFixed(2));
-      const refundFee = Math.floor(refundAmount * 0.05); // 수수료도 환불
+      const totalQuantity = typeof order.quantity === 'string' ? parseFloat(order.quantity) : (typeof order.quantity === 'number' ? order.quantity : 0);
+      const orderFee = typeof order.fee === 'string' ? parseFloat(order.fee) : (typeof order.fee === 'number' ? order.fee : 0);
+
+      // 남은 수량에 대한 금액 계산
+      const refundAmount = orderPrice * remainingQty;
+
+      // 남은 수량 비율로 수수료 비례 배분
+      const remainingRatio = totalQuantity > 0 ? remainingQty / totalQuantity : 0;
+      const refundFee = Math.floor(orderFee * remainingRatio);
+
       const totalRefund = refundAmount + refundFee;
+
+      console.log(`📝 주문 취소 환불 계산: 가격=${orderPrice}, 남은수량=${remainingQty}, 전체수량=${totalQuantity}, 주문수수료=${orderFee}, 환불수수료=${refundFee}, 총환불=${totalRefund}`);
 
       // MEME 코인인 경우: MAJOR 코인 환불
       if (coin.coin_type === 'MEME') {
