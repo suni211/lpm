@@ -248,23 +248,57 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
       return res.status(400).json({ error: '취소할 수량이 없습니다' });
     }
 
+    // 코인 정보 조회 (MEME 코인인지 확인)
+    const coins = await query('SELECT * FROM coins WHERE id = ?', [order.coin_id]);
+    if (coins.length === 0) {
+      return res.status(404).json({ error: '코인을 찾을 수 없습니다' });
+    }
+    const coin = coins[0];
+
     // 주문 취소 처리
     if (order.order_type === 'BUY') {
-      // 매수 취소: Gold 환불 (남은 수량 기준)
+      // 매수 취소: 환불 (남은 수량 기준)
       const orderPrice = typeof order.price === 'string' ? parseFloat(order.price) : (typeof order.price === 'number' ? order.price : 0);
       if (isNaN(orderPrice) || orderPrice <= 0) {
         return res.status(400).json({ error: '유효하지 않은 주문 가격입니다' });
       }
-      
+
       const refundAmount = parseFloat((orderPrice * remainingQty).toFixed(2));
       const refundFee = Math.floor(refundAmount * 0.05); // 수수료도 환불
       const totalRefund = refundAmount + refundFee;
-      
-      // 숫자로 명시적 변환
-      await query('UPDATE user_wallets SET gold_balance = gold_balance + ? WHERE id = ?', [
-        Number(totalRefund),
-        order.wallet_id,
-      ]);
+
+      // MEME 코인인 경우: MAJOR 코인 환불
+      if (coin.coin_type === 'MEME') {
+        if (!coin.base_currency_id) {
+          return res.status(400).json({ error: 'MEME 코인은 기준 화폐가 설정되어야 합니다' });
+        }
+
+        // base_currency 조회
+        const baseCurrencies = await query(
+          'SELECT * FROM coins WHERE id = ? AND coin_type = "MAJOR"',
+          [coin.base_currency_id]
+        );
+
+        if (baseCurrencies.length === 0) {
+          return res.status(400).json({ error: 'MEME 코인의 기준 화폐가 MAJOR 코인이 아닙니다' });
+        }
+
+        const baseCurrency = baseCurrencies[0];
+
+        // MAJOR 코인 환불 (잠금 해제)
+        await query(
+          'UPDATE user_coin_balances SET available_amount = available_amount + ?, locked_amount = GREATEST(0, locked_amount - ?) WHERE wallet_id = ? AND coin_id = ?',
+          [Number(totalRefund), Number(totalRefund), order.wallet_id, baseCurrency.id]
+        );
+
+        console.log(`💎 MEME 코인 매수 주문 취소: ${coin.symbol} - ${baseCurrency.symbol} ${totalRefund} 환불`);
+      } else {
+        // MAJOR/일반 코인: Gold 환불
+        await query('UPDATE user_wallets SET gold_balance = gold_balance + ? WHERE id = ?', [
+          Number(totalRefund),
+          order.wallet_id,
+        ]);
+      }
     } else if (order.order_type === 'SELL') {
       // 매도 취소: 코인 잠금 해제 (남은 수량 기준)
       const remainingQtyNum = Number(remainingQty);
