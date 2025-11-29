@@ -203,7 +203,9 @@ const LobbyPage = () => {
               const marketCap = typeof coin.market_cap === 'string'
                 ? parseFloat(coin.market_cap)
                 : (coin.market_cap || 0);
-              const profitRate = coin.profit_rate_24h || 0;
+              const profitRate = typeof coin.profit_rate_24h === 'string'
+                ? parseFloat(coin.profit_rate_24h)
+                : (coin.profit_rate_24h || 0);
 
               return (
                 <tr key={coin.id} className="coin-row">
