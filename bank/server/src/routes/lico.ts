@@ -156,11 +156,15 @@ router.post('/transfer-to-lico', isAuthenticated, async (req: Request, res: Resp
       return res.status(400).json({ error: '잔액이 부족합니다' });
     }
 
+    // Transaction ID 미리 생성
+    const transactionId = uuidv4();
+
     // Lico API로 입금 요청
     try {
       const licoResponse = await axios.post(`${LICO_API_URL}/api/wallets/deposit`, {
         wallet_address: connection.lico_wallet_address,
         amount: amount,
+        transaction_id: transactionId,
       });
 
       if (licoResponse.data.success) {
@@ -168,7 +172,6 @@ router.post('/transfer-to-lico', isAuthenticated, async (req: Request, res: Resp
         await query('UPDATE accounts SET balance = balance - ? WHERE id = ?', [amount, stock_account_id]);
 
         // 거래 기록
-        const transactionId = uuidv4();
         await query(
           `INSERT INTO transactions (id, transaction_type, account_id, amount, balance_before, balance_after, notes)
            VALUES (?, 'TRANSFER_OUT', ?, ?, ?, ?, ?)`,
