@@ -19,6 +19,8 @@ import WalletInfoPage from './pages/WalletInfoPage';
 import NewsPage from './pages/NewsPage';
 import NewsDetailPage from './pages/NewsDetailPage';
 import ExchangePage from './pages/ExchangePage';
+import MemeCoinApplicationPage from './pages/MemeCoinApplicationPage';
+import AdminMemeApplicationsPage from './pages/AdminMemeApplicationsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -165,6 +167,22 @@ function App() {
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminNewsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/meme-applications"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminMemeApplicationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/meme-application"
+              element={
+                <ProtectedRoute>
+                  <MemeCoinApplicationPage />
                 </ProtectedRoute>
               }
             />

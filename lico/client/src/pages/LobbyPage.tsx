@@ -101,8 +101,16 @@ const LobbyPage = () => {
   return (
     <div className="lobby-page">
       <div className="lobby-header">
-        <h1>🏦 LICO 거래소</h1>
-        <p>실시간 코인 시장 현황</p>
+        <div>
+          <h1>🏦 LICO 거래소</h1>
+          <p>실시간 코인 시장 현황</p>
+        </div>
+        <button
+          className="create-meme-button"
+          onClick={() => navigate('/meme-application')}
+        >
+          💎 밈 코인 발행하기
+        </button>
       </div>
 
       {/* 시장 현황판 */}

@@ -8,25 +8,47 @@
 }
 
 .lobby-header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 32px;
   padding-bottom: 24px;
   border-bottom: 2px solid #333;
 }
 
-.lobby-header h1 {
+.lobby-header > div h1 {
   font-size: 36px;
   margin: 0 0 8px 0;
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  text-align: left;
 }
 
-.lobby-header p {
+.lobby-header > div p {
   margin: 0;
   color: #9ca3af;
   font-size: 16px;
+  text-align: left;
+}
+
+.create-meme-button {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.create-meme-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
 }
 
 /* 시장 현황판 */

@@ -239,6 +239,13 @@ const AdminDashboard = () => {
           >
             📰 뉴스 관리
           </button>
+          <button
+            className="create-button"
+            onClick={() => navigate('/admin/meme-applications')}
+            style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}
+          >
+            💎 밈 코인 신청 관리
+          </button>
           {activeTab === 'coins' && (
             <button className="create-button" onClick={() => setShowCreateModal(true)}>
               + 코인 생성
