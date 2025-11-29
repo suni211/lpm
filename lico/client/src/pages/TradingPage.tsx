@@ -12,6 +12,7 @@ import CoinSidebar from '../components/CoinSidebar';
 import TopRankingsTicker from '../components/TopRankingsTicker';
 import Toast from '../components/Toast';
 import soundPlayer from '../utils/soundPlayer';
+import { classifyCoin } from '../utils/coinClassification';
 import './TradingPage.css';
 
 interface ToastNotification {
@@ -1189,18 +1190,70 @@ const TradingPage = () => {
     return sign + numChange.toFixed(2) + '%';
   };
 
+  const currentPrice = typeof selectedCoin.current_price === 'string'
+    ? parseFloat(selectedCoin.current_price)
+    : (selectedCoin.current_price || 0);
+  const coinClassification = classifyCoin(currentPrice, selectedCoin.coin_type);
+
   return (
     <div className="trading-page">
       <TopRankingsTicker />
       <div className="trading-container">
         <div className="main-content">
+          {/* 코인 분류 경고 메시지 */}
+          {coinClassification.warningMessage && (
+            <div style={{
+              padding: '1rem',
+              backgroundColor: coinClassification.riskLevel === 'DUST' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+              borderLeft: `4px solid ${coinClassification.warningColor}`,
+              marginBottom: '1rem',
+              borderRadius: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <div style={{
+                fontSize: '1.5rem',
+                flexShrink: 0
+              }}>
+                {coinClassification.riskLevel === 'DUST' ? '⚠️' : '💡'}
+              </div>
+              <div>
+                <div style={{
+                  fontWeight: 'bold',
+                  color: coinClassification.warningColor,
+                  marginBottom: '0.25rem',
+                  fontSize: '1rem'
+                }}>
+                  {coinClassification.badge}
+                </div>
+                <div style={{ color: '#e5e7eb', fontSize: '0.95rem' }}>
+                  {coinClassification.warningMessage}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="coin-header">
             <div className="coin-header-left">
               {selectedCoin.logo_url && (
                 <img src={selectedCoin.logo_url} alt={selectedCoin.symbol} className="coin-header-logo" />
               )}
               <div className="coin-header-info">
-                <h1>{selectedCoin.name}</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <h1>{selectedCoin.name}</h1>
+                  <span style={{
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold',
+                    backgroundColor: coinClassification.badgeColor + '20',
+                    color: coinClassification.badgeColor,
+                    border: `1px solid ${coinClassification.badgeColor}`
+                  }}>
+                    {coinClassification.badge}
+                  </span>
+                </div>
                 <div className="coin-header-symbols">
                   <span className="coin-symbol">{selectedCoin.symbol}</span>
                   <span className="coin-divider">/</span>
