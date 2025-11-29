@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../database/db';
+import { isAdmin } from '../middleware/auth';
 
 const router = Router();
 
@@ -99,12 +100,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 // ==================== 관리자 API (인증 필요) ====================
 
 // 뉴스 작성 (관리자 전용)
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', isAdmin, async (req: Request, res: Response) => {
   try {
-    const adminId = (req as any).adminId; // auth 미들웨어에서 설정
-    if (!adminId) {
-      return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다' });
-    }
+    const adminId = req.session.adminId;
 
     const { title, content, image_url, is_pinned = false, status = 'PUBLISHED' } = req.body;
 
@@ -132,12 +130,9 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // 뉴스 수정 (관리자 전용)
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', isAdmin, async (req: Request, res: Response) => {
   try {
-    const adminId = (req as any).adminId;
-    if (!adminId) {
-      return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다' });
-    }
+    const adminId = req.session.adminId;
 
     const { id } = req.params;
     const { title, content, image_url, is_pinned, status } = req.body;
@@ -185,12 +180,8 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // 뉴스 삭제 (관리자 전용)
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', isAdmin, async (req: Request, res: Response) => {
   try {
-    const adminId = (req as any).adminId;
-    if (!adminId) {
-      return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다' });
-    }
 
     const { id } = req.params;
 
