@@ -38,25 +38,21 @@ export class TradingEngine {
     const fee = Math.floor(totalAmount * 0.05);
     const totalRequired = totalAmount + fee;
 
-    // MEME 코인인 경우: MAJOR 코인 잔액 잠금
-    if (coin.coin_type === 'MEME') {
-      if (!coin.base_currency_id) {
-        throw new Error('MEME 코인은 기준 화폐가 설정되어야 합니다');
-      }
-
+    // base_currency가 있는 경우: 해당 코인으로 거래
+    if (coin.base_currency_id) {
       // base_currency 조회
       const baseCurrencies = await query(
-        'SELECT * FROM coins WHERE id = ? AND coin_type = "MAJOR"',
+        'SELECT * FROM coins WHERE id = ?',
         [coin.base_currency_id]
       );
 
       if (baseCurrencies.length === 0) {
-        throw new Error('MEME 코인의 기준 화폐가 MAJOR 코인이 아닙니다');
+        throw new Error('기준 화폐를 찾을 수 없습니다');
       }
 
       const baseCurrency = baseCurrencies[0];
 
-      // MAJOR 코인 잔액 확인
+      // 기준 화폐 잔액 확인
       const balances = await query(
         'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
         [walletId, baseCurrency.id]
@@ -72,15 +68,15 @@ export class TradingEngine {
         throw new Error(`${baseCurrency.symbol} 잔액이 부족합니다 (필요: ${totalRequired}, 보유: ${availableAmount})`);
       }
 
-      // MAJOR 코인 잠금
+      // 기준 화폐 잠금
       await query(
         'UPDATE user_coin_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND coin_id = ?',
         [totalRequired, totalRequired, walletId, baseCurrency.id]
       );
 
-      console.log(`💎 MEME 코인 매수 주문: ${coin.symbol} - ${baseCurrency.symbol} ${totalRequired} 잠금`);
+      console.log(`💰 ${coin.symbol} 매수 주문: ${baseCurrency.symbol} ${totalRequired} 잠금`);
     } else {
-      // MAJOR/일반 코인: Gold 잠금
+      // base_currency가 없는 경우: Gold로 거래
       const wallets = await query('SELECT * FROM user_wallets WHERE id = ?', [walletId]);
       if (wallets.length === 0) {
         throw new Error('지갑을 찾을 수 없습니다');
@@ -284,24 +280,20 @@ export class TradingEngine {
         const fee = Math.floor(totalAmount * 0.05);
         const totalRequired = totalAmount + fee;
 
-        // MEME 코인인 경우: MAJOR 코인 잔액 확인 및 잠금
-        if (coin.coin_type === 'MEME') {
-          if (!coin.base_currency_id) {
-            throw new Error('MEME 코인은 기준 화폐가 설정되어야 합니다');
-          }
-
+        // base_currency가 있는 경우: 기준 화폐 잔액 확인 및 잠금
+        if (coin.base_currency_id) {
           const baseCurrencies = await query(
-            'SELECT * FROM coins WHERE id = ? AND coin_type = "MAJOR"',
+            'SELECT * FROM coins WHERE id = ?',
             [coin.base_currency_id]
           );
 
           if (baseCurrencies.length === 0) {
-            throw new Error('MEME 코인의 기준 화폐가 MAJOR 코인이 아닙니다');
+            throw new Error('기준 화폐를 찾을 수 없습니다');
           }
 
           const baseCurrency = baseCurrencies[0];
 
-          // MAJOR 코인 잔액 확인
+          // 기준 화폐 잔액 확인
           const balances = await query(
             'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
             [walletId, baseCurrency.id]
@@ -324,15 +316,15 @@ export class TradingEngine {
             [orderId, walletId, coinId, currentPrice, remainingQty, fee]
           );
 
-          // MAJOR 코인 잠금
+          // 기준 화폐 잠금
           await query(
             'UPDATE user_coin_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND coin_id = ?',
             [totalRequired, totalRequired, walletId, baseCurrency.id]
           );
 
-          console.log(`💎 MEME 코인 예약 주문 생성: ${coin.symbol} - ${baseCurrency.symbol} ${totalRequired} 잠금`);
+          console.log(`💰 ${coin.symbol} 예약 주문 생성: ${baseCurrency.symbol} ${totalRequired} 잠금`);
         } else {
-          // MAJOR/일반 코인: Gold 잔액 확인 및 차감
+          // base_currency가 없는 경우: Gold 잔액 확인 및 차감
           const walletBalanceCheck = typeof wallet.gold_balance === 'string'
             ? parseFloat(wallet.gold_balance)
             : (wallet.gold_balance || 0);
@@ -665,33 +657,29 @@ export class TradingEngine {
       [tradeId, coinId, buyOrderId || null, sellOrderId || null, buyerWalletId, sellerWalletId, price, quantity, buyFee, sellFee]
     );
 
-    // MEME 코인인 경우: MAJOR 코인으로 거래
-    if (coin.coin_type === 'MEME') {
-      if (!coin.base_currency_id) {
-        throw new Error('MEME 코인은 기준 화폐가 설정되어야 합니다');
-      }
-
+    // base_currency가 있는 경우: 해당 코인으로 거래
+    if (coin.base_currency_id) {
       // base_currency 조회
       const baseCurrencies = await query(
-        'SELECT * FROM coins WHERE id = ? AND coin_type = "MAJOR"',
+        'SELECT * FROM coins WHERE id = ?',
         [coin.base_currency_id]
       );
 
       if (baseCurrencies.length === 0) {
-        throw new Error('MEME 코인의 기준 화폐가 MAJOR 코인이 아닙니다');
+        throw new Error('기준 화폐를 찾을 수 없습니다');
       }
 
       const baseCurrency = baseCurrencies[0];
 
-      // 매수자: MEME 코인 증가 (MAJOR 코인은 이미 차감됨)
+      // 매수자: 코인 증가 (기준 화폐는 이미 차감됨)
       await this.updateCoinBalance(buyerWalletId, coinId, quantity, price);
 
-      // 매도자: MAJOR 코인 증가 (수수료 차감), MEME 코인 차감
+      // 매도자: 기준 화폐 증가 (수수료 차감), 코인 차감
       await this.updateCoinBalance(sellerWalletId, baseCurrency.id, totalAmount - sellFee);
 
-      console.log(`💎 MEME 코인 거래 체결: ${coin.symbol} - ${quantity}개 @ ${price} ${baseCurrency.symbol}`);
+      console.log(`💰 ${coin.symbol} 거래 체결: ${quantity}개 @ ${price} ${baseCurrency.symbol}`);
     } else {
-      // MAJOR 코인 또는 일반 코인: Gold로 거래
+      // base_currency가 없는 경우: Gold로 거래
       // 매수자: 코인 증가 (Gold는 이미 차감됨)
       await this.updateCoinBalance(buyerWalletId, coinId, quantity, price);
 
