@@ -9,6 +9,7 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import AdminTradesPage from './pages/AdminTradesPage';
 import AdminNewsPage from './pages/AdminNewsPage';
 import LoginPage from './pages/LoginPage';
+import LobbyPage from './pages/LobbyPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import QuestionnairePage from './pages/QuestionnairePage';
 import StockAccountAgreementPage from './pages/StockAccountAgreementPage';
@@ -83,7 +84,7 @@ function App() {
               path="/"
               element={
                 <ProtectedRoute>
-                  <TradingPage />
+                  <LobbyPage />
                 </ProtectedRoute>
               }
             />
