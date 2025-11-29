@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import TradingPage from './pages/TradingPage';
 import DepositWithdrawPage from './pages/DepositWithdrawPage';
 import InvestmentHistoryPage from './pages/InvestmentHistoryPage';
@@ -187,6 +188,7 @@ function App() {
               }
             />
           </Routes>
+          <Footer />
         </div>
       </Router>
     </QueryClientProvider>
