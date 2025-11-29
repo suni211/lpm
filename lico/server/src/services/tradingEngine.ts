@@ -537,7 +537,7 @@ export class TradingEngine {
 
     // 매수자: Gold 차감 (수수료 포함), 코인 증가
     await this.updateWalletBalance(buyerWalletId, -(totalAmount + buyFee));
-    await this.updateCoinBalance(buyerWalletId, coinId, quantity);
+    await this.updateCoinBalance(buyerWalletId, coinId, quantity, price);
 
     // 매도자: Gold 증가 (수수료 차감), 코인 차감
     await this.updateWalletBalance(sellerWalletId, totalAmount - sellFee);
@@ -755,7 +755,7 @@ export class TradingEngine {
   }
 
   // 코인 잔액 업데이트 (소수점 지원)
-  private async updateCoinBalance(walletId: string, coinId: string, amount: number) {
+  private async updateCoinBalance(walletId: string, coinId: string, amount: number, buyPrice?: number) {
     // 소수점 8자리까지 정밀도 유지
     const preciseAmount = parseFloat(amount.toFixed(8));
 
@@ -765,16 +765,41 @@ export class TradingEngine {
     );
 
     if (existing.length > 0) {
-      // 기존 잔액 업데이트 (소수점 정밀도 유지)
-      await query(
-        'UPDATE user_coin_balances SET available_amount = available_amount + ? WHERE wallet_id = ? AND coin_id = ?',
-        [preciseAmount, walletId, coinId]
-      );
+      // 기존 잔액 업데이트
+      const oldBalance = existing[0];
+      const oldAvailableAmount = typeof oldBalance.available_amount === 'string'
+        ? parseFloat(oldBalance.available_amount)
+        : (oldBalance.available_amount || 0);
+      const oldAvgBuyPrice = typeof oldBalance.average_buy_price === 'string'
+        ? parseFloat(oldBalance.average_buy_price)
+        : (oldBalance.average_buy_price || 0);
+
+      // 매수 거래인 경우 (amount > 0 && buyPrice 제공)
+      if (preciseAmount > 0 && buyPrice !== undefined && buyPrice > 0) {
+        // 평균 매수가 계산: (기존 보유량 × 기존 평균가 + 신규 매수량 × 신규 매수가) / (기존 보유량 + 신규 매수량)
+        const newAvgBuyPrice = oldAvailableAmount > 0
+          ? ((oldAvailableAmount * oldAvgBuyPrice) + (preciseAmount * buyPrice)) / (oldAvailableAmount + preciseAmount)
+          : buyPrice;
+
+        await query(
+          'UPDATE user_coin_balances SET available_amount = available_amount + ?, average_buy_price = ? WHERE wallet_id = ? AND coin_id = ?',
+          [preciseAmount, newAvgBuyPrice, walletId, coinId]
+        );
+
+        console.log(`📊 평균 매수가 업데이트: ${oldAvgBuyPrice.toFixed(2)} G → ${newAvgBuyPrice.toFixed(2)} G (매수량: ${preciseAmount})`);
+      } else {
+        // 매도 거래인 경우 평균 매수가 유지
+        await query(
+          'UPDATE user_coin_balances SET available_amount = available_amount + ? WHERE wallet_id = ? AND coin_id = ?',
+          [preciseAmount, walletId, coinId]
+        );
+      }
     } else {
       // 새 잔액 생성
+      const newAvgBuyPrice = (buyPrice !== undefined && buyPrice > 0) ? buyPrice : 0;
       await query(
-        'INSERT INTO user_coin_balances (id, wallet_id, coin_id, available_amount) VALUES (?, ?, ?, ?)',
-        [uuidv4(), walletId, coinId, preciseAmount]
+        'INSERT INTO user_coin_balances (id, wallet_id, coin_id, available_amount, average_buy_price) VALUES (?, ?, ?, ?, ?)',
+        [uuidv4(), walletId, coinId, preciseAmount, newAvgBuyPrice]
       );
     }
   }
