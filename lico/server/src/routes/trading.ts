@@ -53,6 +53,56 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(400).json({ error: '유효하지 않은 수량입니다' });
     }
 
+    // MEME 코인 거래 제한: MAJOR 코인으로만 거래 가능
+    if (coin.coin_type === 'MEME') {
+      if (!coin.base_currency_id) {
+        return res.status(400).json({
+          error: 'MEME 코인은 기준 화폐가 설정되어야 합니다',
+          message: '관리자에게 문의하세요'
+        });
+      }
+
+      // base_currency 조회
+      const baseCurrencies = await query(
+        'SELECT * FROM coins WHERE id = ? AND coin_type = "MAJOR" AND status = "ACTIVE"',
+        [coin.base_currency_id]
+      );
+
+      if (baseCurrencies.length === 0) {
+        return res.status(400).json({
+          error: 'MEME 코인은 MAJOR 코인으로만 거래할 수 있습니다',
+          message: '이 MEME 코인의 기준 화폐가 MAJOR 코인이 아니거나 비활성화되었습니다'
+        });
+      }
+
+      const baseCurrency = baseCurrencies[0];
+
+      // 매수 주문: 사용자가 base_currency를 충분히 보유하고 있는지 확인
+      if (order_type === 'BUY') {
+        const userBaseCurrencyBalance = await query(
+          'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+          [wallet.id, baseCurrency.id]
+        );
+
+        const totalCost = orderPrice * finalQuantity;
+        const availableBalance = userBaseCurrencyBalance.length > 0
+          ? parseFloat(userBaseCurrencyBalance[0].available_amount)
+          : 0;
+
+        if (availableBalance < totalCost) {
+          return res.status(400).json({
+            error: `${baseCurrency.symbol} 잔액이 부족합니다`,
+            message: `필요: ${totalCost.toLocaleString()} ${baseCurrency.symbol}, 보유: ${availableBalance.toLocaleString()} ${baseCurrency.symbol}`,
+            required: totalCost,
+            available: availableBalance,
+            currency: baseCurrency.symbol
+          });
+        }
+      }
+
+      console.log(`💎 MEME 코인 거래: ${coin.symbol} (기준 화폐: ${baseCurrency.symbol})`);
+    }
+
     // 주문 생성 및 매칭 (tradingEngine 사용)
     let orderId: string;
     let matchResult: { matched: number; remaining: number };
