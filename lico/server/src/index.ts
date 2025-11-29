@@ -6,6 +6,7 @@ import { createServer } from 'http';
 import pool from './database/db';
 import blockchainService from './services/blockchainService';
 import aiTradingBot from './services/aiTradingBot';
+import stopOrderMonitor from './services/stopOrderMonitor';
 import initializeWebSocket from './websocket';
 
 // Load environment variables
@@ -157,6 +158,10 @@ httpServer.listen(PORT, async () => {
   // Initialize AI Trading Bot
   aiTradingBot.start();
   console.log('✅ AI Trading Bot started');
+
+  // Initialize Stop Order Monitor
+  stopOrderMonitor.start();
+  console.log('✅ Stop Order Monitor started');
 });
 
 // Graceful shutdown

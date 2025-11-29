@@ -3,6 +3,7 @@ import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import blockchainService from '../services/blockchainService';
 import tradingEngine from '../services/tradingEngine';
+import stopOrderMonitor from '../services/stopOrderMonitor';
 import { isAuthenticated } from '../middleware/auth';
 
 const router = express.Router();
@@ -396,6 +397,93 @@ router.get('/trades/:wallet_address', isAuthenticated, async (req: Request, res:
   } catch (error) {
     console.error('거래 내역 조회 오류:', error);
     res.status(500).json({ error: '거래 내역 조회 실패' });
+  }
+});
+
+// 스탑 주문 생성 (손절/익절) - 로그인 필요
+router.post('/stop-order', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { wallet_address, coin_id, stop_type, quantity, stop_price, trailing_percent } = req.body;
+
+    // 지갑 조회
+    const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [wallet_address]);
+    if (wallets.length === 0) {
+      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+    }
+    const wallet = wallets[0];
+
+    // 코인 보유 확인
+    const balances = await query(
+      'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+      [wallet.id, coin_id]
+    );
+
+    if (balances.length === 0) {
+      return res.status(400).json({ error: '해당 코인을 보유하고 있지 않습니다' });
+    }
+
+    const availableAmount = typeof balances[0].available_amount === 'string'
+      ? parseFloat(balances[0].available_amount)
+      : (balances[0].available_amount || 0);
+
+    if (availableAmount < quantity) {
+      return res.status(400).json({
+        error: `보유 수량이 부족합니다 (보유: ${availableAmount}, 요청: ${quantity})`
+      });
+    }
+
+    // 스탑 주문 생성
+    const orderId = await stopOrderMonitor.createStopOrder(
+      wallet.id,
+      coin_id,
+      stop_type,
+      quantity,
+      stop_price,
+      trailing_percent
+    );
+
+    // 코인 잠금 (스탑 주문이 트리거될 때까지)
+    await query(
+      'UPDATE user_coin_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND coin_id = ?',
+      [quantity, quantity, wallet.id, coin_id]
+    );
+
+    res.json({
+      success: true,
+      order_id: orderId,
+      message: '스탑 주문이 등록되었습니다',
+    });
+  } catch (error: any) {
+    console.error('스탑 주문 생성 오류:', error);
+    res.status(500).json({ error: error.message || '스탑 주문 생성 실패' });
+  }
+});
+
+// 내 스탑 주문 목록 - 로그인 필요
+router.get('/stop-orders/:wallet_address', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { wallet_address } = req.params;
+
+    const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [wallet_address]);
+    if (wallets.length === 0) {
+      return res.status(404).json({ error: '지갑을 찾을 수 없습니다' });
+    }
+    const wallet = wallets[0];
+
+    const stopOrders = await query(
+      `SELECT o.*, c.symbol, c.name, c.current_price
+       FROM orders o
+       JOIN coins c ON o.coin_id = c.id
+       WHERE o.wallet_id = ?
+       AND o.is_stop_order = TRUE
+       ORDER BY o.created_at DESC`,
+      [wallet.id]
+    );
+
+    res.json({ stop_orders: stopOrders });
+  } catch (error) {
+    console.error('스탑 주문 조회 오류:', error);
+    res.status(500).json({ error: '스탑 주문 조회 실패' });
   }
 });
 
