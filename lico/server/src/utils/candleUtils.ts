@@ -7,14 +7,16 @@ import { v4 as uuidv4 } from 'uuid';
  */
 
 // Date를 MySQL DATETIME 포맷으로 변환 (YYYY-MM-DD HH:MM:SS)
-// UTC 시간을 그대로 사용
+// 한국 시간(KST, UTC+9) 사용
 function toMySQLDateTime(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hours = String(date.getUTCHours()).padStart(2, '0');
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+  // KST = UTC + 9시간
+  const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+  const year = kstDate.getUTCFullYear();
+  const month = String(kstDate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(kstDate.getUTCDate()).padStart(2, '0');
+  const hours = String(kstDate.getUTCHours()).padStart(2, '0');
+  const minutes = String(kstDate.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(kstDate.getUTCSeconds()).padStart(2, '0');
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
@@ -26,9 +28,11 @@ export async function updateCandleData(
 ): Promise<void> {
   try {
     const now = new Date();
+    // KST 기준으로 계산 (UTC + 9시간)
+    const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000));
 
     // 1분 단위로 내림 (초/밀리초를 0으로)
-    const openTimeMinute = Math.floor(now.getTime() / 60000) * 60000;
+    const openTimeMinute = Math.floor(kstNow.getTime() / 60000) * 60000;
     const openTime = new Date(openTimeMinute);
 
     const closeTime = new Date(openTime);
@@ -83,9 +87,11 @@ async function updateHourlyCandleData(
 ): Promise<void> {
   try {
     const now = new Date();
+    // KST 기준으로 계산 (UTC + 9시간)
+    const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000));
 
     // 1시간 단위로 내림 (분/초/밀리초를 0으로)
-    const openTimeHour = Math.floor(now.getTime() / 3600000) * 3600000;
+    const openTimeHour = Math.floor(kstNow.getTime() / 3600000) * 3600000;
     const openTime = new Date(openTimeHour);
 
     const closeTime = new Date(openTime);
@@ -136,9 +142,11 @@ async function updateDailyCandleData(
 ): Promise<void> {
   try {
     const now = new Date();
+    // KST 기준으로 계산 (UTC + 9시간)
+    const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000));
 
     // 1일 단위로 내림 (시/분/초/밀리초를 0으로)
-    const openTimeDay = Math.floor(now.getTime() / 86400000) * 86400000;
+    const openTimeDay = Math.floor(kstNow.getTime() / 86400000) * 86400000;
     const openTime = new Date(openTimeDay);
 
     const closeTime = new Date(openTime);
