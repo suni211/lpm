@@ -1269,7 +1269,14 @@ const TradingPage = () => {
               </div>
             </div>
             <div className="coin-header-right">
-              <div className="coin-price-large">{formatPrice(selectedCoin.current_price)} {currencySymbol}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                <div className="coin-price-large">{formatPrice(selectedCoin.current_price)} {currencySymbol}</div>
+                {baseCurrency && selectedCoin.coin_type === 'MEME' && (
+                  <div style={{ fontSize: '0.9em', color: '#9ca3af' }}>
+                    ≈ {formatPrice(currentPrice * (typeof baseCurrency.current_price === 'string' ? parseFloat(baseCurrency.current_price) : (baseCurrency.current_price || 0)))} G
+                  </div>
+                )}
+              </div>
               <div className={'coin-change-large ' + (selectedCoin.price_change_24h >= 0 ? 'positive' : 'negative')}>
                 {formatChange(selectedCoin.price_change_24h)}
               </div>
@@ -1291,7 +1298,14 @@ const TradingPage = () => {
             </div>
             <div className="stat-item">
               <span className="stat-label">시가총액</span>
-              <span className="stat-value">{formatPrice(selectedCoin.market_cap)} {currencySymbol}</span>
+              <span className="stat-value">
+                {formatPrice(
+                  baseCurrency && selectedCoin.coin_type === 'MEME'
+                    ? (currentPrice * (typeof baseCurrency.current_price === 'string' ? parseFloat(baseCurrency.current_price) : (baseCurrency.current_price || 0)) *
+                       (typeof selectedCoin.circulating_supply === 'string' ? parseFloat(selectedCoin.circulating_supply) : (selectedCoin.circulating_supply || 0)))
+                    : selectedCoin.market_cap
+                )} G
+              </span>
             </div>
           </div>
 

@@ -26,7 +26,44 @@ router.get('/', async (req: Request, res: Response) => {
 
     const coins = await query(sql, params);
 
-    res.json({ coins: coins || [] });
+    // 각 코인에 대해 base_currency 정보와 골드 환산 가격 추가
+    const coinsWithExtraInfo = await Promise.all(
+      coins.map(async (coin: any) => {
+        let baseCurrencyData = null;
+        let goldPrice = coin.current_price; // 기본값은 현재가
+
+        // MEME 코인이고 base_currency_id가 있는 경우
+        if (coin.base_currency_id) {
+          try {
+            const baseCurrencies = await query(
+              'SELECT id, symbol, name, current_price FROM coins WHERE id = ?',
+              [coin.base_currency_id]
+            );
+            if (baseCurrencies.length > 0) {
+              baseCurrencyData = baseCurrencies[0];
+              // 골드 환산 가격 = ECC 가격 × ECC의 골드 가격
+              const eccPrice = typeof baseCurrencyData.current_price === 'string'
+                ? parseFloat(baseCurrencyData.current_price)
+                : (baseCurrencyData.current_price || 0);
+              const coinEccPrice = typeof coin.current_price === 'string'
+                ? parseFloat(coin.current_price)
+                : (coin.current_price || 0);
+              goldPrice = coinEccPrice * eccPrice;
+            }
+          } catch (error) {
+            console.error('Failed to fetch base currency:', error);
+          }
+        }
+
+        return {
+          ...coin,
+          base_currency: baseCurrencyData,
+          gold_price: goldPrice, // 골드로 환산한 가격
+        };
+      })
+    );
+
+    res.json({ coins: coinsWithExtraInfo || [] });
   } catch (error) {
     console.error('코인 목록 조회 오류:', error);
     res.status(500).json({ error: '코인 목록 조회 실패' });

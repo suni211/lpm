@@ -10,6 +10,13 @@ interface CoinWithStats extends Coin {
   is_blacklisted?: boolean;
   creator_can_trade?: boolean;
   is_supply_limited?: boolean;
+  base_currency?: {
+    id: string;
+    symbol: string;
+    name: string;
+    current_price: number;
+  } | null;
+  gold_price?: number; // 골드로 환산한 가격
 }
 
 const LobbyPage = () => {
@@ -226,12 +233,29 @@ const LobbyPage = () => {
                       {coin.coin_type === 'MAJOR' ? 'MAJOR' : 'MEME'}
                     </span>
                   </td>
-                  <td className="price">{formatPrice(currentPrice)} G</td>
+                  <td className="price">
+                    {coin.coin_type === 'MEME' && coin.base_currency ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div>{formatPrice(currentPrice)} {coin.base_currency.symbol}</div>
+                        <div style={{ fontSize: '0.85em', color: '#9ca3af' }}>
+                          ≈ {formatPrice(coin.gold_price || 0)} G
+                        </div>
+                      </div>
+                    ) : (
+                      <div>{formatPrice(currentPrice)} G</div>
+                    )}
+                  </td>
                   <td className={profitRate >= 0 ? 'positive' : 'negative'}>
                     {profitRate >= 0 ? '+' : ''}{profitRate.toFixed(2)}%
                   </td>
                   <td>{formatNumber(volume24h)}</td>
-                  <td>{formatNumber(marketCap)} G</td>
+                  <td>
+                    {coin.coin_type === 'MEME' && coin.gold_price ? (
+                      formatNumber(coin.gold_price * (typeof coin.circulating_supply === 'string' ? parseFloat(coin.circulating_supply) : (coin.circulating_supply || 0)))
+                    ) : (
+                      formatNumber(marketCap)
+                    )} G
+                  </td>
                   <td>
                     <span className={`badge ${coin.is_blacklisted ? 'badge-no' : 'badge-yes'}`}>
                       {coin.is_blacklisted ? '예' : '아니요'}
