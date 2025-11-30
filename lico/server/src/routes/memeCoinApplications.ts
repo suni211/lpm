@@ -31,8 +31,8 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
     }
 
     const supplyAmount = parseFloat(initial_supply);
-    if (supplyAmount < 4000) {
-      return res.status(400).json({ error: '최소 발행량은 4,000개 이상이어야 합니다.' });
+    if (supplyAmount <= 0) {
+      return res.status(400).json({ error: '발행량은 0보다 커야 합니다.' });
     }
 
     // 심볼 중복 체크
@@ -73,9 +73,9 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
       [walletId, eccCoin.id]
     );
 
-    const initialCapitalECC = 4000; // 초기 자본 4,000 ECC
-    const listingFeeECC = 500; // 발행 수수료 500 ECC (12.5%)
-    const totalRequiredECC = initialCapitalECC + listingFeeECC; // 4,500 ECC
+    const initialCapitalECC = 500; // 초기 자본 500 ECC (유동성 풀)
+    const listingFeeECC = 50; // 발행 수수료 50 ECC (10%)
+    const totalRequiredECC = initialCapitalECC + listingFeeECC; // 550 ECC
 
     if (balances.length === 0 || parseFloat(balances[0].available_amount) < totalRequiredECC) {
       return res.status(400).json({
