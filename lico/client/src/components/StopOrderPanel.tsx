@@ -51,7 +51,7 @@ const StopOrderPanel: React.FC<StopOrderPanelProps> = ({
         `http://localhost:5002/api/trading/stop-orders/${walletAddress}`,
         { withCredentials: true }
       );
-      setStopOrders(response.data);
+      setStopOrders(response.data.stop_orders || response.data);
     } catch (error) {
       console.error('스탑 주문 조회 실패:', error);
     }
@@ -93,8 +93,8 @@ const StopOrderPanel: React.FC<StopOrderPanelProps> = ({
   const cancelStopOrder = async (orderId: string) => {
     try {
       await axios.post(
-        'http://localhost:5002/api/trading/cancel',
-        { order_id: orderId },
+        `http://localhost:5002/api/trading/orders/${orderId}/cancel`,
+        { wallet_address: walletAddress },
         { withCredentials: true }
       );
       alert('스탑 주문이 취소되었습니다.');

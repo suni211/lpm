@@ -83,6 +83,9 @@
 .application-form-container {
   max-width: 800px;
   margin: 0 auto;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  padding-right: 10px;
 }
 
 .info-card {
@@ -288,6 +291,9 @@
 .my-applications {
   max-width: 1200px;
   margin: 0 auto;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  padding-right: 10px;
 }
 
 .my-applications h2 {
