@@ -32,6 +32,7 @@ const MemeCoinApplicationPage = () => {
   const [coinDescription, setCoinDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [initialSupply, setInitialSupply] = useState('');
+  const [initialCapital, setInitialCapital] = useState('500'); // 초기 자본 (최소 500 ECC)
   const [canCreatorTrade, setCanCreatorTrade] = useState(true);
   const [isSupplyLimited, setIsSupplyLimited] = useState(true);
   const [creatorInitialHoldingECC, setCreatorInitialHoldingECC] = useState('0');
@@ -78,8 +79,18 @@ const MemeCoinApplicationPage = () => {
 
   const calculatePrice = () => {
     if (!initialSupply || parseFloat(initialSupply) === 0) return 0;
-    const initialCapitalECC = 500; // DEX 스타일: 500 ECC 유동성 풀
-    return initialCapitalECC / parseFloat(initialSupply);
+    const capital = parseFloat(initialCapital || '500');
+    return capital / parseFloat(initialSupply);
+  };
+
+  const calculateListingFee = () => {
+    const capital = parseFloat(initialCapital || '500');
+    return capital * 0.1; // 10% 수수료
+  };
+
+  const calculateTotalRequired = () => {
+    const capital = parseFloat(initialCapital || '500');
+    return capital + calculateListingFee(); // 자본 + 수수료
   };
 
   const calculateCreatorHoldingPercent = () => {
@@ -118,6 +129,18 @@ const MemeCoinApplicationPage = () => {
       return;
     }
 
+    const capital = parseFloat(initialCapital);
+    if (capital < 500) {
+      alert('최소 초기 자본은 500 ECC 이상이어야 합니다.');
+      return;
+    }
+
+    const totalRequired = calculateTotalRequired();
+    if (eccBalance < totalRequired) {
+      alert(`밈 코인 발행에는 ${totalRequired.toLocaleString()} ECC가 필요합니다. (초기 자본 ${capital.toLocaleString()} + 수수료 ${calculateListingFee().toLocaleString()})`);
+      return;
+    }
+
     const creatorHolding = parseFloat(creatorInitialHoldingECC || '0');
     if (creatorHolding < 0 || creatorHolding > supply) {
       alert(`제작자 초기 보유량은 0 ~ ${supply.toLocaleString()} ECC 사이여야 합니다.`);
@@ -132,11 +155,6 @@ const MemeCoinApplicationPage = () => {
       if (!confirmed) return;
     }
 
-    if (eccBalance < 550) {
-      alert('밈 코인 발행에는 550 ECC가 필요합니다. (초기 자본 500 + 수수료 50)');
-      return;
-    }
-
     try {
       setLoading(true);
       const response = await api.post('/meme-applications', {
@@ -145,6 +163,7 @@ const MemeCoinApplicationPage = () => {
         coin_description: coinDescription,
         image_url: imageUrl || null,
         initial_supply: parseFloat(initialSupply),
+        initial_capital_ecc: parseFloat(initialCapital),
         can_creator_trade: canCreatorTrade,
         is_supply_limited: isSupplyLimited,
         creator_initial_holding_ecc: parseFloat(creatorInitialHoldingECC || '0'),
@@ -159,6 +178,7 @@ const MemeCoinApplicationPage = () => {
       setCoinDescription('');
       setImageUrl('');
       setInitialSupply('');
+      setInitialCapital('500');
       setCanCreatorTrade(true);
       setIsSupplyLimited(true);
       setCreatorInitialHoldingECC('0');
@@ -223,13 +243,14 @@ const MemeCoinApplicationPage = () => {
             <h3>📋 발행 조건 (DEX 스타일)</h3>
             <ul>
               <li>발행량: <strong>자유 설정</strong> (제한 없음)</li>
-              <li>초기 유동성: <strong>500 ECC (고정)</strong></li>
-              <li>발행 수수료: <strong>50 ECC (10%)</strong></li>
-              <li>총 필요 금액: <strong>550 ECC (약 5,577 골드)</strong></li>
-              <li>초기 가격: 500 ECC / 발행량</li>
+              <li>초기 자본: <strong>최소 500 ECC 이상</strong> (원하는 만큼 투입 가능)</li>
+              <li>발행 수수료: <strong>초기 자본의 10%</strong></li>
+              <li>최소 필요 금액: <strong>550 ECC (약 5,577 골드)</strong></li>
+              <li>초기 가격: 초기 자본 / 발행량</li>
               <li>제작자 초기 보유량: 0 ~ 발행량 ECC 설정 가능</li>
               <li style={{ color: '#ff3b30', fontWeight: 600 }}>⚠️ 제작자 보유율 10% 이상 시 러그풀 위험 경고</li>
               <li>관리자 승인 후 거래소 상장</li>
+              <li>💡 투입 자본이 많을수록 초기 가격이 높아집니다</li>
             </ul>
           </div>
 
@@ -283,6 +304,26 @@ const MemeCoinApplicationPage = () => {
 
             <div className="form-section">
               <h3>발행 설정</h3>
+
+              <div className="form-group">
+                <label>초기 자본 (ECC) *</label>
+                <input
+                  type="number"
+                  value={initialCapital}
+                  onChange={(e) => setInitialCapital(e.target.value)}
+                  placeholder="최소 500 ECC"
+                  step="0.01"
+                  min="500"
+                  required
+                />
+                <p className="help-text">
+                  💰 투입 금액: {parseFloat(initialCapital || '500').toLocaleString()} ECC (약 {(parseFloat(initialCapital || '500') * 10.14).toLocaleString()} 골드)
+                  <br />
+                  💸 수수료 (10%): {calculateListingFee().toLocaleString()} ECC
+                  <br />
+                  📊 총 필요: <strong>{calculateTotalRequired().toLocaleString()} ECC</strong>
+                </p>
+              </div>
 
               <div className="form-group">
                 <label>초기 발행량 *</label>
@@ -397,20 +438,20 @@ const MemeCoinApplicationPage = () => {
             <div className="form-summary">
               <h3>요약</h3>
               <div className="summary-row">
-                <span>초기 유동성:</span>
-                <span>500 ECC</span>
+                <span>초기 자본:</span>
+                <span>{parseFloat(initialCapital || '500').toLocaleString()} ECC</span>
               </div>
               <div className="summary-row">
                 <span>발행 수수료 (10%):</span>
-                <span>50 ECC</span>
+                <span>{calculateListingFee().toLocaleString()} ECC</span>
               </div>
               <div className="summary-row total">
                 <span>총 필요 금액:</span>
-                <span>550 ECC (약 5,577 골드)</span>
+                <span>{calculateTotalRequired().toLocaleString()} ECC (약 {(calculateTotalRequired() * 10.14).toLocaleString()} 골드)</span>
               </div>
               <div className="summary-row">
                 <span>현재 잔액:</span>
-                <span className={eccBalance >= 550 ? 'sufficient' : 'insufficient'}>
+                <span className={eccBalance >= calculateTotalRequired() ? 'sufficient' : 'insufficient'}>
                   {eccBalance.toLocaleString()} ECC
                 </span>
               </div>
@@ -419,14 +460,14 @@ const MemeCoinApplicationPage = () => {
             <button
               type="submit"
               className="submit-button"
-              disabled={loading || eccBalance < 550}
+              disabled={loading || eccBalance < calculateTotalRequired()}
             >
               {loading ? '신청 중...' : '발행 신청하기'}
             </button>
 
-            {eccBalance < 550 && (
+            {eccBalance < calculateTotalRequired() && (
               <p className="error-message">
-                ECC 잔액이 부족합니다. 최소 550 ECC가 필요합니다.
+                ECC 잔액이 부족합니다. 최소 {calculateTotalRequired().toLocaleString()} ECC가 필요합니다.
               </p>
             )}
           </form>

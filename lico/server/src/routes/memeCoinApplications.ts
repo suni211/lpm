@@ -17,6 +17,7 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
       coin_description,
       image_url,
       initial_supply,
+      initial_capital_ecc,
       can_creator_trade,
       is_supply_limited,
       creator_initial_holding_ecc,
@@ -73,9 +74,14 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
       [walletId, eccCoin.id]
     );
 
-    const initialCapitalECC = 500; // 초기 자본 500 ECC (유동성 풀)
-    const listingFeeECC = 50; // 발행 수수료 50 ECC (10%)
-    const totalRequiredECC = initialCapitalECC + listingFeeECC; // 550 ECC
+    // 초기 자본 검증
+    const initialCapitalECC = parseFloat(initial_capital_ecc || '500');
+    if (initialCapitalECC < 500) {
+      return res.status(400).json({ error: '최소 초기 자본은 500 ECC 이상이어야 합니다.' });
+    }
+
+    const listingFeeECC = initialCapitalECC * 0.1; // 발행 수수료 10%
+    const totalRequiredECC = initialCapitalECC + listingFeeECC;
 
     if (balances.length === 0 || parseFloat(balances[0].available_amount) < totalRequiredECC) {
       return res.status(400).json({
