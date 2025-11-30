@@ -488,6 +488,16 @@
   transform: scale(1.2);
 }
 
+.warning-text {
+  color: #ff3b30 !important;
+  font-weight: 600 !important;
+  background: rgba(255, 59, 48, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  margin-top: 8px;
+}
+
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;

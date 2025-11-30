@@ -30,8 +30,9 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(400).json({ error: '필수 정보를 모두 입력해주세요.' });
     }
 
-    if (parseFloat(initial_supply) <= 0) {
-      return res.status(400).json({ error: '초기 발행량은 0보다 커야 합니다.' });
+    const supplyAmount = parseFloat(initial_supply);
+    if (supplyAmount < 4000) {
+      return res.status(400).json({ error: '최소 발행량은 4,000개 이상이어야 합니다.' });
     }
 
     // 심볼 중복 체크
@@ -84,10 +85,19 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
 
     // 제작자 초기 보유량 검증
     const creatorHoldingECC = parseFloat(creator_initial_holding_ecc || '0');
-    if (creatorHoldingECC < 0 || creatorHoldingECC > initialCapitalECC) {
+    if (creatorHoldingECC < 0 || creatorHoldingECC > supplyAmount) {
       return res.status(400).json({
-        error: `제작자 초기 보유량은 0 ~ ${initialCapitalECC} ECC 사이여야 합니다.`,
+        error: `제작자 초기 보유량은 0 ~ ${supplyAmount} ECC 사이여야 합니다.`,
       });
+    }
+
+    // 러그풀 위험 체크 (10% 이상)
+    const pricePerCoin = initialCapitalECC / supplyAmount;
+    const creatorHoldingCoins = creatorHoldingECC / pricePerCoin;
+    const creatorHoldingPercent = (creatorHoldingCoins / supplyAmount) * 100;
+
+    if (creatorHoldingPercent > 10) {
+      console.warn(`⚠️ 러그풀 위험: ${coin_symbol} 제작자 보유율 ${creatorHoldingPercent.toFixed(2)}%`);
     }
 
     // 블랙리스트 주소 검증 (선택사항)

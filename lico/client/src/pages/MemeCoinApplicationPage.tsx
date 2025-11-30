@@ -78,8 +78,19 @@ const MemeCoinApplicationPage = () => {
 
   const calculatePrice = () => {
     if (!initialSupply || parseFloat(initialSupply) === 0) return 0;
-    const totalECC = 4000; // 4000 초기자본
-    return totalECC / parseFloat(initialSupply);
+    const initialCapitalECC = 4000; // 고정 초기 자본
+    return initialCapitalECC / parseFloat(initialSupply);
+  };
+
+  const calculateCreatorHoldingPercent = () => {
+    const holding = parseFloat(creatorInitialHoldingECC || '0');
+    const supply = parseFloat(initialSupply || '0');
+    if (supply === 0) return 0;
+    // 보유율 = (보유 ECC / 가격) / 전체 발행량 * 100
+    const price = calculatePrice();
+    if (price === 0) return 0;
+    const holdingCoins = holding / price;
+    return (holdingCoins / supply) * 100;
   };
 
   const addBlacklistAddress = () => {
@@ -101,15 +112,24 @@ const MemeCoinApplicationPage = () => {
       return;
     }
 
-    if (parseFloat(initialSupply) <= 0) {
-      alert('초기 발행량은 0보다 커야 합니다.');
+    const supply = parseFloat(initialSupply);
+    if (supply < 4000) {
+      alert('최소 발행량은 4,000개 이상이어야 합니다.');
       return;
     }
 
     const creatorHolding = parseFloat(creatorInitialHoldingECC || '0');
-    if (creatorHolding < 0 || creatorHolding > 4000) {
-      alert('제작자 초기 보유량은 0 ~ 4,000 ECC 사이여야 합니다.');
+    if (creatorHolding < 0 || creatorHolding > supply) {
+      alert(`제작자 초기 보유량은 0 ~ ${supply.toLocaleString()} ECC 사이여야 합니다.`);
       return;
+    }
+
+    const holdingPercent = calculateCreatorHoldingPercent();
+    if (holdingPercent > 10) {
+      const confirmed = window.confirm(
+        `⚠️ 러그풀 위험 경고!\n\n제작자 보유율: ${holdingPercent.toFixed(2)}%\n\n10% 이상의 제작자 보유는 러그풀(rug pull) 위험이 있습니다.\n정말 계속 진행하시겠습니까?`
+      );
+      if (!confirmed) return;
     }
 
     if (eccBalance < 4500) {
@@ -202,11 +222,13 @@ const MemeCoinApplicationPage = () => {
           <div className="info-card">
             <h3>📋 발행 조건</h3>
             <ul>
-              <li>초기 자본: <strong>4,000 ECC</strong></li>
+              <li>최소 발행량: <strong>4,000개 이상</strong></li>
+              <li>초기 자본: <strong>4,000 ECC (고정)</strong></li>
               <li>발행 수수료: <strong>500 ECC (12.5%)</strong></li>
               <li>총 필요 금액: <strong>4,500 ECC</strong></li>
               <li>초기 가격: 4,000 ECC / 발행량</li>
-              <li>제작자 초기 보유량: 0 ~ 4,000 ECC 설정 가능</li>
+              <li>제작자 초기 보유량: 0 ~ 발행량 ECC 설정 가능</li>
+              <li style={{ color: '#ff3b30', fontWeight: 600 }}>⚠️ 제작자 보유율 10% 이상 시 러그풀 위험 경고</li>
               <li>관리자 승인 후 거래소 상장</li>
             </ul>
           </div>
@@ -286,16 +308,28 @@ const MemeCoinApplicationPage = () => {
                   type="number"
                   value={creatorInitialHoldingECC}
                   onChange={(e) => setCreatorInitialHoldingECC(e.target.value)}
-                  placeholder="0 ~ 4000 ECC"
+                  placeholder={`0 ~ ${initialSupply || '발행량'} ECC`}
                   step="0.01"
                   min="0"
-                  max="4000"
+                  max={initialSupply || '0'}
                 />
-                <p className="help-text">
-                  {creatorInitialHoldingECC && parseFloat(creatorInitialHoldingECC) > 0
-                    ? `💰 ${(parseFloat(creatorInitialHoldingECC) / calculatePrice()).toFixed(2)} 코인을 보유하게 됩니다.`
-                    : '💡 0 ECC = 코인을 보유하지 않음'}
-                </p>
+                {creatorInitialHoldingECC && parseFloat(creatorInitialHoldingECC) > 0 && initialSupply ? (
+                  <div>
+                    <p className="help-text">
+                      💰 {(parseFloat(creatorInitialHoldingECC) / calculatePrice()).toFixed(2)} 코인 보유
+                      ({calculateCreatorHoldingPercent().toFixed(2)}%)
+                    </p>
+                    {calculateCreatorHoldingPercent() > 10 && (
+                      <p className="help-text warning-text">
+                        ⚠️ 러그풀 위험: 제작자 보유율이 10%를 초과합니다!
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="help-text">
+                    💡 0 ECC = 코인을 보유하지 않음
+                  </p>
+                )}
               </div>
 
               <div className="form-group checkbox-group">
