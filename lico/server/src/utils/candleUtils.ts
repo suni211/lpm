@@ -28,8 +28,8 @@ export async function updateCandleData(
     const now = new Date();
 
     // 1분 단위로 내림 (초/밀리초를 0으로)
-    const openTime = new Date(now);
-    openTime.setUTCSeconds(0, 0);
+    const openTimeMinute = Math.floor(now.getTime() / 60000) * 60000;
+    const openTime = new Date(openTimeMinute);
 
     const closeTime = new Date(openTime);
     closeTime.setUTCMinutes(closeTime.getUTCMinutes() + 1);
@@ -85,8 +85,8 @@ async function updateHourlyCandleData(
     const now = new Date();
 
     // 1시간 단위로 내림 (분/초/밀리초를 0으로)
-    const openTime = new Date(now);
-    openTime.setUTCMinutes(0, 0, 0);
+    const openTimeHour = Math.floor(now.getTime() / 3600000) * 3600000;
+    const openTime = new Date(openTimeHour);
 
     const closeTime = new Date(openTime);
     closeTime.setUTCHours(closeTime.getUTCHours() + 1);
@@ -138,8 +138,8 @@ async function updateDailyCandleData(
     const now = new Date();
 
     // 1일 단위로 내림 (시/분/초/밀리초를 0으로)
-    const openTime = new Date(now);
-    openTime.setUTCHours(0, 0, 0, 0);
+    const openTimeDay = Math.floor(now.getTime() / 86400000) * 86400000;
+    const openTime = new Date(openTimeDay);
 
     const closeTime = new Date(openTime);
     closeTime.setUTCDate(closeTime.getUTCDate() + 1);
