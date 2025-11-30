@@ -17,6 +17,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
   const currencySymbol = baseCurrency?.symbol || 'G';
   const [orderType, setOrderType] = useState<OrderType>('BUY');
   const [inputMode, setInputMode] = useState<'quantity' | 'amount'>('amount'); // 금액 모드 기본
+  const [orderMethod, setOrderMethod] = useState<'LIMIT' | 'MARKET'>('LIMIT'); // 지정가/시장가 선택
   const [price, setPrice] = useState(() => {
     const priceValue = typeof coin.current_price === 'string' ? parseFloat(coin.current_price) : (coin.current_price || 0);
     return isNaN(priceValue) ? '0' : priceValue.toString();
@@ -121,7 +122,11 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
     e.preventDefault();
     setError('');
 
-    const p = parseFloat(price);
+    // 시장가 주문인 경우 가격은 현재가 사용
+    const p = orderMethod === 'MARKET'
+      ? (typeof coin.current_price === 'string' ? parseFloat(coin.current_price) : (coin.current_price || 0))
+      : parseFloat(price);
+
     if (!p || p <= 0) {
       setError('유효하지 않은 가격입니다');
       return;
@@ -206,8 +211,8 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
         wallet_address: walletAddress,
         coin_id: coin.id,
         order_type: orderType,
-        order_method: 'LIMIT',
-        price: p,
+        order_method: orderMethod,
+        price: orderMethod === 'LIMIT' ? p : undefined,
       };
 
       // 금액 모드면 amount 전송, 수량 모드면 quantity 전송
@@ -222,7 +227,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
       setQuantity('');
       setAmount('');
       setError('');
-      
+
       // 코인 잔액 다시 조회
       try {
         const balances = await walletService.getMyBalances(walletAddress);
@@ -231,8 +236,12 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
       } catch (err) {
         console.error('Failed to refresh coin balance:', err);
       }
-      
-      alert('주문이 등록되었습니다!');
+
+      if (orderMethod === 'MARKET') {
+        alert('시장가 주문이 체결되었습니다!');
+      } else {
+        alert('지정가 주문이 등록되었습니다!');
+      }
       onOrderSuccess();
     } catch (err: any) {
       setError(err.response?.data?.error || '주문 실패');
@@ -406,8 +415,26 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* 입력 모드 선택 */}
+        {/* 주문 방식 선택 (지정가/시장가) */}
         <div className="input-mode-selector">
+          <button
+            type="button"
+            className={`mode-button ${orderMethod === 'LIMIT' ? 'active' : ''}`}
+            onClick={() => setOrderMethod('LIMIT')}
+          >
+            지정가
+          </button>
+          <button
+            type="button"
+            className={`mode-button ${orderMethod === 'MARKET' ? 'active' : ''}`}
+            onClick={() => setOrderMethod('MARKET')}
+          >
+            시장가
+          </button>
+        </div>
+
+        {/* 입력 모드 선택 */}
+        <div className="input-mode-selector" style={{ marginTop: '8px' }}>
           <button
             type="button"
             className={`mode-button ${inputMode === 'amount' ? 'active' : ''}`}
@@ -424,17 +451,31 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
           </button>
         </div>
 
-        <div className="form-group">
-          <label>가격 ({currencySymbol})</label>
-          <input
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="가격"
-            step="any"
-            required
-          />
-        </div>
+        {orderMethod === 'LIMIT' && (
+          <div className="form-group">
+            <label>가격 ({currencySymbol})</label>
+            <input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="가격"
+              step="any"
+              required
+            />
+          </div>
+        )}
+
+        {orderMethod === 'MARKET' && (
+          <div className="form-group">
+            <label>시장가 (현재가: {formatNumber(coin.current_price)} {currencySymbol})</label>
+            <input
+              type="text"
+              value={`${formatNumber(coin.current_price)} ${currencySymbol}`}
+              disabled
+              style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
+            />
+          </div>
+        )}
 
         {inputMode === 'amount' ? (
           <div className="form-group">
@@ -582,7 +623,11 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
           className={'submit-button ' + (orderType === 'BUY' ? 'buy-button' : 'sell-button')}
           disabled={loading}
         >
-          {loading ? '처리 중...' : orderType === 'BUY' ? '매수하기' : '매도하기'}
+          {loading ? '처리 중...' : (
+            orderMethod === 'MARKET'
+              ? (orderType === 'BUY' ? '시장가 매수' : '시장가 매도')
+              : (orderType === 'BUY' ? '지정가 매수' : '지정가 매도')
+          )}
         </button>
       </form>
     </div>
