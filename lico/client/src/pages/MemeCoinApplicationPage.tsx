@@ -12,9 +12,11 @@ interface Application {
   can_creator_trade: boolean;
   trading_lock_days: number;
   is_supply_limited: boolean;
+  creator_initial_holding_ecc: number;
+  blacklisted_addresses: string;
   calculated_price: number;
-  initial_capital_cyc: number;
-  listing_fee_cyc: number;
+  initial_capital_ecc: number;
+  listing_fee_ecc: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   admin_comment?: string;
   created_at: string;
@@ -32,13 +34,16 @@ const MemeCoinApplicationPage = () => {
   const [initialSupply, setInitialSupply] = useState('');
   const [canCreatorTrade, setCanCreatorTrade] = useState(true);
   const [isSupplyLimited, setIsSupplyLimited] = useState(true);
+  const [creatorInitialHoldingECC, setCreatorInitialHoldingECC] = useState('0');
+  const [blacklistedAddresses, setBlacklistedAddresses] = useState<string[]>([]);
+  const [blacklistInput, setBlacklistInput] = useState('');
 
   // 내 신청 내역
   const [myApplications, setMyApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // CYC 잔액
-  const [cycBalance, setCycBalance] = useState(0);
+  // ECC 잔액
+  const [eccBalance, setEccBalance] = useState(0);
 
   useEffect(() => {
     fetchCycBalance();
@@ -53,12 +58,12 @@ const MemeCoinApplicationPage = () => {
       const walletAddress = response.data.user.wallet_address;
 
       const balanceRes = await api.get(`/wallets/${walletAddress}/balance`);
-      const cycCoin = balanceRes.data.coins.find((c: any) => c.symbol === 'CYC');
-      if (cycCoin) {
-        setCycBalance(cycCoin.available_amount);
+      const eccCoin = balanceRes.data.coins.find((c: any) => c.symbol === 'ECC');
+      if (eccCoin) {
+        setEccBalance(eccCoin.available_amount);
       }
     } catch (error) {
-      console.error('CYC 잔액 조회 실패:', error);
+      console.error('ECC 잔액 조회 실패:', error);
     }
   };
 
@@ -73,8 +78,19 @@ const MemeCoinApplicationPage = () => {
 
   const calculatePrice = () => {
     if (!initialSupply || parseFloat(initialSupply) === 0) return 0;
-    const totalCYC = 55000; // 50000 초기자본 + 5000 수수료
-    return totalCYC / parseFloat(initialSupply);
+    const totalECC = 4000; // 4000 초기자본
+    return totalECC / parseFloat(initialSupply);
+  };
+
+  const addBlacklistAddress = () => {
+    if (blacklistInput.trim() && !blacklistedAddresses.includes(blacklistInput.trim())) {
+      setBlacklistedAddresses([...blacklistedAddresses, blacklistInput.trim()]);
+      setBlacklistInput('');
+    }
+  };
+
+  const removeBlacklistAddress = (address: string) => {
+    setBlacklistedAddresses(blacklistedAddresses.filter(a => a !== address));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,8 +106,14 @@ const MemeCoinApplicationPage = () => {
       return;
     }
 
-    if (cycBalance < 55000) {
-      alert('밈 코인 발행에는 55,000 CYC가 필요합니다. (초기 자본 50,000 + 수수료 5,000)');
+    const creatorHolding = parseFloat(creatorInitialHoldingECC || '0');
+    if (creatorHolding < 0 || creatorHolding > 4000) {
+      alert('제작자 초기 보유량은 0 ~ 4,000 ECC 사이여야 합니다.');
+      return;
+    }
+
+    if (eccBalance < 4500) {
+      alert('밈 코인 발행에는 4,500 ECC가 필요합니다. (초기 자본 4,000 + 수수료 500)');
       return;
     }
 
@@ -105,6 +127,8 @@ const MemeCoinApplicationPage = () => {
         initial_supply: parseFloat(initialSupply),
         can_creator_trade: canCreatorTrade,
         is_supply_limited: isSupplyLimited,
+        creator_initial_holding_ecc: parseFloat(creatorInitialHoldingECC || '0'),
+        blacklisted_addresses: blacklistedAddresses,
       });
 
       alert(response.data.message);
@@ -117,6 +141,9 @@ const MemeCoinApplicationPage = () => {
       setInitialSupply('');
       setCanCreatorTrade(true);
       setIsSupplyLimited(true);
+      setCreatorInitialHoldingECC('0');
+      setBlacklistedAddresses([]);
+      setBlacklistInput('');
 
       // 내 신청 내역 탭으로 이동
       setActiveTab('myApplications');
@@ -150,7 +177,7 @@ const MemeCoinApplicationPage = () => {
           </button>
           <h1>💎 밈 코인 발행 신청</h1>
           <div className="cyc-balance">
-            보유 CYC: <span>{cycBalance.toLocaleString()}</span>
+            보유 ECC: <span>{eccBalance.toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -175,10 +202,11 @@ const MemeCoinApplicationPage = () => {
           <div className="info-card">
             <h3>📋 발행 조건</h3>
             <ul>
-              <li>초기 자본: <strong>50,000 CYC</strong></li>
-              <li>발행 수수료: <strong>5,000 CYC (10%)</strong></li>
-              <li>총 필요 금액: <strong>55,000 CYC</strong></li>
-              <li>초기 가격: 총 CYC / 발행량</li>
+              <li>초기 자본: <strong>4,000 ECC</strong></li>
+              <li>발행 수수료: <strong>500 ECC (12.5%)</strong></li>
+              <li>총 필요 금액: <strong>4,500 ECC</strong></li>
+              <li>초기 가격: 4,000 ECC / 발행량</li>
+              <li>제작자 초기 보유량: 0 ~ 4,000 ECC 설정 가능</li>
               <li>관리자 승인 후 거래소 상장</li>
             </ul>
           </div>
@@ -247,9 +275,27 @@ const MemeCoinApplicationPage = () => {
                 />
                 {initialSupply && (
                   <p className="calculated-price">
-                    계산된 초기 가격: <strong>{calculatePrice().toFixed(8)} CYC/코인</strong>
+                    계산된 초기 가격: <strong>{calculatePrice().toFixed(8)} ECC/코인</strong>
                   </p>
                 )}
+              </div>
+
+              <div className="form-group">
+                <label>제작자 초기 보유량 (ECC)</label>
+                <input
+                  type="number"
+                  value={creatorInitialHoldingECC}
+                  onChange={(e) => setCreatorInitialHoldingECC(e.target.value)}
+                  placeholder="0 ~ 4000 ECC"
+                  step="0.01"
+                  min="0"
+                  max="4000"
+                />
+                <p className="help-text">
+                  {creatorInitialHoldingECC && parseFloat(creatorInitialHoldingECC) > 0
+                    ? `💰 ${(parseFloat(creatorInitialHoldingECC) / calculatePrice()).toFixed(2)} 코인을 보유하게 됩니다.`
+                    : '💡 0 ECC = 코인을 보유하지 않음'}
+                </p>
               </div>
 
               <div className="form-group checkbox-group">
@@ -283,26 +329,55 @@ const MemeCoinApplicationPage = () => {
                     : '⚠️ 언제든지 추가 발행 가능 (가격 하락 위험)'}
                 </p>
               </div>
+
+              <div className="form-group">
+                <label>블랙리스트 지갑 주소 (선택)</label>
+                <div className="blacklist-input-group">
+                  <input
+                    type="text"
+                    value={blacklistInput}
+                    onChange={(e) => setBlacklistInput(e.target.value)}
+                    placeholder="거래 차단할 지갑 주소 입력"
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addBlacklistAddress())}
+                  />
+                  <button type="button" onClick={addBlacklistAddress} className="add-button">
+                    추가
+                  </button>
+                </div>
+                {blacklistedAddresses.length > 0 && (
+                  <div className="blacklist-tags">
+                    {blacklistedAddresses.map((addr) => (
+                      <span key={addr} className="blacklist-tag">
+                        {addr}
+                        <button type="button" onClick={() => removeBlacklistAddress(addr)}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <p className="help-text">
+                  🚫 블랙리스트에 추가된 지갑은 이 코인을 거래할 수 없습니다.
+                </p>
+              </div>
             </div>
 
             <div className="form-summary">
               <h3>요약</h3>
               <div className="summary-row">
                 <span>초기 자본:</span>
-                <span>50,000 CYC</span>
+                <span>4,000 ECC</span>
               </div>
               <div className="summary-row">
-                <span>발행 수수료 (10%):</span>
-                <span>5,000 CYC</span>
+                <span>발행 수수료 (12.5%):</span>
+                <span>500 ECC</span>
               </div>
               <div className="summary-row total">
                 <span>총 필요 금액:</span>
-                <span>55,000 CYC</span>
+                <span>4,500 ECC</span>
               </div>
               <div className="summary-row">
                 <span>현재 잔액:</span>
-                <span className={cycBalance >= 55000 ? 'sufficient' : 'insufficient'}>
-                  {cycBalance.toLocaleString()} CYC
+                <span className={eccBalance >= 4500 ? 'sufficient' : 'insufficient'}>
+                  {eccBalance.toLocaleString()} ECC
                 </span>
               </div>
             </div>
@@ -310,14 +385,14 @@ const MemeCoinApplicationPage = () => {
             <button
               type="submit"
               className="submit-button"
-              disabled={loading || cycBalance < 55000}
+              disabled={loading || eccBalance < 4500}
             >
               {loading ? '신청 중...' : '발행 신청하기'}
             </button>
 
-            {cycBalance < 55000 && (
+            {eccBalance < 4500 && (
               <p className="error-message">
-                CYC 잔액이 부족합니다. 최소 55,000 CYC가 필요합니다.
+                ECC 잔액이 부족합니다. 최소 4,500 ECC가 필요합니다.
               </p>
             )}
           </form>

@@ -427,6 +427,67 @@
   line-height: 1.5;
 }
 
+.blacklist-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.blacklist-input-group input {
+  flex: 1;
+}
+
+.blacklist-input-group .add-button {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.blacklist-input-group .add-button:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+
+.blacklist-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.blacklist-tag {
+  background: rgba(255, 59, 48, 0.15);
+  color: #ff3b30;
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blacklist-tag button {
+  background: none;
+  border: none;
+  color: #ff3b30;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.blacklist-tag button:hover {
+  transform: scale(1.2);
+}
+
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;
@@ -440,5 +501,13 @@
 
   .applications-list {
     grid-template-columns: 1fr;
+  }
+
+  .blacklist-input-group {
+    flex-direction: column;
+  }
+
+  .blacklist-input-group .add-button {
+    width: 100%;
   }
 }

@@ -19,6 +19,8 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
       initial_supply,
       can_creator_trade,
       is_supply_limited,
+      creator_initial_holding_ecc,
+      blacklisted_addresses,
     } = req.body;
 
     const walletAddress = (req as any).user.wallet_address;
@@ -54,36 +56,50 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
     }
     const walletId = wallets[0].id;
 
-    // CYC 코인 정보 가져오기
-    const cycCoins = await query('SELECT id, current_price FROM coins WHERE symbol = "CYC"', []);
-    if (cycCoins.length === 0) {
-      return res.status(500).json({ error: 'CYC 코인을 찾을 수 없습니다.' });
+    // ECC 코인 정보 가져오기
+    const eccCoins = await query('SELECT id, current_price FROM coins WHERE symbol = "ECC"', []);
+    if (eccCoins.length === 0) {
+      return res.status(500).json({ error: 'ECC 코인을 찾을 수 없습니다.' });
     }
-    const cycCoin = cycCoins[0];
-    const cycPriceInGold = typeof cycCoin.current_price === 'string'
-      ? parseFloat(cycCoin.current_price)
-      : cycCoin.current_price;
+    const eccCoin = eccCoins[0];
+    const eccPriceInGold = typeof eccCoin.current_price === 'string'
+      ? parseFloat(eccCoin.current_price)
+      : eccCoin.current_price;
 
-    // 사용자의 CYC 잔액 확인
+    // 사용자의 ECC 잔액 확인
     const balances = await query(
       'SELECT available_amount FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
-      [walletId, cycCoin.id]
+      [walletId, eccCoin.id]
     );
 
-    const initialCapitalCYC = 50000; // 초기 자본 50,000 CYC
-    const listingFeeCYC = initialCapitalCYC * 0.1; // 10% 수수료 (5,000 CYC)
-    const totalRequiredCYC = initialCapitalCYC + listingFeeCYC; // 55,000 CYC
+    const initialCapitalECC = 4000; // 초기 자본 4,000 ECC
+    const listingFeeECC = 500; // 발행 수수료 500 ECC (12.5%)
+    const totalRequiredECC = initialCapitalECC + listingFeeECC; // 4,500 ECC
 
-    if (balances.length === 0 || parseFloat(balances[0].available_amount) < totalRequiredCYC) {
+    if (balances.length === 0 || parseFloat(balances[0].available_amount) < totalRequiredECC) {
       return res.status(400).json({
-        error: `밈 코인 발행에는 ${totalRequiredCYC.toLocaleString()} CYC가 필요합니다. (초기 자본 ${initialCapitalCYC.toLocaleString()} + 수수료 ${listingFeeCYC.toLocaleString()})`,
+        error: `밈 코인 발행에는 ${totalRequiredECC.toLocaleString()} ECC가 필요합니다. (초기 자본 ${initialCapitalECC.toLocaleString()} + 수수료 ${listingFeeECC.toLocaleString()})`,
       });
     }
 
+    // 제작자 초기 보유량 검증
+    const creatorHoldingECC = parseFloat(creator_initial_holding_ecc || '0');
+    if (creatorHoldingECC < 0 || creatorHoldingECC > initialCapitalECC) {
+      return res.status(400).json({
+        error: `제작자 초기 보유량은 0 ~ ${initialCapitalECC} ECC 사이여야 합니다.`,
+      });
+    }
+
+    // 블랙리스트 주소 검증 (선택사항)
+    let blacklistStr = '';
+    if (blacklisted_addresses && Array.isArray(blacklisted_addresses) && blacklisted_addresses.length > 0) {
+      blacklistStr = blacklisted_addresses.join(',');
+    }
+
     // 초기 가격 계산
-    // 55,000 CYC를 initial_supply로 나눔
-    // 예: 10,000개 발행 시 → 5.5 CYC/코인
-    const calculatedPriceCYC = totalRequiredCYC / parseFloat(initial_supply);
+    // 4,000 ECC를 initial_supply로 나눔
+    // 예: 10,000개 발행 시 → 0.4 ECC/코인
+    const calculatedPriceECC = initialCapitalECC / parseFloat(initial_supply);
 
     // 거래 잠금 일수 설정
     const tradingLockDays = can_creator_trade ? 0 : 7;
@@ -94,8 +110,9 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
       `INSERT INTO meme_coin_applications (
         id, applicant_wallet_id, coin_name, coin_symbol, coin_description, image_url,
         initial_supply, can_creator_trade, trading_lock_days, is_supply_limited,
-        initial_capital_cyc, listing_fee_cyc, calculated_price, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
+        creator_initial_holding_ecc, blacklisted_addresses,
+        initial_capital_ecc, listing_fee_ecc, calculated_price, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
       [
         applicationId,
         walletId,
@@ -107,18 +124,20 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
         can_creator_trade,
         tradingLockDays,
         is_supply_limited,
-        initialCapitalCYC,
-        listingFeeCYC,
-        calculatedPriceCYC,
+        creatorHoldingECC,
+        blacklistStr || null,
+        initialCapitalECC,
+        listingFeeECC,
+        calculatedPriceECC,
       ]
     );
 
-    // CYC 잔액 잠금 (신청서 승인 전까지)
+    // ECC 잔액 잠금 (신청서 승인 전까지)
     await query(
       `UPDATE user_coin_balances
        SET available_amount = available_amount - ?, locked_amount = locked_amount + ?
        WHERE wallet_id = ? AND coin_id = ?`,
-      [totalRequiredCYC, totalRequiredCYC, walletId, cycCoin.id]
+      [totalRequiredECC, totalRequiredECC, walletId, eccCoin.id]
     );
 
     res.json({
@@ -128,9 +147,10 @@ router.post('/', isAuthenticated, async (req: Request, res: Response) => {
         coin_name,
         coin_symbol,
         initial_supply,
-        calculated_price_cyc: calculatedPriceCYC,
-        calculated_price_gold: calculatedPriceCYC * cycPriceInGold,
-        total_required_cyc: totalRequiredCYC,
+        calculated_price_ecc: calculatedPriceECC,
+        calculated_price_gold: calculatedPriceECC * eccPriceInGold,
+        total_required_ecc: totalRequiredECC,
+        creator_initial_holding_ecc: creatorHoldingECC,
         status: 'PENDING',
       },
     });
@@ -230,18 +250,18 @@ router.post('/:id/approve', isAuthenticated, isAdmin, async (req: Request, res: 
       return res.status(400).json({ error: '이미 처리된 신청서입니다.' });
     }
 
-    // CYC 코인 정보
-    const cycCoins = await query('SELECT id, current_price FROM coins WHERE symbol = "CYC"', []);
-    if (cycCoins.length === 0) {
-      return res.status(500).json({ error: 'CYC 코인을 찾을 수 없습니다.' });
+    // ECC 코인 정보
+    const eccCoins = await query('SELECT id, current_price FROM coins WHERE symbol = "ECC"', []);
+    if (eccCoins.length === 0) {
+      return res.status(500).json({ error: 'ECC 코인을 찾을 수 없습니다.' });
     }
-    const cycCoin = cycCoins[0];
+    const eccCoin = eccCoins[0];
 
     // 초기 가격 (골드 기준)
-    const cycPriceInGold = typeof cycCoin.current_price === 'string'
-      ? parseFloat(cycCoin.current_price)
-      : cycCoin.current_price;
-    const initialPriceGold = parseFloat(application.calculated_price) * cycPriceInGold;
+    const eccPriceInGold = typeof eccCoin.current_price === 'string'
+      ? parseFloat(eccCoin.current_price)
+      : eccCoin.current_price;
+    const initialPriceGold = parseFloat(application.calculated_price) * eccPriceInGold;
 
     // 1. 새 코인 생성
     const newCoinId = uuidv4();
@@ -249,8 +269,8 @@ router.post('/:id/approve', isAuthenticated, isAdmin, async (req: Request, res: 
       `INSERT INTO coins (
         id, name, symbol, description, image_url, current_price, coin_type,
         total_supply, circulating_supply, base_currency_id,
-        creator_wallet_id, is_supply_limited, creator_can_trade, status
-      ) VALUES (?, ?, ?, ?, ?, ?, 'MEME', ?, ?, ?, ?, ?, ?, 'ACTIVE')`,
+        creator_wallet_id, is_supply_limited, creator_can_trade, blacklisted_addresses, status
+      ) VALUES (?, ?, ?, ?, ?, ?, 'MEME', ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')`,
       [
         newCoinId,
         application.coin_name,
@@ -260,14 +280,20 @@ router.post('/:id/approve', isAuthenticated, isAdmin, async (req: Request, res: 
         initialPriceGold, // 골드 기준 초기 가격
         application.initial_supply,
         application.initial_supply,
-        cycCoin.id, // base_currency_id는 CYC
+        eccCoin.id, // base_currency_id는 ECC
         application.applicant_wallet_id,
         application.is_supply_limited,
         application.can_creator_trade,
+        application.blacklisted_addresses || null,
       ]
     );
 
-    // 2. 생성자에게 초기 발행량 지급
+    // 2. 제작자 초기 보유량 계산 및 지급
+    const creatorHoldingECC = parseFloat(application.creator_initial_holding_ecc || '0');
+    const pricePerCoin = parseFloat(application.calculated_price);
+    const creatorCoinAmount = creatorHoldingECC > 0 ? creatorHoldingECC / pricePerCoin : 0;
+
+    // 제작자에게 초기 발행량 지급
     await query(
       `INSERT INTO user_coin_balances (id, wallet_id, coin_id, available_amount, locked_amount)
        VALUES (?, ?, ?, ?, 0)
@@ -276,18 +302,18 @@ router.post('/:id/approve', isAuthenticated, isAdmin, async (req: Request, res: 
         uuidv4(),
         application.applicant_wallet_id,
         newCoinId,
-        application.initial_supply,
-        application.initial_supply,
+        creatorCoinAmount,
+        creatorCoinAmount,
       ]
     );
 
-    // 3. CYC 잠금 해제 및 차감
-    const totalCYC = parseFloat(application.initial_capital_cyc) + parseFloat(application.listing_fee_cyc);
+    // 3. ECC 잠금 해제 및 차감
+    const totalECC = parseFloat(application.initial_capital_ecc) + parseFloat(application.listing_fee_ecc);
     await query(
       `UPDATE user_coin_balances
        SET locked_amount = locked_amount - ?
        WHERE wallet_id = ? AND coin_id = ?`,
-      [totalCYC, application.applicant_wallet_id, cycCoin.id]
+      [totalECC, application.applicant_wallet_id, eccCoin.id]
     );
 
     // 4. 수수료 차감 (실제로는 소각하거나 거래소 지갑으로)
@@ -296,7 +322,7 @@ router.post('/:id/approve', isAuthenticated, isAdmin, async (req: Request, res: 
       `UPDATE user_coin_balances
        SET available_amount = available_amount - ?
        WHERE wallet_id = ? AND coin_id = ?`,
-      [parseFloat(application.listing_fee_cyc), application.applicant_wallet_id, cycCoin.id]
+      [parseFloat(application.listing_fee_ecc), application.applicant_wallet_id, eccCoin.id]
     );
 
     // 5. 신청서 상태 업데이트
@@ -351,20 +377,20 @@ router.post('/:id/reject', isAuthenticated, isAdmin, async (req: Request, res: R
       return res.status(400).json({ error: '이미 처리된 신청서입니다.' });
     }
 
-    // CYC 코인 정보
-    const cycCoins = await query('SELECT id FROM coins WHERE symbol = "CYC"', []);
-    if (cycCoins.length === 0) {
-      return res.status(500).json({ error: 'CYC 코인을 찾을 수 없습니다.' });
+    // ECC 코인 정보
+    const eccCoins = await query('SELECT id FROM coins WHERE symbol = "ECC"', []);
+    if (eccCoins.length === 0) {
+      return res.status(500).json({ error: 'ECC 코인을 찾을 수 없습니다.' });
     }
-    const cycCoin = cycCoins[0];
+    const eccCoin = eccCoins[0];
 
-    // CYC 잠금 해제 (환불)
-    const totalCYC = parseFloat(application.initial_capital_cyc) + parseFloat(application.listing_fee_cyc);
+    // ECC 잠금 해제 (환불)
+    const totalECC = parseFloat(application.initial_capital_ecc) + parseFloat(application.listing_fee_ecc);
     await query(
       `UPDATE user_coin_balances
        SET locked_amount = locked_amount - ?, available_amount = available_amount + ?
        WHERE wallet_id = ? AND coin_id = ?`,
-      [totalCYC, totalCYC, application.applicant_wallet_id, cycCoin.id]
+      [totalECC, totalECC, application.applicant_wallet_id, eccCoin.id]
     );
 
     // 신청서 상태 업데이트

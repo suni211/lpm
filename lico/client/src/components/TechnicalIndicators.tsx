@@ -43,7 +43,7 @@ const TechnicalIndicators: React.FC<TechnicalIndicatorsProps> = ({
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://localhost:5002/api/indicators/indicators/${coinId}`,
+        `http://localhost:5002/api/indicators/${coinId}`,
         {
           params: { interval, limit: 100 },
           withCredentials: true,

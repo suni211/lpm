@@ -14,11 +14,13 @@ CREATE TABLE IF NOT EXISTS meme_coin_applications (
   can_creator_trade BOOLEAN NOT NULL, -- 생성자가 바로 거래 가능한가?
   trading_lock_days INT DEFAULT 0, -- 거래 잠금 일수 (아니요 선택 시 7일)
   is_supply_limited BOOLEAN NOT NULL, -- 발행 제한 여부
+  creator_initial_holding_ecc DECIMAL(20, 8) NOT NULL DEFAULT 0, -- 제작자 초기 보유량 구매에 사용할 ECC (최대 4000)
+  blacklisted_addresses TEXT, -- 블랙리스트 지갑 주소 (쉼표로 구분)
 
-  -- 가격 계산 (CYC 기준)
-  initial_capital_cyc DECIMAL(20, 8) NOT NULL DEFAULT 50000.00, -- 초기 자본 (CYC)
-  listing_fee_cyc DECIMAL(20, 8) NOT NULL, -- 발행 수수료 10% (5000 CYC)
-  calculated_price DECIMAL(20, 8) NOT NULL, -- 계산된 초기 가격 (CYC 기준)
+  -- 가격 계산 (ECC 기준)
+  initial_capital_ecc DECIMAL(20, 8) NOT NULL DEFAULT 4000.00, -- 초기 자본 (ECC)
+  listing_fee_ecc DECIMAL(20, 8) NOT NULL, -- 발행 수수료 12.5% (500 ECC)
+  calculated_price DECIMAL(20, 8) NOT NULL, -- 계산된 초기 가격 (ECC 기준)
 
   -- 신청 상태
   status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
