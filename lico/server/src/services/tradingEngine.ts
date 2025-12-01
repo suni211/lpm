@@ -651,10 +651,14 @@ export class TradingEngine {
     const coin = coins[0];
 
     // 거래 기록 생성 (buy_order_id, sell_order_id는 NULL 허용)
+    // sellOrderId가 'MARKET_SELL' 같은 특수 값이면 NULL로 처리
+    const validSellOrderId = (sellOrderId && sellOrderId !== 'MARKET_SELL') ? sellOrderId : null;
+    const validBuyOrderId = buyOrderId || null;
+
     await query(
       `INSERT INTO trades (id, coin_id, buy_order_id, sell_order_id, buyer_wallet_id, seller_wallet_id, price, quantity, buy_fee, sell_fee)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [tradeId, coinId, buyOrderId || null, sellOrderId || null, buyerWalletId, sellerWalletId, price, quantity, buyFee, sellFee]
+      [tradeId, coinId, validBuyOrderId, validSellOrderId, buyerWalletId, sellerWalletId, price, quantity, buyFee, sellFee]
     );
 
     // base_currency가 있는 경우: 해당 코인으로 거래
