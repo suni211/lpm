@@ -1,0 +1,133 @@
+.no-wallet-page {
+  min-height: 100vh;
+  background: #0f1117;
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.no-wallet-container {
+  max-width: 700px;
+  width: 100%;
+}
+
+.info-card {
+  background: #1a1d29;
+  border-radius: 16px;
+  padding: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-card h1 {
+  color: #fff;
+  font-size: 28px;
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+.description {
+  color: #9ca3af;
+  font-size: 16px;
+  line-height: 1.6;
+  text-align: center;
+  margin: 0 0 32px 0;
+}
+
+.description strong {
+  color: #3b82f6;
+}
+
+.steps-section {
+  margin-bottom: 32px;
+}
+
+.steps-section h2 {
+  color: #fff;
+  font-size: 20px;
+  margin: 0 0 20px 0;
+}
+
+.steps-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: step-counter;
+}
+
+.steps-list li {
+  counter-increment: step-counter;
+  margin-bottom: 24px;
+  padding-left: 50px;
+  position: relative;
+}
+
+.steps-list li::before {
+  content: counter(step-counter);
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: #3b82f6;
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.steps-list li strong {
+  color: #fff;
+  font-size: 16px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.steps-list li p {
+  color: #9ca3af;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.steps-list li a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.steps-list li a:hover {
+  text-decoration: underline;
+}
+
+.action-section {
+  text-align: center;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.questionnaire-button {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-bottom: 16px;
+}
+
+.questionnaire-button:hover {
+  background: #2563eb;
+}
+
+.help-text {
+  color: #9ca3af;
+  font-size: 14px;
+  margin: 0;
+}
+

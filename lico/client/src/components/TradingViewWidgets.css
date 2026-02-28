@@ -1,0 +1,28 @@
+.tradingview-widget-container {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.tradingview-widget-container__widget {
+  width: 100%;
+}
+
+.ticker-tape {
+  background: #1a1d29;
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.market-data {
+  background: #1a1d29;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.advanced-chart {
+  background: #1a1d29;
+  border-radius: 8px;
+  padding: 8px;
+}
+

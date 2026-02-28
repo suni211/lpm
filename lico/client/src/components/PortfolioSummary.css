@@ -1,0 +1,155 @@
+.portfolio-summary {
+  background: #1a1d29;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 300px;
+}
+
+.portfolio-header {
+  margin-bottom: 8px;
+}
+
+.portfolio-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.portfolio-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: #2a2e3e;
+  border-radius: 6px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.stat-value.positive {
+  color: #22c55e;
+}
+
+.stat-value.negative {
+  color: #ef4444;
+}
+
+.portfolio-holdings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.holdings-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.holdings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.holding-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #2a2e3e;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.holding-item:hover {
+  background: #3a3e4e;
+}
+
+.holding-coin {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coin-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.coin-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.coin-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.coin-amount {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.holding-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.value-amount {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.value-pl {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.value-pl.positive {
+  color: #22c55e;
+}
+
+.value-pl.negative {
+  color: #ef4444;
+}
+
+.widget-loading,
+.no-holdings {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+

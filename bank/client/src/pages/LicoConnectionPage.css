@@ -1,0 +1,183 @@
+.lico-connection-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px;
+  background: #1a1d29;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.5s ease-out;
+  color: #fff;
+}
+
+.lico-connection-container h1 {
+  margin-bottom: 32px;
+  color: #fff;
+  font-size: 28px;
+}
+
+.connection-setup {
+  text-align: center;
+  padding: 40px;
+}
+
+.connection-setup h2 {
+  margin-bottom: 16px;
+  color: #fff;
+}
+
+.connection-setup p {
+  color: #9ca3af;
+  margin-bottom: 32px;
+}
+
+.connect-button {
+  padding: 16px 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  animation: scaleIn 0.4s ease-out;
+}
+
+.connect-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.connect-button:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.connect-button:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+}
+
+.connect-button:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+.connection-form {
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.connection-info {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.info-card {
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+  border-radius: 12px;
+  border: 2px solid #667eea;
+  transition: all 0.3s ease;
+  animation: scaleIn 0.4s ease-out;
+  color: #fff;
+}
+
+.info-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(102, 126, 234, 0.2);
+}
+
+.info-card h3 {
+  margin: 0 0 16px 0;
+  color: #fff;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.wallet-address {
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.transfer-section {
+  padding: 24px;
+  background: #2a2e3e;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.transfer-section h3 {
+  margin: 0 0 16px 0;
+  color: #fff;
+}
+
+.transfer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lico-button {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.lico-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.lico-button:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.lico-button:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+}
+
+.lico-button:active {
+  transform: translateY(-1px) scale(0.98);
+}
+

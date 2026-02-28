@@ -1,0 +1,208 @@
+.admin-page-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
+  padding: 40px;
+  color: #fff;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.admin-page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.back-button {
+  padding: 10px 20px;
+  background: #2a2e3e;
+  border: 1px solid #3a3e4e;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-button:hover {
+  background: #3a3e4e;
+  border-color: #667eea;
+}
+
+.admin-page-header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #fff;
+}
+
+.filters-section {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #1a1d29;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.filter-group select {
+  padding: 8px 16px;
+  background: #2a2e3e;
+  border: 1px solid #3a3e4e;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.trades-table-section {
+  background: #1a1d29;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.table-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.table-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+}
+
+.trades-table {
+  overflow-x: auto;
+}
+
+.trades-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.trades-table thead {
+  background: #2a2e3e;
+}
+
+.trades-table th {
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #e5e7eb;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.trades-table td {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #d1d5db;
+  font-size: 14px;
+}
+
+.trades-table tbody tr:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.coin-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coin-symbol {
+  font-weight: 600;
+  color: #fff;
+}
+
+.coin-name {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.price {
+  font-weight: 600;
+  color: #86efac;
+}
+
+.total {
+  font-weight: 600;
+  color: #60a5fa;
+}
+
+.fee {
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.5;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+  font-size: 18px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.page-button {
+  padding: 8px 16px;
+  background: #2a2e3e;
+  border: 1px solid #3a3e4e;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.page-button:hover:not(:disabled) {
+  background: #3a3e4e;
+  border-color: #667eea;
+}
+
+.page-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  color: #e5e7eb;
+  font-weight: 600;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  color: #9ca3af;
+  font-size: 18px;
+}
+

@@ -1,0 +1,252 @@
+.order-form {
+  background: #1a1d29;
+  border-radius: 8px;
+  padding: 6px;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.order-type-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.order-type-tabs .tab-button {
+  flex: 1;
+}
+
+.tab-button {
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #2a2e3e;
+  color: #9ca3af;
+}
+
+.buy-tab.active {
+  background: #22c55e;
+  color: #fff;
+}
+
+.sell-tab.active {
+  background: #ef4444;
+  color: #fff;
+}
+
+.form-group {
+  margin-bottom: 6px;
+}
+
+.form-group label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.max-button {
+  padding: 4px 8px;
+  background: #3b82f6;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.max-button:hover {
+  background: #2563eb;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 8px;
+  background: #2a2e3e;
+  border: 1px solid #3a3e4e;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  border-color: #3b82f6;
+}
+
+.order-summary {
+  background: #2a2e3e;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 6px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.summary-row span:first-child {
+  color: #9ca3af;
+}
+
+.summary-row span:last-child {
+  color: #fff;
+  font-weight: 500;
+}
+
+.fee-row {
+  color: #f59e0b;
+}
+
+.total-row {
+  border-top: 1px solid #3a3e4e;
+  margin-top: 4px;
+  padding-top: 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.total-row span:last-child {
+  color: #3b82f6;
+  font-size: 14px;
+}
+
+.balance-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  background: #2a2e3e;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.balance-info > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.balance-info span:first-child {
+  color: #9ca3af;
+}
+
+.balance-amount {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.error-message {
+  padding: 6px 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.buy-button {
+  background: #22c55e;
+  color: #fff;
+}
+
+.buy-button:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.sell-button {
+  background: #ef4444;
+  color: #fff;
+}
+
+.sell-button:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.submit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.input-mode-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.mode-button {
+  padding: 5px;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #2a2e3e;
+  color: #9ca3af;
+}
+
+.mode-button.active {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.mode-button:hover {
+  background: #3a3e4e;
+}
+
+.mode-button.active:hover {
+  background: #2563eb;
+}
+
+.calculated-info {
+  margin-top: 3px;
+  font-size: 10px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.order-form form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.order-form form > *:not(.submit-button) {
+  flex-shrink: 0;
+}
