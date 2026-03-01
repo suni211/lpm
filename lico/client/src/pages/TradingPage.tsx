@@ -951,10 +951,6 @@ const TradingPage = () => {
     return sign + numChange.toFixed(2) + '%';
   };
 
-  const currentPrice = typeof selectedStock.current_price === 'string'
-    ? parseFloat(selectedStock.current_price)
-    : (selectedStock.current_price || 0);
-
   return (
     <div className="trading-page">
       <TopRankingsTicker />
@@ -1044,7 +1040,7 @@ const TradingPage = () => {
 
           <div className="trading-panel">
             <div className="orderbook-section">
-              <Orderbook coinId={selectedStock.id} />
+              <Orderbook stockId={selectedStock.id} />
             </div>
             <div className="coin-sidebar-section">
               <StockSidebar selectedStockId={selectedStock.id} />
@@ -1054,7 +1050,7 @@ const TradingPage = () => {
 
         <div className="sidebar-content">
           <OrderForm
-            coin={selectedStock}
+            stock={selectedStock}
             walletAddress={walletAddress}
             goldBalance={goldBalance}
             onOrderSuccess={handleOrderSuccess}
