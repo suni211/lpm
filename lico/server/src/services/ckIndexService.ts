@@ -1,19 +1,5 @@
-import { RowDataPacket } from 'mysql2/promise';
-import pool from '../database/connection';
+import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
-
-interface Stock extends RowDataPacket {
-  id: string;
-  symbol: string;
-  current_price: number;
-  circulating_supply: number;
-  market_cap: number;
-}
-
-interface CKIndex extends RowDataPacket {
-  index_value: number;
-  timestamp: Date;
-}
 
 /**
  * CK 지수 계산 서비스
@@ -32,44 +18,38 @@ class CKIndexService {
    * CK 지수 계산
    */
   async calculateCKIndex(): Promise<number> {
-    const conn = await pool.getConnection();
-    try {
-      // 모든 활성 주식 조회
-      const [stocks] = await conn.query<Stock[]>(
-        `SELECT id, symbol, current_price, circulating_supply, market_cap
-         FROM stocks
-         WHERE status = 'ACTIVE'`
-      );
+    // 모든 활성 주식 조회
+    const stocks = await query(
+      `SELECT id, symbol, current_price, circulating_supply, market_cap
+       FROM stocks
+       WHERE status = 'ACTIVE'`
+    );
 
-      if (stocks.length === 0) {
-        return this.BASE_INDEX;
-      }
-
-      // 총 시가총액 계산
-      const totalMarketCap = stocks.reduce((sum, stock) => sum + Number(stock.market_cap), 0);
-
-      if (totalMarketCap === 0) {
-        return this.BASE_INDEX;
-      }
-
-      // 최초 기준 시가총액 조회 (또는 설정)
-      const baseMarketCap = await this.getOrSetBaseMarketCap(conn, totalMarketCap);
-
-      // CK 지수 = (현재 총 시가총액 / 기준 총 시가총액) × 1000
-      const ckIndex = (totalMarketCap / baseMarketCap) * this.BASE_INDEX;
-
-      return Math.round(ckIndex * 100) / 100; // 소수점 2자리
-
-    } finally {
-      conn.release();
+    if (stocks.length === 0) {
+      return this.BASE_INDEX;
     }
+
+    // 총 시가총액 계산
+    const totalMarketCap = stocks.reduce((sum: number, stock: any) => sum + Number(stock.market_cap), 0);
+
+    if (totalMarketCap === 0) {
+      return this.BASE_INDEX;
+    }
+
+    // 최초 기준 시가총액 조회 (또는 설정)
+    const baseMarketCap = await this.getOrSetBaseMarketCap(totalMarketCap);
+
+    // CK 지수 = (현재 총 시가총액 / 기준 총 시가총액) × 1000
+    const ckIndex = (totalMarketCap / baseMarketCap) * this.BASE_INDEX;
+
+    return Math.round(ckIndex * 100) / 100; // 소수점 2자리
   }
 
   /**
    * 기준 시가총액 조회 또는 설정
    */
-  private async getOrSetBaseMarketCap(conn: any, currentMarketCap: number): Promise<number> {
-    const [rows] = await conn.query<RowDataPacket[]>(
+  private async getOrSetBaseMarketCap(currentMarketCap: number): Promise<number> {
+    const rows = await query(
       `SELECT config_value FROM system_config WHERE config_key = 'ck_base_market_cap'`
     );
 
@@ -78,7 +58,7 @@ class CKIndexService {
     }
 
     // 최초 설정: 현재 시가총액을 기준으로
-    await conn.query(
+    await query(
       `INSERT INTO system_config (config_key, config_value) VALUES ('ck_base_market_cap', ?)
        ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)`,
       [currentMarketCap.toString()]
@@ -91,53 +71,41 @@ class CKIndexService {
    * CK 지수 저장
    */
   async saveCKIndex(indexValue: number): Promise<void> {
-    const conn = await pool.getConnection();
-    try {
-      // 이전 지수 조회
-      const [prevRows] = await conn.query<CKIndex[]>(
-        `SELECT index_value FROM ck_index ORDER BY timestamp DESC LIMIT 1`
-      );
+    // 이전 지수 조회
+    const prevRows = await query(
+      `SELECT index_value FROM ck_index ORDER BY timestamp DESC LIMIT 1`
+    );
 
-      const prevIndex = prevRows.length > 0 ? prevRows[0].index_value : this.BASE_INDEX;
+    const prevIndex = prevRows.length > 0 ? prevRows[0].index_value : this.BASE_INDEX;
 
-      // 변동률 계산
-      const changePercent = ((indexValue - prevIndex) / prevIndex) * 100;
+    // 변동률 계산
+    const changePercent = ((indexValue - prevIndex) / prevIndex) * 100;
 
-      // 새 지수 저장
-      await conn.query(
-        `INSERT INTO ck_index (id, index_value, change_percent) VALUES (?, ?, ?)`,
-        [uuidv4(), indexValue, changePercent]
-      );
+    // 새 지수 저장
+    await query(
+      `INSERT INTO ck_index (id, index_value, change_percent) VALUES (?, ?, ?)`,
+      [uuidv4(), indexValue, changePercent]
+    );
 
-      console.log(`[CK Index] ${indexValue.toFixed(2)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`);
-
-    } finally {
-      conn.release();
-    }
+    console.log(`[CK Index] ${indexValue.toFixed(2)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`);
   }
 
   /**
    * 최신 CK 지수 조회
    */
   async getLatestCKIndex(): Promise<{ value: number; change: number }> {
-    const conn = await pool.getConnection();
-    try {
-      const [rows] = await conn.query<CKIndex[]>(
-        `SELECT index_value, change_percent FROM ck_index ORDER BY timestamp DESC LIMIT 1`
-      );
+    const rows = await query(
+      `SELECT index_value, change_percent FROM ck_index ORDER BY timestamp DESC LIMIT 1`
+    );
 
-      if (rows.length === 0) {
-        return { value: this.BASE_INDEX, change: 0 };
-      }
-
-      return {
-        value: rows[0].index_value,
-        change: rows[0].change_percent
-      };
-
-    } finally {
-      conn.release();
+    if (rows.length === 0) {
+      return { value: this.BASE_INDEX, change: 0 };
     }
+
+    return {
+      value: rows[0].index_value,
+      change: rows[0].change_percent
+    };
   }
 
   /**
@@ -187,25 +155,19 @@ class CKIndexService {
    * CK 지수 히스토리 조회 (차트용)
    */
   async getCKIndexHistory(hours: number = 24): Promise<any[]> {
-    const conn = await pool.getConnection();
-    try {
-      const [rows] = await conn.query<CKIndex[]>(
-        `SELECT index_value, change_percent, timestamp
-         FROM ck_index
-         WHERE timestamp >= DATE_SUB(NOW(), INTERVAL ? HOUR)
-         ORDER BY timestamp ASC`,
-        [hours]
-      );
+    const rows = await query(
+      `SELECT index_value, change_percent, timestamp
+       FROM ck_index
+       WHERE timestamp >= DATE_SUB(NOW(), INTERVAL ? HOUR)
+       ORDER BY timestamp ASC`,
+      [hours]
+    );
 
-      return rows.map(row => ({
-        value: row.index_value,
-        change: row.change_percent,
-        time: row.timestamp
-      }));
-
-    } finally {
-      conn.release();
-    }
+    return rows.map((row: any) => ({
+      value: row.index_value,
+      change: row.change_percent,
+      time: row.timestamp
+    }));
   }
 }
 

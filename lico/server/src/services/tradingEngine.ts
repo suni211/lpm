@@ -715,7 +715,7 @@ export class TradingEngine {
 
     // 실시간 가격 조정 (거래 체결 시마다)
     try {
-      await aiTradingBot.adjustPriceForCoin(coinId);
+      await aiTradingBot.adjustPriceForStock(coinId);
       
       // WebSocket으로 가격 업데이트 브로드캐스트 - ACTIVE 상태만
       if (websocketInstance && websocketInstance.broadcastPriceUpdate) {
@@ -740,7 +740,7 @@ export class TradingEngine {
 
     // 실시간 유동성 공급 (거래 체결 시마다)
     try {
-      await aiTradingBot.provideLiquidityForCoin(coinId);
+      await aiTradingBot.provideLiquidityForStock(coinId);
       
       // WebSocket으로 호가창 업데이트 브로드캐스트
       if (websocketInstance && websocketInstance.broadcastOrderbookUpdate) {
