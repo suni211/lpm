@@ -215,7 +215,7 @@ class NewsImpactService {
     const walletAddress = 'AI' + Math.random().toString(36).substring(2, 32).toUpperCase();
 
     await conn.query(
-      `INSERT INTO user_wallets (id, wallet_address, minecraft_username, krw_balance, status)
+      `INSERT INTO user_wallets (id, wallet_address, minecraft_username, gold_balance, status)
        VALUES (?, ?, 'AI_TRADER', 999999999999, 'ACTIVE')`,
       [walletId, walletAddress]
     );

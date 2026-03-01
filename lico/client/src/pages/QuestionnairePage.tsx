@@ -165,8 +165,8 @@ const QuestionnairePage = () => {
           <div className="question-group">
             <label className="question-label">
               <span className="question-number">3.</span>
-              LICO SYSTEM은 블록체인 기술을 도입해, 저희도 건드리지 못합니다.
-              코인이 사라질 시, 책임을 온전히 당신이 쥐어집니다. 동의하십니까?
+              LICO SYSTEM은 투자 기술을 도입해, 저희도 건드리지 못합니다.
+              주식이 사라질 시, 책임을 온전히 당신이 쥐어집니다. 동의하십니까?
             </label>
             <div className="answer-options">
               <label className="radio-label">

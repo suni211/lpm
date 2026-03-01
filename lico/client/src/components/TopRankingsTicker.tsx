@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import type { Coin } from '../types';
+import type { Stock } from '../types';
 import './TopRankingsTicker.css';
 
 interface RankingData {
-  topGainers: Coin[];
-  topLosers: Coin[];
-  topActive: Coin[];
+  topGainers: Stock[];
+  topLosers: Stock[];
+  topActive: Stock[];
 }
 
 const TopRankingsTicker = () => {
@@ -22,7 +22,7 @@ const TopRankingsTicker = () => {
   useEffect(() => {
     const fetchRankings = async () => {
       try {
-        const response = await api.get('/coins/rankings/top5');
+        const response = await api.get('/stocks/rankings/top5');
         setData(response.data);
       } catch (error) {
         console.error('Failed to fetch rankings:', error);
@@ -54,7 +54,7 @@ const TopRankingsTicker = () => {
     return `${sign}${numChange.toFixed(2)}%`;
   };
 
-  const handleCoinClick = (symbol: string) => {
+  const handleStockClick = (symbol: string) => {
     navigate(`/trading/${symbol}`);
   };
 
@@ -74,15 +74,15 @@ const TopRankingsTicker = () => {
           <span className="label-text">상승</span>
         </div>
         <div className="ticker-items">
-          {data.topGainers.map((coin) => (
+          {data.topGainers.map((stock) => (
             <div
-              key={coin.id}
+              key={stock.id}
               className="ticker-item gainer"
-              onClick={() => handleCoinClick(coin.symbol)}
+              onClick={() => handleStockClick(stock.symbol)}
             >
-              <span className="coin-symbol">{coin.symbol}</span>
-              <span className="coin-price">{formatPrice(coin.current_price)} G</span>
-              <span className="coin-change positive">{formatChange(coin.price_change_24h)}</span>
+              <span className="coin-symbol">{stock.symbol}</span>
+              <span className="coin-price">{formatPrice(stock.current_price)} G</span>
+              <span className="coin-change positive">{formatChange(stock.price_change_24h)}</span>
             </div>
           ))}
         </div>
@@ -94,15 +94,15 @@ const TopRankingsTicker = () => {
           <span className="label-text">하락</span>
         </div>
         <div className="ticker-items">
-          {data.topLosers.map((coin) => (
+          {data.topLosers.map((stock) => (
             <div
-              key={coin.id}
+              key={stock.id}
               className="ticker-item loser"
-              onClick={() => handleCoinClick(coin.symbol)}
+              onClick={() => handleStockClick(stock.symbol)}
             >
-              <span className="coin-symbol">{coin.symbol}</span>
-              <span className="coin-price">{formatPrice(coin.current_price)} G</span>
-              <span className="coin-change negative">{formatChange(coin.price_change_24h)}</span>
+              <span className="coin-symbol">{stock.symbol}</span>
+              <span className="coin-price">{formatPrice(stock.current_price)} G</span>
+              <span className="coin-change negative">{formatChange(stock.price_change_24h)}</span>
             </div>
           ))}
         </div>
@@ -114,15 +114,15 @@ const TopRankingsTicker = () => {
           <span className="label-text">액티브</span>
         </div>
         <div className="ticker-items">
-          {data.topActive.map((coin) => (
+          {data.topActive.map((stock) => (
             <div
-              key={coin.id}
+              key={stock.id}
               className="ticker-item active"
-              onClick={() => handleCoinClick(coin.symbol)}
+              onClick={() => handleStockClick(stock.symbol)}
             >
-              <span className="coin-symbol">{coin.symbol}</span>
-              <span className="coin-price">{formatPrice(coin.current_price)} G</span>
-              <span className="coin-volume">거래량: {formatPrice(coin.volume_24h)}</span>
+              <span className="coin-symbol">{stock.symbol}</span>
+              <span className="coin-price">{formatPrice(stock.current_price)} G</span>
+              <span className="coin-volume">거래량: {formatPrice(stock.volume_24h)}</span>
             </div>
           ))}
         </div>
@@ -132,4 +132,3 @@ const TopRankingsTicker = () => {
 };
 
 export default TopRankingsTicker;
-

@@ -12,28 +12,28 @@ function AdminTradesPage({ setAuth }: AdminTradesPageProps) {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [selectedCoin, setSelectedCoin] = useState<string>('');
-  const [coins, setCoins] = useState<any[]>([]);
+  const [selectedStock, setSelectedStock] = useState<string>('');
+  const [stocks, setStocks] = useState<any[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchCoins();
+    fetchStocks();
     fetchTrades();
-  }, [page, selectedCoin]);
+  }, [page, selectedStock]);
 
-  const fetchCoins = async () => {
+  const fetchStocks = async () => {
     try {
-      const response = await api.get('/coins');
-      setCoins(response.data.coins || []);
+      const response = await api.get('/stocks');
+      setStocks(response.data.stocks || []);
     } catch (error) {
-      console.error('코인 목록 조회 실패:', error);
+      console.error('종목 목록 조회 실패:', error);
     }
   };
 
   const fetchTrades = async () => {
     try {
       const params: any = { page, limit: 50 };
-      if (selectedCoin) params.coin_id = selectedCoin;
+      if (selectedStock) params.stock_id = selectedStock;
 
       const response = await api.get('/admin/trades', { params });
       setTrades(response.data.trades || []);
@@ -69,12 +69,12 @@ function AdminTradesPage({ setAuth }: AdminTradesPageProps) {
       {/* 필터 */}
       <div className="filters-section">
         <div className="filter-group">
-          <label>코인:</label>
-          <select value={selectedCoin} onChange={(e) => { setSelectedCoin(e.target.value); setPage(1); }}>
+          <label>종목:</label>
+          <select value={selectedStock} onChange={(e) => { setSelectedStock(e.target.value); setPage(1); }}>
             <option value="">전체</option>
-            {coins.map((coin) => (
-              <option key={coin.id} value={coin.id}>
-                {coin.symbol} - {coin.name}
+            {stocks.map((stock) => (
+              <option key={stock.id} value={stock.id}>
+                {stock.symbol} - {stock.name}
               </option>
             ))}
           </select>
@@ -91,7 +91,7 @@ function AdminTradesPage({ setAuth }: AdminTradesPageProps) {
             <thead>
               <tr>
                 <th>시간</th>
-                <th>코인</th>
+                <th>종목</th>
                 <th>가격</th>
                 <th>수량</th>
                 <th>총액</th>
@@ -110,9 +110,9 @@ function AdminTradesPage({ setAuth }: AdminTradesPageProps) {
                   <tr key={trade.id}>
                     <td>{new Date(trade.created_at).toLocaleString('ko-KR')}</td>
                     <td>
-                      <div className="coin-cell">
-                        <span className="coin-symbol">{trade.symbol}</span>
-                        <span className="coin-name">{trade.name}</span>
+                      <div className="stock-cell">
+                        <span className="stock-symbol">{trade.symbol}</span>
+                        <span className="stock-name">{trade.name}</span>
                       </div>
                     </td>
                     <td className="price">{Number(trade.price).toLocaleString()} G</td>

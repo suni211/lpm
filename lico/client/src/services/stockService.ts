@@ -1,34 +1,34 @@
 import api from './api';
-import type { Coin, Candle, Trade, Orderbook } from '../types';
+import type { Stock, Candle, Trade, Orderbook } from '../types';
 
-export const coinService = {
-  // 모든 코인 목록
-  getCoins: async (status: string = 'ACTIVE'): Promise<Coin[]> => {
-    const response = await api.get('/coins', { params: { status } });
-    return response.data.coins;
+export const stockService = {
+  // 모든 종목 목록
+  getStocks: async (status: string = 'ACTIVE'): Promise<Stock[]> => {
+    const response = await api.get('/stocks', { params: { status } });
+    return response.data.stocks;
   },
 
-  // 코인 상세 정보
-  getCoinBySymbol: async (symbol: string): Promise<Coin> => {
-    const response = await api.get(`/coins/symbol/${symbol}`);
-    return response.data.coin;
+  // 종목 상세 정보
+  getStockBySymbol: async (symbol: string): Promise<Stock> => {
+    const response = await api.get(`/stocks/symbol/${symbol}`);
+    return response.data.stock;
   },
 
-  // 코인 가격 정보
-  getCoinPrice: async (coinId: string) => {
-    const response = await api.get(`/coins/${coinId}/price`);
+  // 종목 가격 정보
+  getStockPrice: async (stockId: string) => {
+    const response = await api.get(`/stocks/${stockId}/price`);
     return response.data;
   },
 
   // 최근 거래 내역
-  getRecentTrades: async (coinId: string, limit: number = 50): Promise<Trade[]> => {
-    const response = await api.get(`/coins/${coinId}/trades/recent`, { params: { limit } });
+  getRecentTrades: async (stockId: string, limit: number = 50): Promise<Trade[]> => {
+    const response = await api.get(`/stocks/${stockId}/trades/recent`, { params: { limit } });
     return response.data.trades;
   },
 
   // 캔들스틱 데이터
-  getCandles: async (coinId: string, interval: '1m' | '1h' | '1d', limit: number = 100): Promise<Candle[]> => {
-    const response = await api.get(`/coins/${coinId}/candles/${interval}`, { params: { limit } });
+  getCandles: async (stockId: string, interval: '1m' | '1h' | '1d', limit: number = 100): Promise<Candle[]> => {
+    const response = await api.get(`/stocks/${stockId}/candles/${interval}`, { params: { limit } });
     return response.data.candles;
   },
 };
@@ -37,7 +37,7 @@ export const tradingService = {
   // 주문 생성
   createOrder: async (orderData: {
     wallet_address: string;
-    coin_id: string;
+    stock_id: string;
     order_type: 'BUY' | 'SELL';
     order_method: 'MARKET' | 'LIMIT';
     price?: number;
@@ -48,9 +48,9 @@ export const tradingService = {
   },
 
   // 내 주문 목록
-  getMyOrders: async (walletAddress: string, status?: string, coinId?: string) => {
+  getMyOrders: async (walletAddress: string, status?: string, stockId?: string) => {
     const response = await api.get(`/trading/orders/${walletAddress}`, {
-      params: { status, coin_id: coinId },
+      params: { status, stock_id: stockId },
     });
     return response.data.orders;
   },
@@ -62,15 +62,15 @@ export const tradingService = {
   },
 
   // 호가창
-  getOrderbook: async (coinId: string, limit: number = 20): Promise<Orderbook> => {
-    const response = await api.get(`/trading/orderbook/${coinId}`, { params: { limit } });
+  getOrderbook: async (stockId: string, limit: number = 20): Promise<Orderbook> => {
+    const response = await api.get(`/trading/orderbook/${stockId}`, { params: { limit } });
     return response.data;
   },
 
   // 내 거래 체결 내역
-  getMyTrades: async (walletAddress: string, coinId?: string, limit: number = 50) => {
+  getMyTrades: async (walletAddress: string, stockId?: string, limit: number = 50) => {
     const response = await api.get(`/trading/trades/${walletAddress}`, {
-      params: { coin_id: coinId, limit },
+      params: { stock_id: stockId, limit },
     });
     return response.data.trades;
   },
@@ -83,7 +83,7 @@ export const walletService = {
     return response.data.wallet;
   },
 
-  // 내 코인 보유 현황
+  // 내 종목 보유 현황
   getMyBalances: async (walletAddress: string) => {
     const response = await api.get(`/wallets/${walletAddress}/balances`);
     return response.data;

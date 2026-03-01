@@ -11,13 +11,13 @@ router.get('/negative-balances', isAdmin, async (req: Request, res: Response) =>
       SELECT
         ucb.id,
         uw.minecraft_username,
-        c.symbol,
+        s.symbol,
         ucb.available_amount,
         ucb.locked_amount,
         (ucb.available_amount + ucb.locked_amount) as total
-      FROM user_coin_balances ucb
+      FROM user_stock_balances ucb
       JOIN user_wallets uw ON ucb.wallet_id = uw.id
-      JOIN coins c ON ucb.coin_id = c.id
+      JOIN stocks s ON ucb.stock_id = s.id
       WHERE ucb.available_amount < 0 OR ucb.locked_amount < 0
     `);
 
@@ -41,13 +41,13 @@ router.post('/merge-locked-balances', isAdmin, async (req: Request, res: Respons
       SELECT
         ucb.id,
         uw.minecraft_username,
-        c.symbol,
+        s.symbol,
         ucb.available_amount,
         ucb.locked_amount,
         (ucb.available_amount + ucb.locked_amount) as total
-      FROM user_coin_balances ucb
+      FROM user_stock_balances ucb
       JOIN user_wallets uw ON ucb.wallet_id = uw.id
-      JOIN coins c ON ucb.coin_id = c.id
+      JOIN stocks s ON ucb.stock_id = s.id
       WHERE ucb.locked_amount > 0
     `);
 
@@ -76,7 +76,7 @@ router.post('/merge-locked-balances', isAdmin, async (req: Request, res: Respons
 
       // locked를 available로 병합
       await query(
-        `UPDATE user_coin_balances
+        `UPDATE user_stock_balances
          SET available_amount = ?,
              locked_amount = 0
          WHERE id = ?`,
@@ -92,7 +92,7 @@ router.post('/merge-locked-balances', isAdmin, async (req: Request, res: Respons
     // 3. 병합 후 확인
     const remainingLocked = await query(`
       SELECT COUNT(*) as count
-      FROM user_coin_balances
+      FROM user_stock_balances
       WHERE locked_amount > 0
     `);
 
@@ -118,13 +118,13 @@ router.post('/negative-balances', isAdmin, async (req: Request, res: Response) =
       SELECT
         ucb.id,
         uw.minecraft_username,
-        c.symbol,
+        s.symbol,
         ucb.available_amount,
         ucb.locked_amount,
         (ucb.available_amount + ucb.locked_amount) as total
-      FROM user_coin_balances ucb
+      FROM user_stock_balances ucb
       JOIN user_wallets uw ON ucb.wallet_id = uw.id
-      JOIN coins c ON ucb.coin_id = c.id
+      JOIN stocks s ON ucb.stock_id = s.id
       WHERE ucb.available_amount < 0 OR ucb.locked_amount < 0
     `);
 
@@ -155,7 +155,7 @@ router.post('/negative-balances', isAdmin, async (req: Request, res: Response) =
       if (total >= 0) {
         // 총합이 양수면 locked를 available로 옮기기
         await query(
-          `UPDATE user_coin_balances
+          `UPDATE user_stock_balances
            SET available_amount = ?,
                locked_amount = 0
            WHERE id = ?`,
@@ -170,7 +170,7 @@ router.post('/negative-balances', isAdmin, async (req: Request, res: Response) =
       } else {
         // 총합이 음수면 모두 0으로
         await query(
-          `UPDATE user_coin_balances
+          `UPDATE user_stock_balances
            SET available_amount = 0,
                locked_amount = 0
            WHERE id = ?`,
@@ -188,7 +188,7 @@ router.post('/negative-balances', isAdmin, async (req: Request, res: Response) =
     // 3. 수정 후 확인
     const remainingNegative = await query(`
       SELECT COUNT(*) as count
-      FROM user_coin_balances
+      FROM user_stock_balances
       WHERE available_amount < 0 OR locked_amount < 0
     `);
 

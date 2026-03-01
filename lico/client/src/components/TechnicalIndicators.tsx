@@ -21,12 +21,12 @@ interface IndicatorData {
 }
 
 interface TechnicalIndicatorsProps {
-  coinId: string;
+  stockId: string;
   interval?: string;
 }
 
 const TechnicalIndicators: React.FC<TechnicalIndicatorsProps> = ({
-  coinId,
+  stockId,
   interval = '1h',
 }) => {
   const [indicators, setIndicators] = useState<IndicatorData | null>(null);
@@ -37,13 +37,13 @@ const TechnicalIndicators: React.FC<TechnicalIndicatorsProps> = ({
     loadIndicators();
     const intervalId = setInterval(loadIndicators, 10000); // 10초마다 갱신
     return () => clearInterval(intervalId);
-  }, [coinId, interval]);
+  }, [stockId, interval]);
 
   const loadIndicators = async () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://localhost:5002/api/indicators/${coinId}`,
+        `http://localhost:5002/api/indicators/${stockId}`,
         {
           params: { interval, limit: 100 },
           withCredentials: true,

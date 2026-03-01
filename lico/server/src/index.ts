@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import session from 'express-session';
 import { createServer } from 'http';
 import pool from './database/db';
-import blockchainService from './services/blockchainService';
 import aiTradingBot from './services/aiTradingBot';
 import stopOrderMonitor from './services/stopOrderMonitor';
 import initializeWebSocket from './websocket';
@@ -51,10 +50,9 @@ app.use(
 // Routes
 app.get('/', (req: Request, res: Response) => {
   res.json({
-    message: '🪙 Lico Cryptocurrency Exchange API Server',
-    version: '1.0.0',
+    message: 'LICO Stock Exchange API Server',
+    version: '2.0.0',
     status: 'running',
-    blockchain: 'active',
   });
 });
 
@@ -80,30 +78,28 @@ app.get('/health', async (req: Request, res: Response) => {
 import authRoutes from './routes/auth';
 import questionnaireRoutes from './routes/questionnaire';
 import walletsRoutes from './routes/wallets';
-import coinsRoutes from './routes/coins';
+import stocksRoutes from './routes/stocks';
 import tradingRoutes from './routes/trading';
 import blockchainRoutes from './routes/blockchain';
 import adminRoutes from './routes/admin';
 import newsRoutes from './routes/news';
 import newsCommentsRoutes from './routes/newsComments';
 import fixRoutes from './routes/fix';
-import exchangeRoutes from './routes/exchange';
 import indicatorsRoutes from './routes/indicators';
-import memeCoinApplicationsRoutes from './routes/memeCoinApplications';
+import founderSellRequestsRoutes from './routes/founderSellRequests';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questionnaire', questionnaireRoutes);
 app.use('/api/wallets', walletsRoutes);
-app.use('/api/coins', coinsRoutes);
+app.use('/api/stocks', stocksRoutes);
 app.use('/api/trading', tradingRoutes);
 app.use('/api/blockchain', blockchainRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/news', newsRoutes);
-app.use('/api/exchange', exchangeRoutes);
 app.use('/api/news-comments', newsCommentsRoutes);
 app.use('/api/fix', fixRoutes);
 app.use('/api/indicators', indicatorsRoutes);
-app.use('/api/meme-applications', memeCoinApplicationsRoutes);
+app.use('/api/founder-sell-requests', founderSellRequestsRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {
@@ -114,15 +110,6 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
   });
 });
 
-// Initialize blockchain
-async function initializeBlockchain() {
-  try {
-    await blockchainService.createGenesisBlock();
-    console.log('✅ Blockchain initialized');
-  } catch (error) {
-    console.error('❌ Blockchain initialization failed:', error);
-  }
-}
 
 // Initialize WebSocket
 const websocket = initializeWebSocket(httpServer);
@@ -147,17 +134,13 @@ setAITradingBotWebSocket(websocket);
 httpServer.listen(PORT, async () => {
   console.log(`
 ╔═══════════════════════════════════════╗
-║  🪙 Lico Exchange Server Running     ║
-║  📡 Port: ${PORT}                        ║
-║  🌍 Environment: ${process.env.NODE_ENV || 'development'}      ║
-║  🗄️  Database: MariaDB                ║
-║  ⛓️  Blockchain: Active               ║
-║  🔌 WebSocket: Active                 ║
+║  LICO Stock Exchange Server Running  ║
+║  Port: ${PORT}                           ║
+║  Environment: ${process.env.NODE_ENV || 'development'}          ║
+║  Database: MariaDB                    ║
+║  WebSocket: Active                    ║
 ╚═══════════════════════════════════════╝
   `);
-
-  // Initialize blockchain on startup
-  await initializeBlockchain();
 
   // Initialize AI Trading Bot
   aiTradingBot.start();

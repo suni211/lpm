@@ -40,9 +40,9 @@ class StopOrderMonitor {
     try {
       // 활성화된 스탑 주문 조회
       const stopOrders = await query(
-        `SELECT o.*, c.current_price, c.symbol
+        `SELECT o.*, s.current_price, s.symbol
          FROM orders o
-         JOIN coins c ON o.coin_id = c.id
+         JOIN stocks s ON o.stock_id = s.id
          WHERE o.is_stop_order = TRUE
          AND o.stop_triggered = FALSE
          AND o.status = 'PENDING'`,
@@ -145,9 +145,9 @@ class StopOrderMonitor {
 
       // 2. 스탑 로그 기록
       await query(
-        `INSERT INTO stop_order_logs (id, order_id, coin_id, trigger_price, stop_price, stop_type)
+        `INSERT INTO stop_order_logs (id, order_id, stock_id, trigger_price, stop_price, stop_type)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [uuidv4(), order.id, order.coin_id, triggerPrice, order.stop_price, order.stop_type]
+        [uuidv4(), order.id, order.stock_id, triggerPrice, order.stop_price, order.stop_type]
       );
 
       // 3. 시장가 주문으로 즉시 매도 (스탑은 항상 매도)
@@ -163,7 +163,7 @@ class StopOrderMonitor {
         try {
           await tradingEngine.processSellOrder(
             order.wallet_id,
-            order.coin_id,
+            order.stock_id,
             'MARKET',
             quantity
           );
@@ -183,7 +183,7 @@ class StopOrderMonitor {
   // 스탑 주문 생성 헬퍼
   async createStopOrder(
     walletId: string,
-    coinId: string,
+    stockId: string,
     stopType: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP',
     quantity: number,
     stopPrice?: number,
@@ -198,9 +198,9 @@ class StopOrderMonitor {
       }
 
       await query(
-        `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, quantity, is_stop_order, stop_type, trailing_percent, status)
+        `INSERT INTO orders (id, wallet_id, stock_id, order_type, order_method, quantity, is_stop_order, stop_type, trailing_percent, status)
          VALUES (?, ?, ?, 'SELL', 'MARKET', ?, TRUE, ?, ?, 'PENDING')`,
-        [orderId, walletId, coinId, quantity, stopType, trailingPercent]
+        [orderId, walletId, stockId, quantity, stopType, trailingPercent]
       );
     } else {
       // 스탑 로스 / 테이크 프로핏
@@ -209,9 +209,9 @@ class StopOrderMonitor {
       }
 
       await query(
-        `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, quantity, stop_price, is_stop_order, stop_type, status)
+        `INSERT INTO orders (id, wallet_id, stock_id, order_type, order_method, quantity, stop_price, is_stop_order, stop_type, status)
          VALUES (?, ?, ?, 'SELL', 'MARKET', ?, ?, TRUE, ?, 'PENDING')`,
-        [orderId, walletId, coinId, quantity, stopPrice, stopType]
+        [orderId, walletId, stockId, quantity, stopPrice, stopType]
       );
     }
 

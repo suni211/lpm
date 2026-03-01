@@ -1,53 +1,45 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import type { Coin } from '../types';
+import type { Stock } from '../types';
 import './LobbyPage.css';
 
-interface CoinWithStats extends Coin {
+interface StockWithStats extends Stock {
   profit_rate_24h?: number;
   trade_count_24h?: number;
   is_blacklisted?: boolean;
-  creator_can_trade?: boolean;
+  founder_can_trade?: boolean;
   is_supply_limited?: boolean;
-  base_currency?: {
-    id: string;
-    symbol: string;
-    name: string;
-    current_price: number;
-  } | null;
-  gold_price?: number; // 골드로 환산한 가격
 }
 
 const LobbyPage = () => {
   const navigate = useNavigate();
-  const [coins, setCoins] = useState<CoinWithStats[]>([]);
+  const [stocks, setStocks] = useState<StockWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'profit_rate' | 'volume' | 'market_cap'>('profit_rate');
-  const [filterType, setFilterType] = useState<'ALL' | 'MAJOR' | 'MEME'>('ALL');
 
   useEffect(() => {
-    fetchCoins();
-    const interval = setInterval(fetchCoins, 10000); // 10초마다 갱신
+    fetchStocks();
+    const interval = setInterval(fetchStocks, 10000); // 10초마다 갱신
     return () => clearInterval(interval);
   }, []);
 
-  const fetchCoins = async () => {
+  const fetchStocks = async () => {
     try {
-      const response = await api.get('/coins', {
+      const response = await api.get('/stocks', {
         params: { status: 'ACTIVE' }
       });
-      const coinsData = response.data.coins || [];
+      const stocksData = response.data.stocks || [];
 
       // 수익률 계산 및 정렬
-      const coinsWithStats = coinsData.map((coin: CoinWithStats) => ({
-        ...coin,
-        profit_rate_24h: coin.price_change_24h || 0,
+      const stocksWithStats = stocksData.map((stock: StockWithStats) => ({
+        ...stock,
+        profit_rate_24h: stock.price_change_24h || 0,
       }));
 
-      setCoins(coinsWithStats);
+      setStocks(stocksWithStats);
     } catch (error) {
-      console.error('Failed to fetch coins:', error);
+      console.error('Failed to fetch stocks:', error);
     } finally {
       setLoading(false);
     }
@@ -71,18 +63,12 @@ const LobbyPage = () => {
     });
   };
 
-  const handleCoinClick = (symbol: string) => {
+  const handleStockClick = (symbol: string) => {
     navigate(`/trading/${symbol}`);
   };
 
-  // 필터링
-  const filteredCoins = coins.filter(coin => {
-    if (filterType === 'ALL') return true;
-    return coin.coin_type === filterType;
-  });
-
   // 정렬
-  const sortedCoins = [...filteredCoins].sort((a, b) => {
+  const sortedStocks = [...stocks].sort((a, b) => {
     if (sortBy === 'profit_rate') {
       return (b.profit_rate_24h || 0) - (a.profit_rate_24h || 0);
     } else if (sortBy === 'volume') {
@@ -109,68 +95,33 @@ const LobbyPage = () => {
     <div className="lobby-page">
       <div className="lobby-header">
         <div>
-          <h1>🏦 LICO 거래소</h1>
-          <p>실시간 코인 시장 현황</p>
+          <h1>LICO 증권거래소</h1>
+          <p>실시간 주식 시장 현황</p>
         </div>
-        <button
-          className="create-meme-button"
-          onClick={() => navigate('/meme-application')}
-        >
-          💎 밈 코인 발행하기
-        </button>
       </div>
 
       {/* 시장 현황판 */}
       <div className="market-overview">
         <div className="overview-card">
-          <div className="card-label">총 코인 수</div>
-          <div className="card-value">{coins.length}개</div>
+          <div className="card-label">총 종목 수</div>
+          <div className="card-value">{stocks.length}개</div>
         </div>
         <div className="overview-card">
           <div className="card-label">24시간 최고 수익률</div>
           <div className="card-value positive">
-            {coins.length > 0 ? `+${Math.max(...coins.map(c => c.profit_rate_24h || 0)).toFixed(2)}%` : '0%'}
+            {stocks.length > 0 ? `+${Math.max(...stocks.map(c => c.profit_rate_24h || 0)).toFixed(2)}%` : '0%'}
           </div>
         </div>
         <div className="overview-card">
           <div className="card-label">24시간 최저 수익률</div>
           <div className="card-value negative">
-            {coins.length > 0 ? `${Math.min(...coins.map(c => c.profit_rate_24h || 0)).toFixed(2)}%` : '0%'}
+            {stocks.length > 0 ? `${Math.min(...stocks.map(c => c.profit_rate_24h || 0)).toFixed(2)}%` : '0%'}
           </div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">MAJOR 코인</div>
-          <div className="card-value">{coins.filter(c => c.coin_type === 'MAJOR').length}개</div>
-        </div>
-        <div className="overview-card">
-          <div className="card-label">MEME 코인</div>
-          <div className="card-value">{coins.filter(c => c.coin_type === 'MEME').length}개</div>
         </div>
       </div>
 
-      {/* 필터 및 정렬 */}
+      {/* 정렬 */}
       <div className="controls">
-        <div className="filter-buttons">
-          <button
-            className={filterType === 'ALL' ? 'active' : ''}
-            onClick={() => setFilterType('ALL')}
-          >
-            전체
-          </button>
-          <button
-            className={filterType === 'MAJOR' ? 'active' : ''}
-            onClick={() => setFilterType('MAJOR')}
-          >
-            MAJOR
-          </button>
-          <button
-            className={filterType === 'MEME' ? 'active' : ''}
-            onClick={() => setFilterType('MEME')}
-          >
-            MEME
-          </button>
-        </div>
-
         <div className="sort-buttons">
           <label>정렬:</label>
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
@@ -181,103 +132,84 @@ const LobbyPage = () => {
         </div>
       </div>
 
-      {/* 코인 목록 테이블 */}
+      {/* 종목 목록 테이블 */}
       <div className="coins-table-container">
         <table className="coins-table">
           <thead>
             <tr>
               <th>순위</th>
-              <th>코인</th>
-              <th>타입</th>
+              <th>종목</th>
               <th>현재가</th>
               <th>24h 변동</th>
               <th>24h 거래량</th>
               <th>시가총액</th>
               <th>블랙리스트</th>
-              <th>제작자 거래</th>
+              <th>창업자 거래</th>
               <th>발행 제한</th>
               <th>거래</th>
             </tr>
           </thead>
           <tbody>
-            {sortedCoins.map((coin, index) => {
-              const currentPrice = typeof coin.current_price === 'string'
-                ? parseFloat(coin.current_price)
-                : (coin.current_price || 0);
-              const volume24h = typeof coin.volume_24h === 'string'
-                ? parseFloat(coin.volume_24h)
-                : (coin.volume_24h || 0);
-              const marketCap = typeof coin.market_cap === 'string'
-                ? parseFloat(coin.market_cap)
-                : (coin.market_cap || 0);
-              const profitRate = typeof coin.profit_rate_24h === 'string'
-                ? parseFloat(coin.profit_rate_24h)
-                : (coin.profit_rate_24h || 0);
+            {sortedStocks.map((stock, index) => {
+              const currentPrice = typeof stock.current_price === 'string'
+                ? parseFloat(stock.current_price)
+                : (stock.current_price || 0);
+              const volume24h = typeof stock.volume_24h === 'string'
+                ? parseFloat(stock.volume_24h)
+                : (stock.volume_24h || 0);
+              const marketCap = typeof stock.market_cap === 'string'
+                ? parseFloat(stock.market_cap)
+                : (stock.market_cap || 0);
+              const profitRate = typeof stock.profit_rate_24h === 'string'
+                ? parseFloat(stock.profit_rate_24h)
+                : (stock.profit_rate_24h || 0);
 
               return (
-                <tr key={coin.id} className="coin-row">
+                <tr key={stock.id} className="coin-row">
                   <td className="rank">{index + 1}</td>
                   <td className="coin-info">
                     <div className="coin-detail">
-                      {coin.logo_url && (
-                        <img src={coin.logo_url} alt={coin.symbol} className="coin-logo-small" />
+                      {stock.logo_url && (
+                        <img src={stock.logo_url} alt={stock.symbol} className="coin-logo-small" />
                       )}
                       <div>
-                        <div className="coin-symbol">{coin.symbol}</div>
-                        <div className="coin-name">{coin.name}</div>
+                        <div className="coin-symbol">{stock.symbol}</div>
+                        <div className="coin-name">{stock.name}</div>
                       </div>
                     </div>
                   </td>
-                  <td>
-                    <span className={`type-badge ${coin.coin_type?.toLowerCase()}`}>
-                      {coin.coin_type === 'MAJOR' ? 'MAJOR' : 'MEME'}
-                    </span>
-                  </td>
                   <td className="price">
-                    {coin.coin_type === 'MEME' && coin.base_currency ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div>{formatPrice(currentPrice)} {coin.base_currency.symbol}</div>
-                        <div style={{ fontSize: '0.85em', color: '#9ca3af' }}>
-                          ≈ {formatPrice(coin.gold_price || 0)} G
-                        </div>
-                      </div>
-                    ) : (
-                      <div>{formatPrice(currentPrice)} G</div>
-                    )}
+                    <div>{formatPrice(currentPrice)} G</div>
                   </td>
                   <td className={profitRate >= 0 ? 'positive' : 'negative'}>
                     {profitRate >= 0 ? '+' : ''}{profitRate.toFixed(2)}%
                   </td>
                   <td>{formatNumber(volume24h)}</td>
                   <td>
-                    {coin.coin_type === 'MEME' && coin.gold_price ? (
-                      formatNumber(coin.gold_price * (typeof coin.circulating_supply === 'string' ? parseFloat(coin.circulating_supply) : (coin.circulating_supply || 0)))
-                    ) : (
-                      formatNumber(marketCap)
-                    )} G
+                    {formatNumber(marketCap)} G
                   </td>
                   <td>
-                    <span className={`badge ${coin.is_blacklisted ? 'badge-no' : 'badge-yes'}`}>
-                      {coin.is_blacklisted ? '예' : '아니요'}
+                    <span className={`badge ${stock.is_blacklisted ? 'badge-no' : 'badge-yes'}`}>
+                      {stock.is_blacklisted ? '예' : '아니요'}
                     </span>
                   </td>
                   <td>
-                    <span className={`badge ${coin.creator_can_trade === false ? 'badge-no' : 'badge-yes'}`}>
-                      {coin.creator_can_trade === false ? '불가' : '가능'}
+                    <span className={`badge ${stock.founder_can_trade === false ? 'badge-no' : 'badge-yes'}`}>
+                      {stock.founder_can_trade === false ? '불가' : '가능'}
                     </span>
                   </td>
                   <td>
-                    <span className={`badge ${coin.is_supply_limited ? 'badge-yes' : 'badge-no'}`}>
-                      {coin.is_supply_limited ? '예' : '아니요'}
+                    <span className={`badge ${stock.is_supply_limited ? 'badge-yes' : 'badge-no'}`}>
+                      {stock.is_supply_limited ? '예' : '아니요'}
                     </span>
                   </td>
                   <td>
                     <button
                       className="trade-button"
-                      onClick={() => handleCoinClick(coin.symbol)}
-                      disabled={coin.is_blacklisted}
+                      onClick={() => handleStockClick(stock.symbol)}
+                      disabled={stock.is_blacklisted}
                     >
-                      {coin.is_blacklisted ? '거래 불가' : '거래하기'}
+                      {stock.is_blacklisted ? '거래 불가' : '거래하기'}
                     </button>
                   </td>
                 </tr>

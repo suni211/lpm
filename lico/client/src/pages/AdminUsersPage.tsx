@@ -97,8 +97,8 @@ function AdminUsersPage({ setAuth }: AdminUsersPageProps) {
                 <th>지갑 주소</th>
                 <th>Minecraft 닉네임</th>
                 <th>Gold 잔액</th>
-                <th>코인 보유 가치</th>
-                <th>보유 코인 수</th>
+                <th>종목 보유 가치</th>
+                <th>보유 종목 수</th>
                 <th>상태</th>
                 <th>생성일</th>
                 <th>작업</th>
@@ -115,8 +115,8 @@ function AdminUsersPage({ setAuth }: AdminUsersPageProps) {
                     <td className="monospace">{user.wallet_address}</td>
                     <td>{user.minecraft_username}</td>
                     <td className="balance">{Number(user.gold_balance || 0).toLocaleString()} G</td>
-                    <td className="balance">{Number(user.total_coin_value || 0).toLocaleString()} G</td>
-                    <td>{user.coin_count || 0}개</td>
+                    <td className="balance">{Number(user.total_stock_value || 0).toLocaleString()} G</td>
+                    <td>{user.stock_count || 0}개</td>
                     <td>
                       <span className={`status-badge ${user.status.toLowerCase()}`}>
                         {user.status === 'ACTIVE' ? '활성' :

@@ -12,9 +12,9 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/" className="navbar-logo">
-          <img 
-            src="/cryptup-logo.png" 
-            alt="CRYP-UP" 
+          <img
+            src="/cryptup-logo.png"
+            alt="LICO"
             className="navbar-logo-img"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -24,12 +24,12 @@ const Navbar = () => {
               }
             }}
           />
-          <span style={{ display: 'none' }}>🚀 CRYP-UP</span>
+          <span style={{ display: 'none' }}>LICO</span>
         </Link>
         <ul className="navbar-menu">
           <li>
-            <Link 
-              to="/trading" 
+            <Link
+              to="/trading"
               className={'navbar-link ' + (isActive('/trading') || location.pathname === '/' ? 'active' : '')}
             >
               거래소
@@ -41,14 +41,6 @@ const Navbar = () => {
               className={'navbar-link ' + (isActive('/deposit-withdraw') ? 'active' : '')}
             >
               입출금
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/exchange"
-              className={'navbar-link ' + (isActive('/exchange') ? 'active' : '')}
-            >
-              환전
             </Link>
           </li>
           <li>

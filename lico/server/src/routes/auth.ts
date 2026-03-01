@@ -261,7 +261,7 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
       const balanceData = await bankService.getAccountBalance(req.session.username || '');
       if (balanceData.account) {
         bankBalance = balanceData.account.balance || 0;
-        // LICO 지갑의 gold_balance는 BANK 잔액과 동기화하지 않음 (별도 잔액)
+        // LICO 지갑의 Gold 잔액은 BANK 잔액과 동기화하지 않음 (별도 잔액)
       }
     } catch (error) {
       console.error('BANK 잔액 조회 실패:', error);

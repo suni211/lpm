@@ -12,18 +12,18 @@ interface Trade {
 }
 
 interface RecentTradesWidgetProps {
-  coinId: string;
+  stockId: string;
   limit?: number;
 }
 
-const RecentTradesWidget = ({ coinId, limit = 20 }: RecentTradesWidgetProps) => {
+const RecentTradesWidget = ({ stockId, limit = 20 }: RecentTradesWidgetProps) => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchTrades = async () => {
       try {
-        const response = await api.get(`/coins/${coinId}/trades/recent`, {
+        const response = await api.get(`/stocks/${stockId}/trades/recent`, {
           params: { limit },
         });
         setTrades(response.data.trades || []);
@@ -34,13 +34,13 @@ const RecentTradesWidget = ({ coinId, limit = 20 }: RecentTradesWidgetProps) => 
       }
     };
 
-    if (coinId) {
+    if (stockId) {
       fetchTrades();
       // 3초마다 업데이트
       const interval = setInterval(fetchTrades, 3000);
       return () => clearInterval(interval);
     }
-  }, [coinId, limit]);
+  }, [stockId, limit]);
 
   const formatPrice = (price: number | string | null | undefined) => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : (price || 0);
@@ -108,4 +108,3 @@ const RecentTradesWidget = ({ coinId, limit = 20 }: RecentTradesWidgetProps) => 
 };
 
 export default RecentTradesWidget;
-

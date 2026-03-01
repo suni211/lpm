@@ -36,25 +36,25 @@ export class AITradingBot {
     console.log('✅ AI Trading Bot started (가격 변동 활성화, 유동성 공급 활성화)');
   }
 
-  // 특정 코인 가격 조정 (실시간)
-  async adjustPriceForCoin(coinId: string) {
+  // 특정 주식 가격 조정 (실시간)
+  async adjustPriceForStock(stockId: string) {
     try {
-      const coins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coinId]);
-      if (coins.length === 0) return;
+      const stocks = await query('SELECT * FROM stocks WHERE id = ? AND status = "ACTIVE"', [stockId]);
+      if (stocks.length === 0) return;
 
-      const coin = coins[0];
-      await this.adjustSingleCoinPrice(coin);
+      const stock = stocks[0];
+      await this.adjustSingleStockPrice(stock);
     } catch (error) {
-      console.error(`가격 조정 오류 (${coinId}):`, error);
+      console.error(`가격 조정 오류 (${stockId}):`, error);
     }
   }
 
-  // 단일 코인 가격 조정
-  private async adjustSingleCoinPrice(coin: any) {
+  // 단일 주식 가격 조정
+  private async adjustSingleStockPrice(stock: any) {
     // current_price를 숫자로 변환 (DECIMAL 타입이 문자열로 올 수 있음)
-    const currentPrice = typeof coin.current_price === 'string' 
-      ? parseFloat(coin.current_price) 
-      : (coin.current_price || 0);
+    const currentPrice = typeof stock.current_price === 'string'
+      ? parseFloat(stock.current_price)
+      : (stock.current_price || 0);
 
     if (isNaN(currentPrice) || currentPrice <= 0) {
       return;
@@ -64,23 +64,23 @@ export class AITradingBot {
     const recentTrades = await query(
       `SELECT COUNT(*) as count, SUM(quantity) as volume
        FROM trades
-       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)`,
-      [coin.id]
+       WHERE stock_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)`,
+      [stock.id]
     );
 
     const tradeCount = recentTrades[0]?.count || 0;
     const volume = parseFloat(recentTrades[0]?.volume || 0) || 0;
 
-    // 각 코인별 변동성 범위 사용 (설정되지 않으면 기본값: 0.01% ~ 5%)
-    const minVolatility = parseFloat(coin.min_volatility) || 0.0001; // 0.01%
-    const maxVolatility = parseFloat(coin.max_volatility) || 0.05; // 5%
-    
+    // 각 주식별 변동성 범위 사용 (설정되지 않으면 기본값: 0.01% ~ 5%)
+    const minVolatility = parseFloat(stock.min_volatility) || 0.0001; // 0.01%
+    const maxVolatility = parseFloat(stock.max_volatility) || 0.05; // 5%
+
     // 거래가 활발하면 변동성 증가 (최대 maxVolatility까지)
     // 거래량이 많을수록 변동성 증가
     const volumeFactor = Math.min(volume / 10000, 1); // 거래량 10000 이상이면 최대
     const tradeFactor = Math.min(tradeCount / 50, 1); // 거래 50회 이상이면 최대
     const activityFactor = Math.max(volumeFactor, tradeFactor);
-    
+
     const baseVolatility = minVolatility + (maxVolatility - minVolatility) * activityFactor;
     const dynamicVolatility = Math.min(baseVolatility, maxVolatility);
 
@@ -92,16 +92,16 @@ export class AITradingBot {
     // 24시간 전 가격 조회 (캔들스틱 데이터에서)
     const candles24h = await query(
       `SELECT close_price FROM candles_1h
-       WHERE coin_id = ? AND open_time <= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+       WHERE stock_id = ? AND open_time <= DATE_SUB(NOW(), INTERVAL 24 HOUR)
        ORDER BY open_time DESC LIMIT 1`,
-      [coin.id]
+      [stock.id]
     );
-    
+
     // 24시간 전 가격이 없으면 initial_price 사용
-    const price24hAgo = candles24h.length > 0 
-      ? parseFloat(candles24h[0].close_price || coin.initial_price)
-      : parseFloat(coin.initial_price || currentPrice);
-    
+    const price24hAgo = candles24h.length > 0
+      ? parseFloat(candles24h[0].close_price || stock.initial_price)
+      : parseFloat(stock.initial_price || currentPrice);
+
     // 24시간 변동률 계산 (%)
     const priceChange24h = price24hAgo > 0
       ? ((newPrice - price24hAgo) / price24hAgo) * 100
@@ -111,46 +111,46 @@ export class AITradingBot {
     const volume24hResult = await query(
       `SELECT COALESCE(SUM(quantity * price), 0) as total_volume
        FROM trades
-       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
-      [coin.id]
+       WHERE stock_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+      [stock.id]
     );
     const volume24h = parseFloat(volume24hResult[0]?.total_volume || '0');
 
     // 가격, 24시간 변동률, 24시간 거래량 업데이트
     await query(
-      'UPDATE coins SET current_price = ?, price_change_24h = ?, volume_24h = ? WHERE id = ?',
-      [newPrice, priceChange24h, volume24h, coin.id]
+      'UPDATE stocks SET current_price = ?, price_change_24h = ?, volume_24h = ? WHERE id = ?',
+      [newPrice, priceChange24h, volume24h, stock.id]
     );
 
     // 캔들 데이터 저장 (차트에 표시)
-    await updateCandleData(coin.id, newPrice, 0);
+    await updateCandleData(stock.id, newPrice, 0);
 
     // WebSocket으로 가격 업데이트 브로드캐스트 - ACTIVE 상태만
     if (websocketInstance && websocketInstance.broadcastPriceUpdate) {
-      const updatedCoins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coin.id]);
-      if (updatedCoins.length > 0) {
-        const updatedCoin = updatedCoins[0];
+      const updatedStocks = await query('SELECT * FROM stocks WHERE id = ? AND status = "ACTIVE"', [stock.id]);
+      if (updatedStocks.length > 0) {
+        const updatedStock = updatedStocks[0];
         const priceUpdateData = {
-          coin_id: coin.id,
-          symbol: updatedCoin.symbol,
-          name: updatedCoin.name,
-          current_price: updatedCoin.current_price,
-          price_change_24h: updatedCoin.price_change_24h,
-          volume_24h: updatedCoin.volume_24h,
-          market_cap: updatedCoin.market_cap,
+          stock_id: stock.id,
+          symbol: updatedStock.symbol,
+          name: updatedStock.name,
+          current_price: updatedStock.current_price,
+          price_change_24h: updatedStock.price_change_24h,
+          volume_24h: updatedStock.volume_24h,
+          market_cap: updatedStock.market_cap,
           updated_at: new Date().toISOString(),
         };
-        websocketInstance.broadcastPriceUpdate(coin.id, priceUpdateData);
+        websocketInstance.broadcastPriceUpdate(stock.id, priceUpdateData);
       }
     }
 
     // AI 로그 기록
     await query(
-      `INSERT INTO ai_trade_logs (id, coin_id, action, price_before, price_after, reason, volatility_factor)
+      `INSERT INTO ai_trade_logs (id, stock_id, action, price_before, price_after, reason, volatility_factor)
        VALUES (?, ?, 'ADJUST_PRICE', ?, ?, ?, ?)`,
       [
         uuidv4(),
-        coin.id,
+        stock.id,
         currentPrice,
         newPrice,
         `실시간 시장 변동성 조정 (거래량: ${volume}, 변동성: ${(dynamicVolatility * 100).toFixed(2)}%)`,
@@ -158,41 +158,41 @@ export class AITradingBot {
       ]
     );
 
-    console.log(`📊 [실시간] ${coin.symbol}: ${currentPrice.toFixed(2)} → ${newPrice.toFixed(2)} (${(priceChange * 100).toFixed(2)}%, 변동성: ${(dynamicVolatility * 100).toFixed(2)}%)`);
+    console.log(`📊 [실시간] ${stock.symbol}: ${currentPrice.toFixed(2)} → ${newPrice.toFixed(2)} (${(priceChange * 100).toFixed(2)}%, 변동성: ${(dynamicVolatility * 100).toFixed(2)}%)`);
   }
 
   // 가격 조정 (변동성 추가) - 0.01% ~ 5% 범위
   async adjustPrices() {
     try {
-      const coins = await query('SELECT * FROM coins WHERE status = "ACTIVE"');
+      const stocks = await query('SELECT * FROM stocks WHERE status = "ACTIVE"');
 
-      for (const coin of coins) {
-        await this.adjustSingleCoinPrice(coin);
+      for (const stock of stocks) {
+        await this.adjustSingleStockPrice(stock);
       }
     } catch (error) {
       console.error('AI 가격 조정 오류:', error);
     }
   }
 
-  // 특정 코인 유동성 공급 (실시간)
-  async provideLiquidityForCoin(coinId: string) {
+  // 특정 주식 유동성 공급 (실시간)
+  async provideLiquidityForStock(stockId: string) {
     try {
-      const coins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coinId]);
-      if (coins.length === 0) return;
+      const stocks = await query('SELECT * FROM stocks WHERE id = ? AND status = "ACTIVE"', [stockId]);
+      if (stocks.length === 0) return;
 
-      const coin = coins[0];
-      await this.provideLiquidityForSingleCoin(coin);
+      const stock = stocks[0];
+      await this.provideLiquidityForSingleStock(stock);
     } catch (error) {
-      console.error(`유동성 공급 오류 (${coinId}):`, error);
+      console.error(`유동성 공급 오류 (${stockId}):`, error);
     }
   }
 
-  // 단일 코인 유동성 공급
-  private async provideLiquidityForSingleCoin(coin: any) {
+  // 단일 주식 유동성 공급
+  private async provideLiquidityForSingleStock(stock: any) {
     // current_price를 숫자로 변환
-    const currentPrice = typeof coin.current_price === 'string' 
-      ? parseFloat(coin.current_price) 
-      : (coin.current_price || 0);
+    const currentPrice = typeof stock.current_price === 'string'
+      ? parseFloat(stock.current_price)
+      : (stock.current_price || 0);
 
     if (isNaN(currentPrice) || currentPrice <= 0) {
       return;
@@ -200,9 +200,9 @@ export class AITradingBot {
 
     // 기존 AI 주문 확인 (너무 많으면 생성 안 함)
     const existingOrders = await query(
-      `SELECT COUNT(*) as count FROM orders 
-       WHERE coin_id = ? AND is_admin_order = TRUE AND status IN ('PENDING', 'PARTIAL')`,
-      [coin.id]
+      `SELECT COUNT(*) as count FROM orders
+       WHERE stock_id = ? AND is_admin_order = TRUE AND status IN ('PENDING', 'PARTIAL')`,
+      [stock.id]
     );
     const orderCount = existingOrders[0]?.count || 0;
 
@@ -233,34 +233,34 @@ export class AITradingBot {
 
     // 매수 주문
     await query(
-      `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, status, is_admin_order)
+      `INSERT INTO orders (id, wallet_id, stock_id, order_type, order_method, price, quantity, status, is_admin_order)
        VALUES (?, ?, ?, 'BUY', 'LIMIT', ?, ?, 'PENDING', TRUE)`,
-      [uuidv4(), aiWallet.id, coin.id, buyPrice, buyQuantity]
+      [uuidv4(), aiWallet.id, stock.id, buyPrice, buyQuantity]
     );
 
     // 매도 주문
     await query(
-      `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, status, is_admin_order)
+      `INSERT INTO orders (id, wallet_id, stock_id, order_type, order_method, price, quantity, status, is_admin_order)
        VALUES (?, ?, ?, 'SELL', 'LIMIT', ?, ?, 'PENDING', TRUE)`,
-      [uuidv4(), aiWallet.id, coin.id, sellPrice, sellQuantity]
+      [uuidv4(), aiWallet.id, stock.id, sellPrice, sellQuantity]
     );
 
-    console.log(`💧 [실시간] ${coin.symbol} 유동성 공급: 매수 ${buyQuantity.toFixed(2)}@${buyPrice.toFixed(2)}, 매도 ${sellQuantity.toFixed(2)}@${sellPrice.toFixed(2)}`);
+    console.log(`💧 [실시간] ${stock.symbol} 유동성 공급: 매수 ${buyQuantity.toFixed(2)}@${buyPrice.toFixed(2)}, 매도 ${sellQuantity.toFixed(2)}@${sellPrice.toFixed(2)}`);
   }
 
   // 유동성 공급 (거래 활성화)
   async provideLiquidity() {
     try {
-      const coins = await query('SELECT * FROM coins WHERE status = "ACTIVE"');
+      const stocks = await query('SELECT * FROM stocks WHERE status = "ACTIVE"');
 
-      for (const coin of coins) {
+      for (const stock of stocks) {
         // current_price를 숫자로 변환
-        const currentPrice = typeof coin.current_price === 'string' 
-          ? parseFloat(coin.current_price) 
-          : (coin.current_price || 0);
+        const currentPrice = typeof stock.current_price === 'string'
+          ? parseFloat(stock.current_price)
+          : (stock.current_price || 0);
 
         if (isNaN(currentPrice) || currentPrice <= 0) {
-          console.warn(`⚠️ ${coin.symbol}: 유효하지 않은 가격 (${coin.current_price}), 건너뜀`);
+          console.warn(`⚠️ ${stock.symbol}: 유효하지 않은 가격 (${stock.current_price}), 건너뜀`);
           continue;
         }
 
@@ -286,19 +286,19 @@ export class AITradingBot {
 
         // 매수 주문
         await query(
-          `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, status, is_admin_order)
+          `INSERT INTO orders (id, wallet_id, stock_id, order_type, order_method, price, quantity, status, is_admin_order)
            VALUES (?, ?, ?, 'BUY', 'LIMIT', ?, ?, 'PENDING', TRUE)`,
-          [uuidv4(), aiWallet.id, coin.id, buyPrice, buyQuantity]
+          [uuidv4(), aiWallet.id, stock.id, buyPrice, buyQuantity]
         );
 
         // 매도 주문
         await query(
-          `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, status, is_admin_order)
+          `INSERT INTO orders (id, wallet_id, stock_id, order_type, order_method, price, quantity, status, is_admin_order)
            VALUES (?, ?, ?, 'SELL', 'LIMIT', ?, ?, 'PENDING', TRUE)`,
-          [uuidv4(), aiWallet.id, coin.id, sellPrice, sellQuantity]
+          [uuidv4(), aiWallet.id, stock.id, sellPrice, sellQuantity]
         );
 
-        console.log(`💧 ${coin.symbol} 유동성 공급: 매수 ${buyQuantity}@${buyPrice}, 매도 ${sellQuantity}@${sellPrice}`);
+        console.log(`💧 ${stock.symbol} 유동성 공급: 매수 ${buyQuantity}@${buyPrice}, 매도 ${sellQuantity}@${sellPrice}`);
       }
     } catch (error) {
       console.error('유동성 공급 오류:', error);
@@ -306,30 +306,30 @@ export class AITradingBot {
   }
 
   // ADMIN 가격 수동 조정
-  async adminAdjustPrice(coinId: string, newPrice: number, reason: string) {
-    const coins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coinId]);
+  async adminAdjustPrice(stockId: string, newPrice: number, reason: string) {
+    const stocks = await query('SELECT * FROM stocks WHERE id = ? AND status = "ACTIVE"', [stockId]);
 
-    if (coins.length === 0) {
-      throw new Error('코인을 찾을 수 없거나 거래가 중지되었습니다');
+    if (stocks.length === 0) {
+      throw new Error('주식을 찾을 수 없거나 거래가 중지되었습니다');
     }
 
-    const coin = coins[0];
+    const stock = stocks[0];
 
     // current_price를 숫자로 변환
-    const oldPrice = typeof coin.current_price === 'string' 
-      ? parseFloat(coin.current_price) 
-      : (coin.current_price || 0);
+    const oldPrice = typeof stock.current_price === 'string'
+      ? parseFloat(stock.current_price)
+      : (stock.current_price || 0);
 
     if (isNaN(oldPrice)) {
       throw new Error('유효하지 않은 현재 가격입니다');
     }
 
-    await query('UPDATE coins SET current_price = ? WHERE id = ?', [newPrice, coinId]);
+    await query('UPDATE stocks SET current_price = ? WHERE id = ?', [newPrice, stockId]);
 
     await query(
-      `INSERT INTO ai_trade_logs (id, coin_id, action, price_before, price_after, reason)
+      `INSERT INTO ai_trade_logs (id, stock_id, action, price_before, price_after, reason)
        VALUES (?, ?, 'ADJUST_PRICE', ?, ?, ?)`,
-      [uuidv4(), coinId, oldPrice, newPrice, `ADMIN 수동 조정: ${reason}`]
+      [uuidv4(), stockId, oldPrice, newPrice, `ADMIN 수동 조정: ${reason}`]
     );
 
     return { oldPrice, newPrice };

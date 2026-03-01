@@ -4,7 +4,7 @@ import './StopOrderPanel.css';
 
 interface StopOrder {
   id: string;
-  coin_id: string;
+  stock_id: string;
   symbol: string;
   order_type: 'SELL';
   stop_type: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP';
@@ -19,7 +19,7 @@ interface StopOrder {
 
 interface StopOrderPanelProps {
   walletAddress: string;
-  selectedCoin: {
+  selectedStock: {
     id: string;
     symbol: string;
     current_price: number;
@@ -29,7 +29,7 @@ interface StopOrderPanelProps {
 
 const StopOrderPanel: React.FC<StopOrderPanelProps> = ({
   walletAddress,
-  selectedCoin,
+  selectedStock,
   onRefresh,
 }) => {
   const [stopOrders, setStopOrders] = useState<StopOrder[]>([]);
@@ -61,7 +61,7 @@ const StopOrderPanel: React.FC<StopOrderPanelProps> = ({
     try {
       const orderData: any = {
         wallet_address: walletAddress,
-        coin_id: selectedCoin.id,
+        stock_id: selectedStock.id,
         stop_type: stopType,
         quantity: parseFloat(quantity),
       };
@@ -142,8 +142,8 @@ const StopOrderPanel: React.FC<StopOrderPanelProps> = ({
 
       {showForm && (
         <div className="stop-order-form">
-          <h4>새 스탑 주문 생성 - {selectedCoin.symbol}</h4>
-          <p className="current-price">현재가: {selectedCoin.current_price.toLocaleString()} G</p>
+          <h4>새 스탑 주문 생성 - {selectedStock.symbol}</h4>
+          <p className="current-price">현재가: {selectedStock.current_price.toLocaleString()} G</p>
 
           <div className="form-group">
             <label>스탑 타입</label>
@@ -160,7 +160,7 @@ const StopOrderPanel: React.FC<StopOrderPanelProps> = ({
               type="number"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
-              placeholder="매도할 코인 수량"
+              placeholder="매도할 종목 수량"
               step="0.00000001"
             />
           </div>
@@ -185,8 +185,8 @@ const StopOrderPanel: React.FC<StopOrderPanelProps> = ({
                 <p className="price-diff">
                   현재가 대비:{' '}
                   {(
-                    ((parseFloat(stopPrice) - selectedCoin.current_price) /
-                      selectedCoin.current_price) *
+                    ((parseFloat(stopPrice) - selectedStock.current_price) /
+                      selectedStock.current_price) *
                     100
                   ).toFixed(2)}
                   %
@@ -236,7 +236,7 @@ const StopOrderPanel: React.FC<StopOrderPanelProps> = ({
                   <span className={`stop-badge ${getStopTypeColor(order.stop_type)}`}>
                     {getStopTypeLabel(order.stop_type)}
                   </span>
-                  <span className="coin-symbol">{order.symbol}</span>
+                  <span className="stock-symbol">{order.symbol}</span>
                   <span className="quantity">{order.quantity.toFixed(8)}</span>
                 </div>
 

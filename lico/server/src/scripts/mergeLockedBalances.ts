@@ -10,13 +10,13 @@ async function mergeLockedBalances() {
       SELECT
         ucb.id,
         uw.minecraft_username,
-        c.symbol,
+        s.symbol,
         ucb.available_amount,
         ucb.locked_amount,
         (ucb.available_amount + ucb.locked_amount) as total
-      FROM user_coin_balances ucb
+      FROM user_stock_balances ucb
       JOIN user_wallets uw ON ucb.wallet_id = uw.id
-      JOIN coins c ON ucb.coin_id = c.id
+      JOIN stocks s ON ucb.stock_id = s.id
       WHERE ucb.locked_amount > 0
     `);
 
@@ -38,7 +38,7 @@ async function mergeLockedBalances() {
 
       // locked를 available로 병합
       await query(
-        `UPDATE user_coin_balances
+        `UPDATE user_stock_balances
          SET available_amount = ?,
              locked_amount = 0
          WHERE id = ?`,
@@ -53,12 +53,12 @@ async function mergeLockedBalances() {
       SELECT
         ucb.id,
         uw.minecraft_username,
-        c.symbol,
+        s.symbol,
         ucb.available_amount,
         ucb.locked_amount
-      FROM user_coin_balances ucb
+      FROM user_stock_balances ucb
       JOIN user_wallets uw ON ucb.wallet_id = uw.id
-      JOIN coins c ON ucb.coin_id = c.id
+      JOIN stocks s ON ucb.stock_id = s.id
       WHERE ucb.locked_amount > 0
     `);
 

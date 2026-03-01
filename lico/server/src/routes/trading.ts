@@ -1,7 +1,6 @@
 import express, { Request, Response } from 'express';
 import { query } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
-import blockchainService from '../services/blockchainService';
 import tradingEngine from '../services/tradingEngine';
 import stopOrderMonitor from '../services/stopOrderMonitor';
 import { isAuthenticated } from '../middleware/auth';
@@ -11,7 +10,7 @@ const router = express.Router();
 // 주문 생성 (매수/매도) - 로그인 필요
 router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const { wallet_address, coin_id, order_type, order_method, price, quantity, amount } = req.body;
+    const { wallet_address, stock_id, order_type, order_method, price, quantity, amount } = req.body;
 
     // 지갑 조회
     const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
@@ -24,17 +23,17 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
 
     const wallet = wallets[0];
 
-    // 코인 조회
-    const coins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coin_id]);
+    // 주식 조회
+    const stocks = await query('SELECT * FROM stocks WHERE id = ? AND status = "ACTIVE"', [stock_id]);
 
-    if (coins.length === 0) {
-      return res.status(404).json({ error: '코인을 찾을 수 없습니다' });
+    if (stocks.length === 0) {
+      return res.status(404).json({ error: '주식을 찾을 수 없습니다' });
     }
 
-    const coin = coins[0];
+    const stock = stocks[0];
 
     // 시장가 주문은 현재가로 설정
-    const orderPrice = order_method === 'MARKET' ? coin.current_price : price;
+    const orderPrice = order_method === 'MARKET' ? stock.current_price : price;
 
     if (!orderPrice || orderPrice <= 0) {
       return res.status(400).json({ error: '유효하지 않은 가격입니다' });
@@ -54,16 +53,23 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(400).json({ error: '유효하지 않은 수량입니다' });
     }
 
-    // base_currency 기반 거래 로그
-    if (coin.base_currency_id) {
-      const baseCurrencies = await query(
-        'SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"',
-        [coin.base_currency_id]
-      );
+    // 창업자 매도 제한 체크
+    if (order_type === 'SELL' && stock.founder_uuid) {
+      if (wallet.minecraft_uuid === stock.founder_uuid) {
+        // 창업자는 자사 주식 매도 불가 - 관리자 승인 요청 생성
+        const requestId = uuidv4();
+        await query(
+          `INSERT INTO founder_sell_requests (id, stock_id, wallet_id, founder_uuid, order_method, price, quantity, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
+          [requestId, stock_id, wallet.id, stock.founder_uuid, order_method, order_method === 'LIMIT' ? orderPrice : null, finalQuantity]
+        );
 
-      if (baseCurrencies.length > 0) {
-        const baseCurrency = baseCurrencies[0];
-        console.log(`💰 ${coin.symbol} 거래: 기준 화폐 ${baseCurrency.symbol}`);
+        return res.json({
+          success: true,
+          founder_sell_request: true,
+          request_id: requestId,
+          message: '창업자 매도 요청이 등록되었습니다. 관리자 승인 후 매도됩니다.',
+        });
       }
     }
 
@@ -75,9 +81,9 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
       if (order_method === 'MARKET') {
         // 시장가 주문: 즉시 매칭
         if (order_type === 'BUY') {
-          matchResult = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'MARKET', finalQuantity) as { matched: number; remaining: number };
+          matchResult = await tradingEngine.processBuyOrder(wallet.id, stock_id, 'MARKET', finalQuantity) as { matched: number; remaining: number };
         } else {
-          matchResult = await tradingEngine.processSellOrder(wallet.id, coin_id, 'MARKET', finalQuantity) as { matched: number; remaining: number };
+          matchResult = await tradingEngine.processSellOrder(wallet.id, stock_id, 'MARKET', finalQuantity) as { matched: number; remaining: number };
         }
 
         // 시장가 주문 결과 처리
@@ -90,27 +96,15 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
       } else {
         // 지정가 주문: tradingEngine 사용
         if (order_type === 'BUY') {
-          orderId = await tradingEngine.processBuyOrder(wallet.id, coin_id, 'LIMIT', finalQuantity, orderPrice) as string;
+          orderId = await tradingEngine.processBuyOrder(wallet.id, stock_id, 'LIMIT', finalQuantity, orderPrice) as string;
         } else {
-          orderId = await tradingEngine.processSellOrder(wallet.id, coin_id, 'LIMIT', finalQuantity, orderPrice) as string;
+          orderId = await tradingEngine.processSellOrder(wallet.id, stock_id, 'LIMIT', finalQuantity, orderPrice) as string;
         }
 
-        // 블록체인 거래 기록 생성
-        const totalAmount = orderPrice * finalQuantity;
-        const fee = Math.floor(totalAmount * 0.05);
-        await blockchainService.createTransaction(
-          wallet.wallet_address,
-          order_type === 'BUY' ? coin.symbol : 'SYSTEM',
-          totalAmount,
-          fee,
-          'TRADE',
-          orderId
-        );
-
         const orders = await query(
-          `SELECT o.*, c.symbol, c.name
+          `SELECT o.*, s.symbol, s.name
            FROM orders o
-           JOIN coins c ON o.coin_id = c.id
+           JOIN stocks s ON o.stock_id = s.id
            WHERE o.id = ?`,
           [orderId]
         );
@@ -135,7 +129,7 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
 router.get('/orders/:wallet_address', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { wallet_address } = req.params;
-    const { status, coin_id } = req.query;
+    const { status, stock_id } = req.query;
 
     // 지갑 조회
     const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
@@ -149,9 +143,9 @@ router.get('/orders/:wallet_address', isAuthenticated, async (req: Request, res:
     const wallet = wallets[0];
 
     let sql = `
-      SELECT o.*, c.symbol, c.name, c.logo_url
+      SELECT o.*, s.symbol, s.name, s.logo_url
       FROM orders o
-      JOIN coins c ON o.coin_id = c.id
+      JOIN stocks s ON o.stock_id = s.id
       WHERE o.wallet_id = ?
     `;
     const params: any[] = [wallet.id];
@@ -161,9 +155,9 @@ router.get('/orders/:wallet_address', isAuthenticated, async (req: Request, res:
       params.push(status);
     }
 
-    if (coin_id) {
-      sql += ' AND o.coin_id = ?';
-      params.push(coin_id);
+    if (stock_id) {
+      sql += ' AND o.stock_id = ?';
+      params.push(stock_id);
     }
 
     sql += ' ORDER BY o.created_at DESC';
@@ -212,13 +206,6 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
       return res.status(400).json({ error: '취소할 수량이 없습니다' });
     }
 
-    // 코인 정보 조회 (MEME 코인인지 확인)
-    const coins = await query('SELECT * FROM coins WHERE id = ?', [order.coin_id]);
-    if (coins.length === 0) {
-      return res.status(404).json({ error: '코인을 찾을 수 없습니다' });
-    }
-    const coin = coins[0];
-
     // 주문 취소 처리
     if (order.order_type === 'BUY') {
       // 매수 취소: 환불 (남은 수량 기준)
@@ -241,40 +228,13 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
 
       console.log(`📝 주문 취소 환불 계산: 가격=${orderPrice}, 남은수량=${remainingQty}, 전체수량=${totalQuantity}, 주문수수료=${orderFee}, 환불수수료=${refundFee}, 총환불=${totalRefund}`);
 
-      // base_currency가 있는 경우: 기준 화폐 환불
-      if (coin.base_currency_id) {
-        // base_currency 조회
-        const baseCurrencies = await query(
-          'SELECT * FROM coins WHERE id = ?',
-          [coin.base_currency_id]
-        );
-
-        if (baseCurrencies.length === 0) {
-          return res.status(400).json({ error: '기준 화폐를 찾을 수 없습니다' });
-        }
-
-        const baseCurrency = baseCurrencies[0];
-
-        // 기준 화폐 환불 (잠금 해제)
-        await query(
-          'UPDATE user_coin_balances SET available_amount = available_amount + ?, locked_amount = GREATEST(0, locked_amount - ?) WHERE wallet_id = ? AND coin_id = ?',
-          [Number(totalRefund), Number(totalRefund), order.wallet_id, baseCurrency.id]
-        );
-
-        console.log(`💰 ${coin.symbol} 매수 주문 취소: ${baseCurrency.symbol} ${totalRefund} 환불`);
-      } else {
-        // base_currency가 없는 경우: Gold 환불
-        await query('UPDATE user_wallets SET gold_balance = gold_balance + ? WHERE id = ?', [
-          Number(totalRefund),
-          order.wallet_id,
-        ]);
-      }
+      await query('UPDATE user_wallets SET gold_balance = gold_balance + ? WHERE id = ?', [Number(totalRefund), order.wallet_id]);
     } else if (order.order_type === 'SELL') {
-      // 매도 취소: 코인 잠금 해제 (남은 수량 기준)
+      // 매도 취소: 주식 잠금 해제 (남은 수량 기준)
       const remainingQtyNum = Number(remainingQty);
       await query(
-        'UPDATE user_coin_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND coin_id = ?',
-        [remainingQtyNum, remainingQtyNum, order.wallet_id, order.coin_id]
+        'UPDATE user_stock_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND stock_id = ?',
+        [remainingQtyNum, remainingQtyNum, order.wallet_id, order.stock_id]
       );
     }
 
@@ -289,7 +249,7 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
         websocket.broadcastOrderCancelled({
           order_id: order.id,
           wallet_address: order.wallet_address,
-          coin_id: order.coin_id,
+          stock_id: order.stock_id,
           order_type: order.order_type,
           price: order.price,
           quantity: order.quantity,
@@ -313,31 +273,31 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
 });
 
 // 호가창 (매수/매도 주문 목록)
-router.get('/orderbook/:coin_id', async (req: Request, res: Response) => {
+router.get('/orderbook/:stock_id', async (req: Request, res: Response) => {
   try {
-    const { coin_id } = req.params;
+    const { stock_id } = req.params;
     const { limit = 20 } = req.query;
 
     // 매수 호가 (높은 가격 순)
     const buyOrders = await query(
       `SELECT price, SUM(remaining_quantity) as total_quantity, COUNT(*) as order_count
        FROM orders
-       WHERE coin_id = ? AND order_type = 'BUY' AND status IN ('PENDING', 'PARTIAL')
+       WHERE stock_id = ? AND order_type = 'BUY' AND status IN ('PENDING', 'PARTIAL')
        GROUP BY price
        ORDER BY price DESC
        LIMIT ?`,
-      [coin_id, Number(limit)]
+      [stock_id, Number(limit)]
     );
 
     // 매도 호가 (낮은 가격 순)
     const sellOrders = await query(
       `SELECT price, SUM(remaining_quantity) as total_quantity, COUNT(*) as order_count
        FROM orders
-       WHERE coin_id = ? AND order_type = 'SELL' AND status IN ('PENDING', 'PARTIAL')
+       WHERE stock_id = ? AND order_type = 'SELL' AND status IN ('PENDING', 'PARTIAL')
        GROUP BY price
        ORDER BY price ASC
        LIMIT ?`,
-      [coin_id, Number(limit)]
+      [stock_id, Number(limit)]
     );
 
     res.json({
@@ -354,7 +314,7 @@ router.get('/orderbook/:coin_id', async (req: Request, res: Response) => {
 router.get('/trades/:wallet_address', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { wallet_address } = req.params;
-    const { coin_id, limit = 50 } = req.query;
+    const { stock_id, limit = 50 } = req.query;
 
     // 지갑 조회
     const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
@@ -368,7 +328,7 @@ router.get('/trades/:wallet_address', isAuthenticated, async (req: Request, res:
     const wallet = wallets[0];
 
     let sql = `
-      SELECT t.*, c.symbol, c.name,
+      SELECT t.*, s.symbol, s.name,
              CASE
                WHEN t.buyer_wallet_id = ? THEN 'BUY'
                WHEN t.seller_wallet_id = ? THEN 'SELL'
@@ -378,14 +338,14 @@ router.get('/trades/:wallet_address', isAuthenticated, async (req: Request, res:
                WHEN t.seller_wallet_id = ? THEN t.sell_fee
              END as my_fee
       FROM trades t
-      JOIN coins c ON t.coin_id = c.id
+      JOIN stocks s ON t.stock_id = s.id
       WHERE (t.buyer_wallet_id = ? OR t.seller_wallet_id = ?)
     `;
     const params: any[] = [wallet.id, wallet.id, wallet.id, wallet.id, wallet.id, wallet.id];
 
-    if (coin_id) {
-      sql += ' AND t.coin_id = ?';
-      params.push(coin_id);
+    if (stock_id) {
+      sql += ' AND t.stock_id = ?';
+      params.push(stock_id);
     }
 
     sql += ' ORDER BY t.created_at DESC LIMIT ?';
@@ -403,7 +363,7 @@ router.get('/trades/:wallet_address', isAuthenticated, async (req: Request, res:
 // 스탑 주문 생성 (손절/익절) - 로그인 필요
 router.post('/stop-order', isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const { wallet_address, coin_id, stop_type, quantity, stop_price, trailing_percent } = req.body;
+    const { wallet_address, stock_id, stop_type, quantity, stop_price, trailing_percent } = req.body;
 
     // 지갑 조회
     const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [wallet_address]);
@@ -412,14 +372,14 @@ router.post('/stop-order', isAuthenticated, async (req: Request, res: Response) 
     }
     const wallet = wallets[0];
 
-    // 코인 보유 확인
+    // 주식 보유 확인
     const balances = await query(
-      'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
-      [wallet.id, coin_id]
+      'SELECT * FROM user_stock_balances WHERE wallet_id = ? AND stock_id = ?',
+      [wallet.id, stock_id]
     );
 
     if (balances.length === 0) {
-      return res.status(400).json({ error: '해당 코인을 보유하고 있지 않습니다' });
+      return res.status(400).json({ error: '해당 주식을 보유하고 있지 않습니다' });
     }
 
     const availableAmount = typeof balances[0].available_amount === 'string'
@@ -435,17 +395,17 @@ router.post('/stop-order', isAuthenticated, async (req: Request, res: Response) 
     // 스탑 주문 생성
     const orderId = await stopOrderMonitor.createStopOrder(
       wallet.id,
-      coin_id,
+      stock_id,
       stop_type,
       quantity,
       stop_price,
       trailing_percent
     );
 
-    // 코인 잠금 (스탑 주문이 트리거될 때까지)
+    // 주식 잠금 (스탑 주문이 트리거될 때까지)
     await query(
-      'UPDATE user_coin_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND coin_id = ?',
-      [quantity, quantity, wallet.id, coin_id]
+      'UPDATE user_stock_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND stock_id = ?',
+      [quantity, quantity, wallet.id, stock_id]
     );
 
     res.json({
@@ -471,9 +431,9 @@ router.get('/stop-orders/:wallet_address', isAuthenticated, async (req: Request,
     const wallet = wallets[0];
 
     const stopOrders = await query(
-      `SELECT o.*, c.symbol, c.name, c.current_price
+      `SELECT o.*, s.symbol, s.name, s.current_price
        FROM orders o
-       JOIN coins c ON o.coin_id = c.id
+       JOIN stocks s ON o.stock_id = s.id
        WHERE o.wallet_id = ?
        AND o.is_stop_order = TRUE
        ORDER BY o.created_at DESC`,

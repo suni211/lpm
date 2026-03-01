@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
-import { tradingService } from '../services/coinService';
-import type { OrderbookEntry, Coin } from '../types';
+import { tradingService } from '../services/stockService';
+import type { OrderbookEntry } from '../types';
 import './Orderbook.css';
 
 interface OrderbookProps {
-  coinId: string;
-  baseCurrency: Coin | null;
+  stockId: string;
 }
 
 type OrderbookMode = 'normal' | 'cumulative';
 
-const Orderbook = ({ coinId, baseCurrency }: OrderbookProps) => {
-  const currencySymbol = baseCurrency?.symbol || 'G';
+const Orderbook = ({ stockId }: OrderbookProps) => {
   const [mode, setMode] = useState<OrderbookMode>('normal');
   const [buyOrders, setBuyOrders] = useState<OrderbookEntry[]>([]);
   const [sellOrders, setSellOrders] = useState<OrderbookEntry[]>([]);
@@ -20,7 +18,7 @@ const Orderbook = ({ coinId, baseCurrency }: OrderbookProps) => {
   useEffect(() => {
     const fetchOrderbook = async () => {
       try {
-        const data = await tradingService.getOrderbook(coinId, 15);
+        const data = await tradingService.getOrderbook(stockId, 15);
         setBuyOrders(data.buy_orders || []);
         setSellOrders(data.sell_orders || []);
       } catch (error) {
@@ -30,12 +28,12 @@ const Orderbook = ({ coinId, baseCurrency }: OrderbookProps) => {
       }
     };
 
-    if (coinId) {
+    if (stockId) {
       fetchOrderbook();
       const interval = setInterval(fetchOrderbook, 3000);
       return () => clearInterval(interval);
     }
-  }, [coinId]);
+  }, [stockId]);
 
   const formatPrice = (price: number | string | null | undefined) => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : (price || 0);
@@ -100,7 +98,7 @@ const Orderbook = ({ coinId, baseCurrency }: OrderbookProps) => {
       </div>
 
       <div className="orderbook-table-header">
-        <div className="header-price">가격({currencySymbol})</div>
+        <div className="header-price">가격(G)</div>
         <div className="header-quantity">수량</div>
         <div className="header-count">주문수</div>
       </div>
@@ -137,7 +135,7 @@ const Orderbook = ({ coinId, baseCurrency }: OrderbookProps) => {
                   {formatPrice(Math.abs(
                     (typeof sellOrders[0].price === 'string' ? parseFloat(sellOrders[0].price) : (sellOrders[0].price || 0)) -
                     (typeof buyOrders[0].price === 'string' ? parseFloat(buyOrders[0].price) : (buyOrders[0].price || 0))
-                  ))} {currencySymbol}
+                  ))} G
                 </div>
               )}
             </div>

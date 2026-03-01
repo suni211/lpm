@@ -27,79 +27,40 @@ export class TradingEngine {
       return await this.matchMarketBuyOrder(walletId, coinId, quantity);
     }
 
-    // 코인 정보 조회 (MEME 코인인지 확인)
-    const coins = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
-    if (coins.length === 0) {
-      throw new Error('코인을 찾을 수 없습니다');
+    // 주식 정보 조회
+    const stocks = await query('SELECT * FROM stocks WHERE id = ?', [coinId]);
+    if (stocks.length === 0) {
+      throw new Error('주식을 찾을 수 없습니다');
     }
-    const coin = coins[0];
+    const stock = stocks[0];
 
     const totalAmount = price! * quantity;
     const fee = Math.floor(totalAmount * 0.05);
     const totalRequired = totalAmount + fee;
 
-    // base_currency가 있는 경우: 해당 코인으로 거래
-    if (coin.base_currency_id) {
-      // base_currency 조회
-      const baseCurrencies = await query(
-        'SELECT * FROM coins WHERE id = ?',
-        [coin.base_currency_id]
-      );
-
-      if (baseCurrencies.length === 0) {
-        throw new Error('기준 화폐를 찾을 수 없습니다');
-      }
-
-      const baseCurrency = baseCurrencies[0];
-
-      // 기준 화폐 잔액 확인
-      const balances = await query(
-        'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
-        [walletId, baseCurrency.id]
-      );
-
-      const availableAmount = balances.length > 0
-        ? (typeof balances[0].available_amount === 'string'
-          ? parseFloat(balances[0].available_amount)
-          : (balances[0].available_amount || 0))
-        : 0;
-
-      if (availableAmount < totalRequired) {
-        throw new Error(`${baseCurrency.symbol} 잔액이 부족합니다 (필요: ${totalRequired}, 보유: ${availableAmount})`);
-      }
-
-      // 기준 화폐 잠금
-      await query(
-        'UPDATE user_coin_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND coin_id = ?',
-        [totalRequired, totalRequired, walletId, baseCurrency.id]
-      );
-
-      console.log(`💰 ${coin.symbol} 매수 주문: ${baseCurrency.symbol} ${totalRequired} 잠금`);
-    } else {
-      // base_currency가 없는 경우: Gold로 거래
-      const wallets = await query('SELECT * FROM user_wallets WHERE id = ?', [walletId]);
-      if (wallets.length === 0) {
-        throw new Error('지갑을 찾을 수 없습니다');
-      }
-
-      const goldBalance = typeof wallets[0].gold_balance === 'string'
-        ? parseFloat(wallets[0].gold_balance)
-        : (wallets[0].gold_balance || 0);
-
-      if (goldBalance < totalRequired) {
-        throw new Error(`Gold 잔액이 부족합니다 (필요: ${totalRequired}, 보유: ${goldBalance})`);
-      }
-
-      // Gold 잠금 (차감)
-      await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
-        totalRequired,
-        walletId,
-      ]);
+    // Gold 잔액 확인
+    const wallets = await query('SELECT * FROM user_wallets WHERE id = ?', [walletId]);
+    if (wallets.length === 0) {
+      throw new Error('지갑을 찾을 수 없습니다');
     }
+
+    const goldBalance = typeof wallets[0].gold_balance === 'string'
+      ? parseFloat(wallets[0].gold_balance)
+      : (wallets[0].gold_balance || 0);
+
+    if (goldBalance < totalRequired) {
+      throw new Error(`Gold 잔액이 부족합니다 (필요: ${totalRequired}, 보유: ${goldBalance})`);
+    }
+
+    // Gold 잠금 (차감)
+    await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
+      totalRequired,
+      walletId,
+    ]);
 
     // 지정가 매수: 주문 생성 후 매칭 시도
     await query(
-      `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, fee, status)
+      `INSERT INTO orders (id, wallet_id, stock_id, order_type, order_method, price, quantity, fee, status)
        VALUES (?, ?, ?, 'BUY', 'LIMIT', ?, ?, ?, 'PENDING')`,
       [orderId, walletId, coinId, price, quantity, fee]
     );
@@ -118,14 +79,14 @@ export class TradingEngine {
     quantity: number,
     price?: number
   ) {
-    // 코인 잔액 확인
+    // 주식 잔액 확인
     const balances = await query(
-      'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+      'SELECT * FROM user_stock_balances WHERE wallet_id = ? AND stock_id = ?',
       [walletId, coinId]
     );
 
     if (balances.length === 0) {
-      throw new Error('보유 코인이 없습니다');
+      throw new Error('보유 주식이 없습니다');
     }
 
     // available_amount를 숫자로 변환하여 비교
@@ -133,10 +94,10 @@ export class TradingEngine {
       ? parseFloat(balances[0].available_amount)
       : (balances[0].available_amount || 0);
 
-    console.log(`💰 매도 잔액 체크: 보유=${availableAmount.toFixed(8)}, 판매 시도=${quantity}`);
+    console.log(`매도 잔액 체크: 보유=${availableAmount.toFixed(8)}, 판매 시도=${quantity}`);
 
     if (availableAmount < quantity) {
-      throw new Error(`보유 코인이 부족합니다 (보유: ${availableAmount.toFixed(8)}, 필요: ${quantity})`);
+      throw new Error(`보유 주식이 부족합니다 (보유: ${availableAmount.toFixed(8)}, 필요: ${quantity})`);
     }
 
     // 시장가 매도: 현재 최고가 매수 주문과 매칭
@@ -144,7 +105,7 @@ export class TradingEngine {
       return await this.matchMarketSellOrder(walletId, coinId, quantity);
     }
 
-    // 지정가 매도: 코인 잠금
+    // 지정가 매도: 주식 잠금
     if (!price) {
       throw new Error('지정가 주문은 가격이 필요합니다');
     }
@@ -152,18 +113,18 @@ export class TradingEngine {
     const totalAmount = price * quantity;
     const fee = Math.floor(totalAmount * 0.05);
 
-    // 코인 잠금 (주문 체결될 때까지) - 음수 방지
+    // 주식 잠금 (주문 체결될 때까지) - 음수 방지
     await query(
-      `UPDATE user_coin_balances
+      `UPDATE user_stock_balances
        SET available_amount = available_amount - ?,
            locked_amount = locked_amount + ?
-       WHERE wallet_id = ? AND coin_id = ? AND available_amount >= ?`,
+       WHERE wallet_id = ? AND stock_id = ? AND available_amount >= ?`,
       [quantity, quantity, walletId, coinId, quantity]
     );
 
     // 잠금 성공 여부 확인
     const lockedBalances = await query(
-      'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+      'SELECT * FROM user_stock_balances WHERE wallet_id = ? AND stock_id = ?',
       [walletId, coinId]
     );
     const newAvailable = typeof lockedBalances[0].available_amount === 'string'
@@ -173,7 +134,7 @@ export class TradingEngine {
     if (newAvailable < 0) {
       // 롤백
       await query(
-        'UPDATE user_coin_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND coin_id = ?',
+        'UPDATE user_stock_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND stock_id = ?',
         [quantity, quantity, walletId, coinId]
       );
       throw new Error('잔액 잠금 실패: 동시성 문제 발생');
@@ -183,7 +144,7 @@ export class TradingEngine {
 
     // 지정가 매도: 주문 생성 후 매칭 시도
     await query(
-      `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, fee, status)
+      `INSERT INTO orders (id, wallet_id, stock_id, order_type, order_method, price, quantity, fee, status)
        VALUES (?, ?, ?, 'SELL', 'LIMIT', ?, ?, ?, 'PENDING')`,
       [orderId, walletId, coinId, price, quantity, fee]
     );
@@ -203,20 +164,20 @@ export class TradingEngine {
     }
     const wallet = wallets[0];
 
-    // 코인 정보 조회 (현재가 확인) - ACTIVE 상태만
-    const coins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coinId]);
-    if (coins.length === 0) {
-      throw new Error('코인을 찾을 수 없거나 거래가 중지되었습니다');
+    // 주식 정보 조회 (현재가 확인) - ACTIVE 상태만
+    const stocks = await query('SELECT * FROM stocks WHERE id = ? AND status = "ACTIVE"', [coinId]);
+    if (stocks.length === 0) {
+      throw new Error('주식을 찾을 수 없거나 거래가 중지되었습니다');
     }
-    const coin = coins[0];
-    const currentPrice = typeof coin.current_price === 'string' 
-      ? parseFloat(coin.current_price) 
-      : (coin.current_price || 0);
+    const stock = stocks[0];
+    const currentPrice = typeof stock.current_price === 'string'
+      ? parseFloat(stock.current_price)
+      : (stock.current_price || 0);
 
     // 최저가 매도 주문들 조회 (유저 매도 주문, 자기 자신 제외)
     const sellOrders = await query(
       `SELECT * FROM orders
-       WHERE coin_id = ? AND order_type = 'SELL' AND status IN ('PENDING', 'PARTIAL')
+       WHERE stock_id = ? AND order_type = 'SELL' AND status IN ('PENDING', 'PARTIAL')
        AND is_admin_order = FALSE
        AND wallet_id != ?
        ORDER BY price ASC, created_at ASC`,
@@ -253,22 +214,22 @@ export class TradingEngine {
 
     // 2. 남은 수량이 있으면 유통량 기준으로 구매 가능 여부 확인
     if (remainingQty > 0) {
-      // 코인 유통량 확인
-      const coinCirculatingSupply = typeof coin.circulating_supply === 'string' 
-        ? parseFloat(coin.circulating_supply) 
-        : (coin.circulating_supply || 0);
+      // 주식 유통량 확인
+      const stockCirculatingSupply = typeof stock.circulating_supply === 'string'
+        ? parseFloat(stock.circulating_supply)
+        : (stock.circulating_supply || 0);
 
       // 현재 유저들이 보유한 총량 계산 (AI 봇 제외)
       const userHoldings = await query(
         `SELECT COALESCE(SUM(ucb.total_amount), 0) as total_held
-         FROM user_coin_balances ucb
+         FROM user_stock_balances ucb
          JOIN user_wallets uw ON ucb.wallet_id = uw.id
-         WHERE ucb.coin_id = ? AND uw.minecraft_username != 'AI_BOT'`,
+         WHERE ucb.stock_id = ? AND uw.minecraft_username != 'AI_BOT'`,
         [coinId]
       );
 
       const totalHeld = parseFloat(userHoldings[0]?.total_held || '0');
-      const availableSupply = coinCirculatingSupply - totalHeld; // 유통량에서 유저 보유량 제외
+      const availableSupply = stockCirculatingSupply - totalHeld; // 유통량에서 유저 보유량 제외
 
       // 유통량 기준으로 구매 가능한 양 계산
       const purchasableQty = Math.max(0, availableSupply);
@@ -280,72 +241,27 @@ export class TradingEngine {
         const fee = Math.floor(totalAmount * 0.05);
         const totalRequired = totalAmount + fee;
 
-        // base_currency가 있는 경우: 기준 화폐 잔액 확인 및 잠금
-        if (coin.base_currency_id) {
-          const baseCurrencies = await query(
-            'SELECT * FROM coins WHERE id = ?',
-            [coin.base_currency_id]
-          );
+        // Gold 잔액 확인 및 차감
+        const walletBalanceCheck = typeof wallet.gold_balance === 'string'
+          ? parseFloat(wallet.gold_balance)
+          : (wallet.gold_balance || 0);
 
-          if (baseCurrencies.length === 0) {
-            throw new Error('기준 화폐를 찾을 수 없습니다');
-          }
-
-          const baseCurrency = baseCurrencies[0];
-
-          // 기준 화폐 잔액 확인
-          const balances = await query(
-            'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
-            [walletId, baseCurrency.id]
-          );
-
-          const availableAmount = balances.length > 0
-            ? (typeof balances[0].available_amount === 'string'
-              ? parseFloat(balances[0].available_amount)
-              : (balances[0].available_amount || 0))
-            : 0;
-
-          if (availableAmount < totalRequired) {
-            throw new Error(`${baseCurrency.symbol} 잔액이 부족합니다 (필요: ${totalRequired}, 보유: ${availableAmount})`);
-          }
-
-          // 예약 주문 생성
-          await query(
-            `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, fee, status, is_admin_order)
-             VALUES (?, ?, ?, 'BUY', 'LIMIT', ?, ?, ?, 'PENDING', FALSE)`,
-            [orderId, walletId, coinId, currentPrice, remainingQty, fee]
-          );
-
-          // 기준 화폐 잠금
-          await query(
-            'UPDATE user_coin_balances SET available_amount = available_amount - ?, locked_amount = locked_amount + ? WHERE wallet_id = ? AND coin_id = ?',
-            [totalRequired, totalRequired, walletId, baseCurrency.id]
-          );
-
-          console.log(`💰 ${coin.symbol} 예약 주문 생성: ${baseCurrency.symbol} ${totalRequired} 잠금`);
-        } else {
-          // base_currency가 없는 경우: Gold 잔액 확인 및 차감
-          const walletBalanceCheck = typeof wallet.gold_balance === 'string'
-            ? parseFloat(wallet.gold_balance)
-            : (wallet.gold_balance || 0);
-
-          if (walletBalanceCheck < totalCost + totalRequired) {
-            throw new Error('잔액이 부족합니다');
-          }
-
-          // 예약 주문 생성
-          await query(
-            `INSERT INTO orders (id, wallet_id, coin_id, order_type, order_method, price, quantity, fee, status, is_admin_order)
-             VALUES (?, ?, ?, 'BUY', 'LIMIT', ?, ?, ?, 'PENDING', FALSE)`,
-            [orderId, walletId, coinId, currentPrice, remainingQty, fee]
-          );
-
-          // Gold 잠금
-          await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
-            totalRequired,
-            walletId,
-          ]);
+        if (walletBalanceCheck < totalCost + totalRequired) {
+          throw new Error('잔액이 부족합니다');
         }
+
+        // 예약 주문 생성
+        await query(
+          `INSERT INTO orders (id, wallet_id, stock_id, order_type, order_method, price, quantity, fee, status, is_admin_order)
+           VALUES (?, ?, ?, 'BUY', 'LIMIT', ?, ?, ?, 'PENDING', FALSE)`,
+          [orderId, walletId, coinId, currentPrice, remainingQty, fee]
+        );
+
+        // Gold 잠금
+        await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
+          totalRequired,
+          walletId,
+        ]);
 
         return { matched: quantity - remainingQty, remaining: remainingQty };
       }
@@ -357,9 +273,9 @@ export class TradingEngine {
       }
       const aiWallet = aiWallets[0];
 
-      // AI 봇의 코인 잔액 확인
+      // AI 봇의 주식 잔액 확인
       const aiBalances = await query(
-        'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+        'SELECT * FROM user_stock_balances WHERE wallet_id = ? AND stock_id = ?',
         [aiWallet.id, coinId]
       );
 
@@ -379,12 +295,12 @@ export class TradingEngine {
         const neededAmount = sellableQty - aiAvailableAmount;
         if (aiBalances.length > 0) {
           await query(
-            'UPDATE user_coin_balances SET available_amount = available_amount + ? WHERE wallet_id = ? AND coin_id = ?',
+            'UPDATE user_stock_balances SET available_amount = available_amount + ? WHERE wallet_id = ? AND stock_id = ?',
             [neededAmount, aiWallet.id, coinId]
           );
         } else {
           await query(
-            `INSERT INTO user_coin_balances (id, wallet_id, coin_id, available_amount, average_buy_price)
+            `INSERT INTO user_stock_balances (id, wallet_id, stock_id, available_amount, average_buy_price)
              VALUES (?, ?, ?, ?, ?)`,
             [uuidv4(), aiWallet.id, coinId, neededAmount, currentPrice]
           );
@@ -405,7 +321,7 @@ export class TradingEngine {
       }
 
       // AI 봇과 직접 거래 체결 (executeTrade에서 잔액 차감 처리)
-      console.log(`💰 매수 체결: ${sellableQty}개, 가격: ${currentPrice}, 총액: ${totalRequired}`);
+      console.log(`매수 체결: ${sellableQty}개, 가격: ${currentPrice}, 총액: ${totalRequired}`);
       await this.executeTrade(walletId, aiWallet.id, coinId, currentPrice, sellableQty, null, null);
       totalCost += totalRequired;
       remainingQty -= sellableQty;
@@ -418,14 +334,14 @@ export class TradingEngine {
 
   // 시장가 매도 매칭
   private async matchMarketSellOrder(walletId: string, coinId: string, quantity: number) {
-    // 코인 잔액 확인
+    // 주식 잔액 확인
     const balances = await query(
-      'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+      'SELECT * FROM user_stock_balances WHERE wallet_id = ? AND stock_id = ?',
       [walletId, coinId]
     );
 
     if (balances.length === 0) {
-      throw new Error('보유 코인이 없습니다');
+      throw new Error('보유 주식이 없습니다');
     }
 
     // available_amount를 숫자로 변환하여 비교
@@ -433,24 +349,24 @@ export class TradingEngine {
       ? parseFloat(balances[0].available_amount)
       : (balances[0].available_amount || 0);
 
-    console.log(`💰 시장가 매도 잔액 체크: 보유=${availableAmount.toFixed(8)}, 판매 시도=${quantity}`);
+    console.log(`시장가 매도 잔액 체크: 보유=${availableAmount.toFixed(8)}, 판매 시도=${quantity}`);
 
     if (availableAmount < quantity) {
-      throw new Error(`보유 코인이 부족합니다 (보유: ${availableAmount.toFixed(8)}, 필요: ${quantity})`);
+      throw new Error(`보유 주식이 부족합니다 (보유: ${availableAmount.toFixed(8)}, 필요: ${quantity})`);
     }
 
-    // 코인 잠금 (음수 방지)
+    // 주식 잠금 (음수 방지)
     await query(
-      `UPDATE user_coin_balances
+      `UPDATE user_stock_balances
        SET available_amount = available_amount - ?,
            locked_amount = locked_amount + ?
-       WHERE wallet_id = ? AND coin_id = ? AND available_amount >= ?`,
+       WHERE wallet_id = ? AND stock_id = ? AND available_amount >= ?`,
       [quantity, quantity, walletId, coinId, quantity]
     );
 
     // 잠금 성공 여부 확인
     const lockedBalances = await query(
-      'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+      'SELECT * FROM user_stock_balances WHERE wallet_id = ? AND stock_id = ?',
       [walletId, coinId]
     );
     const newAvailable = typeof lockedBalances[0].available_amount === 'string'
@@ -460,7 +376,7 @@ export class TradingEngine {
     if (newAvailable < 0) {
       // 롤백
       await query(
-        'UPDATE user_coin_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND coin_id = ?',
+        'UPDATE user_stock_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND stock_id = ?',
         [quantity, quantity, walletId, coinId]
       );
       throw new Error('잔액 잠금 실패: 동시성 문제 발생');
@@ -469,7 +385,7 @@ export class TradingEngine {
     // 최고가 매수 주문들 조회 (자기 자신 제외)
     const buyOrders = await query(
       `SELECT * FROM orders
-       WHERE coin_id = ? AND order_type = 'BUY' AND status IN ('PENDING', 'PARTIAL')
+       WHERE stock_id = ? AND order_type = 'BUY' AND status IN ('PENDING', 'PARTIAL')
        AND wallet_id != ?
        ORDER BY price DESC, created_at ASC`,
       [coinId, walletId]
@@ -490,7 +406,7 @@ export class TradingEngine {
     // 남은 수량 잠금 해제
     if (remainingQty > 0) {
       await query(
-        'UPDATE user_coin_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND coin_id = ?',
+        'UPDATE user_stock_balances SET available_amount = available_amount + ?, locked_amount = locked_amount - ? WHERE wallet_id = ? AND stock_id = ?',
         [remainingQty, remainingQty, walletId, coinId]
       );
     }
@@ -509,7 +425,7 @@ export class TradingEngine {
     // 지정가 이하의 유저 매도 주문 찾기 (자기 자신 제외)
     const sellOrders = await query(
       `SELECT * FROM orders
-       WHERE coin_id = ? AND order_type = 'SELL' AND price <= ? AND status IN ('PENDING', 'PARTIAL')
+       WHERE stock_id = ? AND order_type = 'SELL' AND price <= ? AND status IN ('PENDING', 'PARTIAL')
        AND is_admin_order = FALSE
        AND wallet_id != ?
        ORDER BY price ASC, created_at ASC`,
@@ -528,32 +444,32 @@ export class TradingEngine {
 
     // 2. 남은 수량이 있고 지정가가 현재가 이상이면 유통량 기준으로 판매
     if (remainingQty > 0) {
-      // 코인 정보 조회 (현재가 및 유통량 확인) - ACTIVE 상태만
-      const coins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coinId]);
-      if (coins.length > 0) {
-        const coin = coins[0];
-        const currentPrice = typeof coin.current_price === 'string' 
-          ? parseFloat(coin.current_price) 
-          : (coin.current_price || 0);
+      // 주식 정보 조회 (현재가 및 유통량 확인) - ACTIVE 상태만
+      const stocks = await query('SELECT * FROM stocks WHERE id = ? AND status = "ACTIVE"', [coinId]);
+      if (stocks.length > 0) {
+        const stock = stocks[0];
+        const currentPrice = typeof stock.current_price === 'string'
+          ? parseFloat(stock.current_price)
+          : (stock.current_price || 0);
 
         // 지정가가 현재가 이상이면 유통량 기준으로 판매
         if (buyPrice >= currentPrice) {
           // 유통량 확인
-          const coinCirculatingSupply = typeof coin.circulating_supply === 'string' 
-            ? parseFloat(coin.circulating_supply) 
-            : (coin.circulating_supply || 0);
+          const stockCirculatingSupply = typeof stock.circulating_supply === 'string'
+            ? parseFloat(stock.circulating_supply)
+            : (stock.circulating_supply || 0);
 
           // 현재 유저들이 보유한 총량 계산 (AI 봇 제외)
           const userHoldings = await query(
             `SELECT COALESCE(SUM(ucb.total_amount), 0) as total_held
-             FROM user_coin_balances ucb
+             FROM user_stock_balances ucb
              JOIN user_wallets uw ON ucb.wallet_id = uw.id
-             WHERE ucb.coin_id = ? AND uw.minecraft_username != 'AI_BOT'`,
+             WHERE ucb.stock_id = ? AND uw.minecraft_username != 'AI_BOT'`,
             [coinId]
           );
 
           const totalHeld = parseFloat(userHoldings[0]?.total_held || '0');
-          const availableSupply = coinCirculatingSupply - totalHeld; // 유통량에서 유저 보유량 제외
+          const availableSupply = stockCirculatingSupply - totalHeld; // 유통량에서 유저 보유량 제외
           const purchasableQty = Math.max(0, availableSupply);
 
           if (purchasableQty > 0) {
@@ -562,9 +478,9 @@ export class TradingEngine {
             if (aiWallets.length > 0) {
               const aiWallet = aiWallets[0];
 
-              // AI 봇의 코인 잔액 확인
+              // AI 봇의 주식 잔액 확인
               const aiBalances = await query(
-                'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+                'SELECT * FROM user_stock_balances WHERE wallet_id = ? AND stock_id = ?',
                 [aiWallet.id, coinId]
               );
 
@@ -581,12 +497,12 @@ export class TradingEngine {
                   const neededAmount = sellableQty - aiAvailableAmount;
                   if (aiBalances.length > 0) {
                     await query(
-                      'UPDATE user_coin_balances SET available_amount = available_amount + ? WHERE wallet_id = ? AND coin_id = ?',
+                      'UPDATE user_stock_balances SET available_amount = available_amount + ? WHERE wallet_id = ? AND stock_id = ?',
                       [neededAmount, aiWallet.id, coinId]
                     );
                   } else {
                     await query(
-                      `INSERT INTO user_coin_balances (id, wallet_id, coin_id, available_amount, average_buy_price)
+                      `INSERT INTO user_stock_balances (id, wallet_id, stock_id, available_amount, average_buy_price)
                        VALUES (?, ?, ?, ?, ?)`,
                       [uuidv4(), aiWallet.id, coinId, neededAmount, currentPrice]
                     );
@@ -612,7 +528,7 @@ export class TradingEngine {
     // 지정가 이상의 매수 주문 찾기 (자기 자신 제외)
     const buyOrders = await query(
       `SELECT * FROM orders
-       WHERE coin_id = ? AND order_type = 'BUY' AND price >= ? AND status IN ('PENDING', 'PARTIAL')
+       WHERE stock_id = ? AND order_type = 'BUY' AND price >= ? AND status IN ('PENDING', 'PARTIAL')
        AND wallet_id != ?
        ORDER BY price DESC, created_at ASC`,
       [coinId, sellPrice, sellOrder.wallet_id]
@@ -643,12 +559,12 @@ export class TradingEngine {
     const buyFee = Math.floor(totalAmount * 0.05);
     const sellFee = Math.floor(totalAmount * 0.05);
 
-    // 코인 정보 조회 (MEME 코인인지 확인)
-    const coins = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
-    if (coins.length === 0) {
-      throw new Error('코인을 찾을 수 없습니다');
+    // 주식 정보 조회
+    const stocks = await query('SELECT * FROM stocks WHERE id = ?', [coinId]);
+    if (stocks.length === 0) {
+      throw new Error('주식을 찾을 수 없습니다');
     }
-    const coin = coins[0];
+    const stock = stocks[0];
 
     // 거래 기록 생성 (buy_order_id, sell_order_id는 NULL 허용)
     // sellOrderId가 'MARKET_SELL' 같은 특수 값이면 NULL로 처리
@@ -656,60 +572,25 @@ export class TradingEngine {
     const validBuyOrderId = buyOrderId || null;
 
     await query(
-      `INSERT INTO trades (id, coin_id, buy_order_id, sell_order_id, buyer_wallet_id, seller_wallet_id, price, quantity, buy_fee, sell_fee)
+      `INSERT INTO trades (id, stock_id, buy_order_id, sell_order_id, buyer_wallet_id, seller_wallet_id, price, quantity, buy_fee, sell_fee)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [tradeId, coinId, validBuyOrderId, validSellOrderId, buyerWalletId, sellerWalletId, price, quantity, buyFee, sellFee]
     );
 
-    // base_currency가 있는 경우: 해당 코인으로 거래
-    if (coin.base_currency_id) {
-      // base_currency 조회
-      const baseCurrencies = await query(
-        'SELECT * FROM coins WHERE id = ?',
-        [coin.base_currency_id]
-      );
+    // 모든 거래는 Gold로 결제
+    // 매수자: 주식 증가 (Gold는 이미 차감됨)
+    await this.updateStockBalance(buyerWalletId, coinId, quantity, price);
 
-      if (baseCurrencies.length === 0) {
-        throw new Error('기준 화폐를 찾을 수 없습니다');
-      }
+    // 매도자: Gold 증가 (수수료 차감)
+    await this.updateWalletBalance(sellerWalletId, totalAmount - sellFee);
 
-      const baseCurrency = baseCurrencies[0];
-
-      // 매수자: locked된 기준 화폐 차감 + 코인 증가
-      if (buyOrderId) {
-        // 매수 주문이 있는 경우: locked_amount에서 차감
-        await query(
-          'UPDATE user_coin_balances SET locked_amount = GREATEST(0, locked_amount - ?) WHERE wallet_id = ? AND coin_id = ?',
-          [totalAmount + buyFee, buyerWalletId, baseCurrency.id]
-        );
-      } else {
-        // 즉시 매수: available_amount에서 차감
-        await this.updateCoinBalance(buyerWalletId, baseCurrency.id, -(totalAmount + buyFee));
-      }
-
-      // 매수자: 코인 증가
-      await this.updateCoinBalance(buyerWalletId, coinId, quantity, price);
-
-      // 매도자: 기준 화폐 증가 (수수료 차감)
-      await this.updateCoinBalance(sellerWalletId, baseCurrency.id, totalAmount - sellFee);
-
-      console.log(`💰 ${coin.symbol} 거래 체결: ${quantity}개 @ ${price} ${baseCurrency.symbol} (매수자 ${baseCurrency.symbol} ${totalAmount + buyFee} 차감)`);
-    } else {
-      // base_currency가 없는 경우: Gold로 거래
-      // 매수자: 코인 증가 (Gold는 이미 차감됨)
-      await this.updateCoinBalance(buyerWalletId, coinId, quantity, price);
-
-      // 매도자: Gold 증가 (수수료 차감), 코인 차감
-      await this.updateWalletBalance(sellerWalletId, totalAmount - sellFee);
-    }
-
-    // 매도자 코인 차감 - sellOrderId가 있으면 locked에서, 없으면 available에서
+    // 매도자 주식 차감 - sellOrderId가 있으면 locked에서, 없으면 available에서
     if (sellOrderId) {
       // 매도 주문이 있는 경우: locked_amount에서 차감 (이미 주문 생성 시 잠김)
-      await this.updateCoinBalanceFromLocked(sellerWalletId, coinId, quantity);
+      await this.updateStockBalanceFromLocked(sellerWalletId, coinId, quantity);
     } else {
       // 즉시 매도 (AI 봇 등): available_amount에서 차감
-      await this.updateCoinBalance(sellerWalletId, coinId, -quantity);
+      await this.updateStockBalance(sellerWalletId, coinId, -quantity);
     }
 
     // 주문 상태 업데이트
@@ -719,40 +600,40 @@ export class TradingEngine {
     // 24시간 전 가격 조회 (캔들스틱 데이터에서)
     const candles24h = await query(
       `SELECT close_price FROM candles_1h
-       WHERE coin_id = ? AND open_time <= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+       WHERE stock_id = ? AND open_time <= DATE_SUB(NOW(), INTERVAL 24 HOUR)
        ORDER BY open_time DESC LIMIT 1`,
       [coinId]
     );
 
-    // 코인이 ACTIVE 상태인지 확인
-    if (coin.status !== 'ACTIVE') {
-      console.warn(`⚠️ 코인 ${coinId}는 ACTIVE 상태가 아니므로 가격 업데이트를 건너뜁니다`);
+    // 주식이 ACTIVE 상태인지 확인
+    if (stock.status !== 'ACTIVE') {
+      console.warn(`주식 ${coinId}는 ACTIVE 상태가 아니므로 가격 업데이트를 건너뜁니다`);
       return;
     }
-    
+
     // 24시간 전 가격이 없으면 initial_price 사용
-    const price24hAgo = candles24h.length > 0 
-      ? parseFloat(candles24h[0].close_price || coin.initial_price)
-      : parseFloat(coin.initial_price || price);
-    
+    const price24hAgo = candles24h.length > 0
+      ? parseFloat(candles24h[0].close_price || stock.initial_price)
+      : parseFloat(stock.initial_price || price);
+
     // 24시간 변동률 계산 (%)
-    const priceChange24h = price24hAgo > 0 
-      ? ((price - price24hAgo) / price24hAgo) * 100 
+    const priceChange24h = price24hAgo > 0
+      ? ((price - price24hAgo) / price24hAgo) * 100
       : 0;
 
     // 거래량 기반 가격 변동 적용 (현실적인 시장 반응)
-    const currentPrice = typeof coin.current_price === 'string' 
-      ? parseFloat(coin.current_price) 
-      : (coin.current_price || 0);
-    
+    const currentPrice = typeof stock.current_price === 'string'
+      ? parseFloat(stock.current_price)
+      : (stock.current_price || 0);
+
     // 거래량 대비 변동성 계산 (거래량이 클수록 가격 변동 증가)
-    const minVolatility = parseFloat(coin.min_volatility) || 0.0001; // 0.01%
-    const maxVolatility = parseFloat(coin.max_volatility) || 0.05; // 5%
-    
+    const minVolatility = parseFloat(stock.min_volatility) || 0.0001; // 0.01%
+    const maxVolatility = parseFloat(stock.max_volatility) || 0.05; // 5%
+
     // 거래량에 따른 가격 변동 (거래량이 전체 유통량의 0.1% 이상이면 최대 변동성)
-    const circulatingSupply = typeof coin.circulating_supply === 'string' 
-      ? parseFloat(coin.circulating_supply) 
-      : (coin.circulating_supply || 1);
+    const circulatingSupply = typeof stock.circulating_supply === 'string'
+      ? parseFloat(stock.circulating_supply)
+      : (stock.circulating_supply || 1);
     const tradeRatio = quantity / Math.max(circulatingSupply, 1);
     const volumeBasedVolatility = Math.min(minVolatility + (maxVolatility - minVolatility) * Math.min(tradeRatio * 1000, 1), maxVolatility);
     
@@ -760,13 +641,13 @@ export class TradingEngine {
     // 매수 거래가 많으면 가격 상승, 매도 거래가 많으면 가격 하락
     const recentBuyTrades = await query(
       `SELECT COUNT(*) as count FROM trades 
-       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE) 
+       WHERE stock_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE) 
        AND buyer_wallet_id != (SELECT id FROM user_wallets WHERE minecraft_username = 'AI_BOT' LIMIT 1)`,
       [coinId]
     );
     const recentSellTrades = await query(
       `SELECT COUNT(*) as count FROM trades 
-       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE) 
+       WHERE stock_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE) 
        AND seller_wallet_id != (SELECT id FROM user_wallets WHERE minecraft_username = 'AI_BOT' LIMIT 1)`,
       [coinId]
     );
@@ -799,7 +680,7 @@ export class TradingEngine {
     const volume24hResult = await query(
       `SELECT COALESCE(SUM(quantity * price), 0) as total_volume
        FROM trades
-       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+       WHERE stock_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
       [coinId]
     );
     const volume24h = parseFloat(volume24hResult[0]?.total_volume || '0');
@@ -807,12 +688,12 @@ export class TradingEngine {
     // 24시간 최고가/최저가 계산 (실제 거래 데이터 기반)
     const high24hResult = await query(
       `SELECT MAX(price) as high_price FROM trades
-       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+       WHERE stock_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
       [coinId]
     );
     const low24hResult = await query(
       `SELECT MIN(price) as low_price FROM trades
-       WHERE coin_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+       WHERE stock_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
       [coinId]
     );
 
@@ -823,9 +704,9 @@ export class TradingEngine {
       ? parseFloat(low24hResult[0].low_price.toString())
       : finalPrice;
 
-    // 코인 현재가, 24시간 변동률, 24시간 거래량, 최고가/최저가 업데이트
+    // 주식 현재가, 24시간 변동률, 24시간 거래량, 최고가/최저가 업데이트
     await query(
-      'UPDATE coins SET current_price = ?, price_change_24h = ?, volume_24h = ?, high_24h = ?, low_24h = ? WHERE id = ?',
+      'UPDATE stocks SET current_price = ?, price_change_24h = ?, volume_24h = ?, high_24h = ?, low_24h = ? WHERE id = ?',
       [finalPrice, finalPriceChange24h, volume24h, high24h, low24h, coinId]
     );
 
@@ -838,17 +719,17 @@ export class TradingEngine {
       
       // WebSocket으로 가격 업데이트 브로드캐스트 - ACTIVE 상태만
       if (websocketInstance && websocketInstance.broadcastPriceUpdate) {
-        const updatedCoins = await query('SELECT * FROM coins WHERE id = ? AND status = "ACTIVE"', [coinId]);
-        if (updatedCoins.length > 0) {
-          const updatedCoin = updatedCoins[0];
+        const updatedStocks = await query('SELECT * FROM stocks WHERE id = ? AND status = "ACTIVE"', [coinId]);
+        if (updatedStocks.length > 0) {
+          const updatedStock = updatedStocks[0];
           websocketInstance.broadcastPriceUpdate(coinId, {
-            coin_id: coinId,
-            current_price: updatedCoin.current_price,
-            price_change_24h: updatedCoin.price_change_24h,
-            volume_24h: updatedCoin.volume_24h,
-            market_cap: updatedCoin.market_cap,
-            high_24h: updatedCoin.high_24h,
-            low_24h: updatedCoin.low_24h,
+            stock_id: coinId,
+            current_price: updatedStock.current_price,
+            price_change_24h: updatedStock.price_change_24h,
+            volume_24h: updatedStock.volume_24h,
+            market_cap: updatedStock.market_cap,
+            high_24h: updatedStock.high_24h,
+            low_24h: updatedStock.low_24h,
             updated_at: new Date().toISOString(),
           });
         }
@@ -867,7 +748,7 @@ export class TradingEngine {
         const buyOrders = await query(
           `SELECT price, SUM(remaining_quantity) as total_quantity, COUNT(*) as order_count
            FROM orders
-           WHERE coin_id = ? AND order_type = 'BUY' AND status IN ('PENDING', 'PARTIAL')
+           WHERE stock_id = ? AND order_type = 'BUY' AND status IN ('PENDING', 'PARTIAL')
            GROUP BY price
            ORDER BY price DESC
            LIMIT 20`,
@@ -876,7 +757,7 @@ export class TradingEngine {
         const sellOrders = await query(
           `SELECT price, SUM(remaining_quantity) as total_quantity, COUNT(*) as order_count
            FROM orders
-           WHERE coin_id = ? AND order_type = 'SELL' AND status IN ('PENDING', 'PARTIAL')
+           WHERE stock_id = ? AND order_type = 'SELL' AND status IN ('PENDING', 'PARTIAL')
            GROUP BY price
            ORDER BY price ASC
            LIMIT 20`,
@@ -913,13 +794,13 @@ export class TradingEngine {
     );
   }
 
-  // 코인 잔액 업데이트 (소수점 지원)
-  private async updateCoinBalance(walletId: string, coinId: string, amount: number, buyPrice?: number) {
+  // 주식 잔액 업데이트 (소수점 지원)
+  private async updateStockBalance(walletId: string, coinId: string, amount: number, buyPrice?: number) {
     // 소수점 8자리까지 정밀도 유지
     const preciseAmount = parseFloat(amount.toFixed(8));
 
     const existing = await query(
-      'SELECT * FROM user_coin_balances WHERE wallet_id = ? AND coin_id = ?',
+      'SELECT * FROM user_stock_balances WHERE wallet_id = ? AND stock_id = ?',
       [walletId, coinId]
     );
 
@@ -941,15 +822,15 @@ export class TradingEngine {
           : buyPrice;
 
         await query(
-          'UPDATE user_coin_balances SET available_amount = available_amount + ?, average_buy_price = ? WHERE wallet_id = ? AND coin_id = ?',
+          'UPDATE user_stock_balances SET available_amount = available_amount + ?, average_buy_price = ? WHERE wallet_id = ? AND stock_id = ?',
           [preciseAmount, newAvgBuyPrice, walletId, coinId]
         );
 
-        console.log(`📊 평균 매수가 업데이트: ${oldAvgBuyPrice.toFixed(2)} G → ${newAvgBuyPrice.toFixed(2)} G (매수량: ${preciseAmount})`);
+        console.log(`평균 매수가 업데이트: ${oldAvgBuyPrice.toFixed(2)} G -> ${newAvgBuyPrice.toFixed(2)} G (매수량: ${preciseAmount})`);
       } else {
         // 매도 거래인 경우 평균 매수가 유지
         await query(
-          'UPDATE user_coin_balances SET available_amount = available_amount + ? WHERE wallet_id = ? AND coin_id = ?',
+          'UPDATE user_stock_balances SET available_amount = available_amount + ? WHERE wallet_id = ? AND stock_id = ?',
           [preciseAmount, walletId, coinId]
         );
       }
@@ -957,24 +838,24 @@ export class TradingEngine {
       // 새 잔액 생성
       const newAvgBuyPrice = (buyPrice !== undefined && buyPrice > 0) ? buyPrice : 0;
       await query(
-        'INSERT INTO user_coin_balances (id, wallet_id, coin_id, available_amount, average_buy_price) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO user_stock_balances (id, wallet_id, stock_id, available_amount, average_buy_price) VALUES (?, ?, ?, ?, ?)',
         [uuidv4(), walletId, coinId, preciseAmount, newAvgBuyPrice]
       );
     }
   }
 
-  // 코인 잔액 업데이트 (locked에서 차감)
-  private async updateCoinBalanceFromLocked(walletId: string, coinId: string, quantity: number) {
+  // 주식 잔액 업데이트 (locked에서 차감)
+  private async updateStockBalanceFromLocked(walletId: string, coinId: string, quantity: number) {
     // 소수점 8자리까지 정밀도 유지
     const preciseQuantity = parseFloat(quantity.toFixed(8));
 
     // locked_amount에서 차감 (체결된 매도 주문)
     await query(
-      'UPDATE user_coin_balances SET locked_amount = locked_amount - ? WHERE wallet_id = ? AND coin_id = ?',
+      'UPDATE user_stock_balances SET locked_amount = locked_amount - ? WHERE wallet_id = ? AND stock_id = ?',
       [preciseQuantity, walletId, coinId]
     );
 
-    console.log(`🔓 locked 해제: wallet=${walletId}, coin=${coinId}, qty=${preciseQuantity}`);
+    console.log(`locked 해제: wallet=${walletId}, stock=${coinId}, qty=${preciseQuantity}`);
   }
 
   // 주문 상태 업데이트
@@ -999,7 +880,7 @@ export class TradingEngine {
         websocketInstance.broadcastOrderFilled({
           order_id: order.id,
           wallet_address: order.wallet_address,
-          coin_id: order.coin_id,
+          stock_id: order.stock_id,
           order_type: order.order_type,
           price: order.price,
           quantity: order.quantity,
@@ -1041,7 +922,7 @@ export class TradingEngine {
     const openTime1mStr = toMySQLDateTime(openTime1m);
 
     const candleData1m = await query(
-      'SELECT * FROM candles_1m WHERE coin_id = ? AND open_time = ?',
+      'SELECT * FROM candles_1m WHERE stock_id = ? AND open_time = ?',
       [coinId, openTime1mStr]
     );
     if (candleData1m.length > 0) {
@@ -1054,7 +935,7 @@ export class TradingEngine {
     const openTime1hStr = toMySQLDateTime(openTime1h);
 
     const candleData1h = await query(
-      'SELECT * FROM candles_1h WHERE coin_id = ? AND open_time = ?',
+      'SELECT * FROM candles_1h WHERE stock_id = ? AND open_time = ?',
       [coinId, openTime1hStr]
     );
     if (candleData1h.length > 0) {
@@ -1067,7 +948,7 @@ export class TradingEngine {
     const openTime1dStr = toMySQLDateTime(openTime1d);
 
     const candleData1d = await query(
-      'SELECT * FROM candles_1d WHERE coin_id = ? AND open_time = ?',
+      'SELECT * FROM candles_1d WHERE stock_id = ? AND open_time = ?',
       [coinId, openTime1dStr]
     );
     if (candleData1d.length > 0) {

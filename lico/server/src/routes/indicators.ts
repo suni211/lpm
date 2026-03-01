@@ -11,19 +11,19 @@ import {
 const router = express.Router();
 
 // 기술적 지표 계산 (공개 API)
-router.get('/indicators/:coin_id', async (req: Request, res: Response) => {
+router.get('/indicators/:stock_id', async (req: Request, res: Response) => {
   try {
-    const { coin_id } = req.params;
+    const { stock_id } = req.params;
     const { interval = '1h', limit = 100 } = req.query;
 
     // 캔들 데이터 조회
     const candles = await query(
       `SELECT open_time, open_price, high_price, low_price, close_price, volume
        FROM candles_${interval}
-       WHERE coin_id = ?
+       WHERE stock_id = ?
        ORDER BY open_time DESC
        LIMIT ?`,
-      [coin_id, Number(limit)]
+      [stock_id, Number(limit)]
     );
 
     if (candles.length === 0) {
@@ -64,18 +64,18 @@ router.get('/indicators/:coin_id', async (req: Request, res: Response) => {
 });
 
 // RSI만 계산
-router.get('/rsi/:coin_id', async (req: Request, res: Response) => {
+router.get('/rsi/:stock_id', async (req: Request, res: Response) => {
   try {
-    const { coin_id } = req.params;
+    const { stock_id } = req.params;
     const { interval = '1h', period = 14, limit = 100 } = req.query;
 
     const candles = await query(
       `SELECT close_price
        FROM candles_${interval}
-       WHERE coin_id = ?
+       WHERE stock_id = ?
        ORDER BY open_time DESC
        LIMIT ?`,
-      [coin_id, Number(limit)]
+      [stock_id, Number(limit)]
     );
 
     candles.reverse();
@@ -89,18 +89,18 @@ router.get('/rsi/:coin_id', async (req: Request, res: Response) => {
 });
 
 // MACD만 계산
-router.get('/macd/:coin_id', async (req: Request, res: Response) => {
+router.get('/macd/:stock_id', async (req: Request, res: Response) => {
   try {
-    const { coin_id } = req.params;
+    const { stock_id } = req.params;
     const { interval = '1h', limit = 100 } = req.query;
 
     const candles = await query(
       `SELECT close_price
        FROM candles_${interval}
-       WHERE coin_id = ?
+       WHERE stock_id = ?
        ORDER BY open_time DESC
        LIMIT ?`,
-      [coin_id, Number(limit)]
+      [stock_id, Number(limit)]
     );
 
     candles.reverse();
@@ -123,18 +123,18 @@ router.get('/macd/:coin_id', async (req: Request, res: Response) => {
 });
 
 // 볼린저 밴드만 계산
-router.get('/bollinger/:coin_id', async (req: Request, res: Response) => {
+router.get('/bollinger/:stock_id', async (req: Request, res: Response) => {
   try {
-    const { coin_id } = req.params;
+    const { stock_id } = req.params;
     const { interval = '1h', period = 20, stdDev = 2, limit = 100 } = req.query;
 
     const candles = await query(
       `SELECT close_price
        FROM candles_${interval}
-       WHERE coin_id = ?
+       WHERE stock_id = ?
        ORDER BY open_time DESC
        LIMIT ?`,
-      [coin_id, Number(limit)]
+      [stock_id, Number(limit)]
     );
 
     candles.reverse();

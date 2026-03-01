@@ -1,21 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import type { Coin } from '../types';
+import type { Stock } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'coins' | 'users' | 'trades' | 'charts'>('coins');
-  const [coins, setCoins] = useState<Coin[]>([]);
+  const [activeTab, setActiveTab] = useState<'stocks' | 'users' | 'trades' | 'charts'>('stocks');
+  const [stocks, setStocks] = useState<Stock[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
   const [priceHistory, setPriceHistory] = useState<any[]>([]);
-  const [selectedCoin, setSelectedCoin] = useState<string>('');
+  const [selectedStock, setSelectedStock] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingCoin, setEditingCoin] = useState<Coin | null>(null);
+  const [editingStock, setEditingStock] = useState<Stock | null>(null);
   const [formData, setFormData] = useState({
     symbol: '',
     name: '',
@@ -25,34 +25,35 @@ const AdminDashboard = () => {
     current_price: '',
     min_volatility: '',
     max_volatility: '',
-    coin_type: 'MEME' as 'MAJOR' | 'MEME',
-    base_currency_id: '',
+    industry_id: '',
+    group_id: '',
+    founder_uuid: '',
   });
 
   useEffect(() => {
-    fetchCoins();
+    fetchStocks();
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'trades') fetchTrades();
   }, [activeTab]);
 
   useEffect(() => {
-    if (selectedCoin && activeTab === 'charts') {
+    if (selectedStock && activeTab === 'charts') {
       fetchPriceHistory();
     }
-  }, [selectedCoin, activeTab]);
+  }, [selectedStock, activeTab]);
 
-  const fetchCoins = async () => {
+  const fetchStocks = async () => {
     try {
-      // 관리자 대시보드에서는 모든 코인 조회 (status 파라미터 없음)
-      const response = await api.get('/coins');
-      const data = response.data.coins || [];
-      setCoins(data);
-      if (data.length > 0 && !selectedCoin) {
-        setSelectedCoin(data[0].id);
+      // 관리자 대시보드에서는 모든 종목 조회 (status 파라미터 없음)
+      const response = await api.get('/stocks');
+      const data = response.data.stocks || [];
+      setStocks(data);
+      if (data.length > 0 && !selectedStock) {
+        setSelectedStock(data[0].id);
       }
     } catch (error) {
-      console.error('코인 목록 조회 실패:', error);
-      setCoins([]);
+      console.error('종목 목록 조회 실패:', error);
+      setStocks([]);
     } finally {
       setLoading(false);
     }
@@ -77,9 +78,9 @@ const AdminDashboard = () => {
   };
 
   const fetchPriceHistory = async () => {
-    if (!selectedCoin) return;
+    if (!selectedStock) return;
     try {
-      const response = await api.get(`/admin/coins/${selectedCoin}/price-history?interval=1h&limit=100`);
+      const response = await api.get(`/admin/stocks/${selectedStock}/price-history?interval=1h&limit=100`);
       const candles = response.data.candles || [];
       const chartData = candles.map((candle: any) => ({
         time: new Date(candle.open_time).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit' }),
@@ -104,7 +105,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleCreateCoin = async (e: React.FormEvent) => {
+  const handleCreateStock = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const payload: any = {
@@ -124,28 +125,33 @@ const AdminDashboard = () => {
         payload.max_volatility = parseFloat(formData.max_volatility) / 100;
       }
 
-      // 코인 타입 추가
-      payload.coin_type = formData.coin_type;
-      if (formData.coin_type === 'MEME' && formData.base_currency_id) {
-        payload.base_currency_id = formData.base_currency_id;
+      // 산업/그룹/창업자 추가
+      if (formData.industry_id) {
+        payload.industry_id = formData.industry_id;
+      }
+      if (formData.group_id) {
+        payload.group_id = formData.group_id;
+      }
+      if (formData.founder_uuid) {
+        payload.founder_uuid = formData.founder_uuid;
       }
 
-      await api.post('/coins', payload);
-      alert('코인이 성공적으로 생성되었습니다!');
+      await api.post('/stocks', payload);
+      alert('종목이 성공적으로 생성되었습니다!');
       setShowCreateModal(false);
       resetForm();
-      fetchCoins();
+      fetchStocks();
     } catch (error: any) {
-      alert(error.response?.data?.error || '코인 생성 실패');
+      alert(error.response?.data?.error || '종목 생성 실패');
     }
   };
 
-  const handleUpdateCoin = async (e: React.FormEvent) => {
+  const handleUpdateStock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingCoin) return;
+    if (!editingStock) return;
 
     try {
-      await api.patch(`/coins/${editingCoin.id}`, {
+      await api.patch(`/stocks/${editingStock.id}`, {
         name: formData.name,
         logo_url: formData.logo_url || null,
         description: formData.description || null,
@@ -154,44 +160,45 @@ const AdminDashboard = () => {
         min_volatility: parseFloat(formData.min_volatility) / 100, // %를 소수로 변환
         max_volatility: parseFloat(formData.max_volatility) / 100, // %를 소수로 변환
       });
-      alert('코인이 성공적으로 수정되었습니다!');
-      setEditingCoin(null);
+      alert('종목이 성공적으로 수정되었습니다!');
+      setEditingStock(null);
       resetForm();
-      fetchCoins();
+      fetchStocks();
     } catch (error: any) {
-      alert(error.response?.data?.error || '코인 수정 실패');
+      alert(error.response?.data?.error || '종목 수정 실패');
     }
   };
 
-  const handleDeleteCoin = async (coinId: string) => {
-    const coin = coins.find(c => c.id === coinId);
-    if (!coin) return;
+  const handleDeleteStock = async (stockId: string) => {
+    const stock = stocks.find(s => s.id === stockId);
+    if (!stock) return;
 
-    if (!confirm(`⚠️ 경고: ${coin.symbol} 코인을 영구 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 다음 데이터가 모두 삭제됩니다:\n- 코인 정보\n- 모든 캔들 데이터 (1m, 1h, 1d)\n- 모든 주문\n- 모든 거래 내역\n- 모든 사용자 잔액\n- 로고 이미지 파일`)) return;
+    if (!confirm(`경고: ${stock.symbol} 종목을 영구 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 다음 데이터가 모두 삭제됩니다:\n- 종목 정보\n- 모든 캔들 데이터 (1m, 1h, 1d)\n- 모든 주문\n- 모든 거래 내역\n- 모든 사용자 잔액\n- 로고 이미지 파일`)) return;
 
     try {
-      const response = await api.delete(`/coins/${coinId}`);
-      alert(response.data.message || '코인이 영구 삭제되었습니다!');
-      fetchCoins();
+      const response = await api.delete(`/stocks/${stockId}`);
+      alert(response.data.message || '종목이 영구 삭제되었습니다!');
+      fetchStocks();
     } catch (error: any) {
-      alert(error.response?.data?.error || '코인 삭제 실패');
-      console.error('코인 삭제 오류:', error);
+      alert(error.response?.data?.error || '종목 삭제 실패');
+      console.error('종목 삭제 오류:', error);
     }
   };
 
-  const handleEditClick = (coin: Coin) => {
-    setEditingCoin(coin);
+  const handleEditClick = (stock: Stock) => {
+    setEditingStock(stock);
     setFormData({
-      symbol: coin.symbol,
-      name: coin.name,
-      logo_url: coin.logo_url || '',
-      description: coin.description || '',
-      circulating_supply: coin.circulating_supply.toString(),
-      current_price: coin.current_price.toString(),
-      min_volatility: coin.min_volatility ? (coin.min_volatility * 100).toFixed(3) : '0.001',
-      max_volatility: coin.max_volatility ? (coin.max_volatility * 100).toFixed(3) : '0.1',
-      coin_type: coin.coin_type || 'MEME',
-      base_currency_id: coin.base_currency_id || '',
+      symbol: stock.symbol,
+      name: stock.name,
+      logo_url: stock.logo_url || '',
+      description: stock.description || '',
+      circulating_supply: stock.circulating_supply.toString(),
+      current_price: stock.current_price.toString(),
+      min_volatility: stock.min_volatility ? (stock.min_volatility * 100).toFixed(3) : '0.001',
+      max_volatility: stock.max_volatility ? (stock.max_volatility * 100).toFixed(3) : '0.1',
+      industry_id: '',
+      group_id: '',
+      founder_uuid: '',
     });
   };
 
@@ -205,8 +212,9 @@ const AdminDashboard = () => {
       current_price: '',
       min_volatility: '0.001',
       max_volatility: '0.1',
-      coin_type: 'MEME',
-      base_currency_id: '',
+      industry_id: '',
+      group_id: '',
+      founder_uuid: '',
     });
   };
 
@@ -237,18 +245,18 @@ const AdminDashboard = () => {
             onClick={() => navigate('/admin/news')}
             style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)' }}
           >
-            📰 뉴스 관리
+            뉴스 관리
           </button>
           <button
             className="create-button"
-            onClick={() => navigate('/admin/meme-applications')}
+            onClick={() => navigate('/admin/founder-sell-requests')}
             style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}
           >
-            💎 밈 코인 신청 관리
+            창업자 매도 요청 관리
           </button>
-          {activeTab === 'coins' && (
+          {activeTab === 'stocks' && (
             <button className="create-button" onClick={() => setShowCreateModal(true)}>
-              + 코인 생성
+              + 종목 생성
             </button>
           )}
         </div>
@@ -257,10 +265,10 @@ const AdminDashboard = () => {
       {/* 탭 메뉴 */}
       <div className="admin-tabs">
         <button
-          className={activeTab === 'coins' ? 'active' : ''}
-          onClick={() => setActiveTab('coins')}
+          className={activeTab === 'stocks' ? 'active' : ''}
+          onClick={() => setActiveTab('stocks')}
         >
-          코인 관리
+          종목 관리
         </button>
         <button
           className={activeTab === 'users' ? 'active' : ''}
@@ -282,11 +290,11 @@ const AdminDashboard = () => {
         </button>
       </div>
 
-      {/* 코인 관리 탭 */}
-      {activeTab === 'coins' && (
+      {/* 종목 관리 탭 */}
+      {activeTab === 'stocks' && (
         <div className="coins-table-container">
           <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, color: '#fff' }}>코인 목록</h3>
+            <h3 style={{ margin: 0, color: '#fff' }}>종목 목록</h3>
             <button
               onClick={() => {
                 resetForm();
@@ -303,7 +311,7 @@ const AdminDashboard = () => {
                 fontWeight: '600',
               }}
             >
-              + 코인 생성
+              + 종목 생성
             </button>
           </div>
           <table className="coins-table">
@@ -311,7 +319,6 @@ const AdminDashboard = () => {
               <tr>
                 <th>심볼</th>
                 <th>이름</th>
-                <th>타입</th>
                 <th>현재 가격</th>
                 <th>유통량</th>
                 <th>시가총액</th>
@@ -323,58 +330,49 @@ const AdminDashboard = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
                     로딩 중...
                   </td>
                 </tr>
-              ) : coins.length === 0 ? (
+              ) : stocks.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-                    등록된 코인이 없습니다
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                    등록된 종목이 없습니다
                   </td>
                 </tr>
               ) : (
-                coins.map((coin) => (
-                  <tr key={coin.id}>
+                stocks.map((stock) => (
+                  <tr key={stock.id}>
                     <td>
                       <div className="coin-cell">
-                        {coin.logo_url && (
-                          <img src={coin.logo_url} alt={coin.symbol} className="coin-table-logo" />
+                        {stock.logo_url && (
+                          <img src={stock.logo_url} alt={stock.symbol} className="coin-table-logo" />
                         )}
-                        <span className="coin-symbol-text">{coin.symbol}</span>
+                        <span className="coin-symbol-text">{stock.symbol}</span>
                       </div>
                     </td>
-                    <td>{coin.name}</td>
-                    <td>
-                      <span className={`status-badge ${coin.coin_type === 'MAJOR' ? 'major' : 'meme'}`} style={{
-                        background: coin.coin_type === 'MAJOR' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(147, 51, 234, 0.2)',
-                        color: coin.coin_type === 'MAJOR' ? '#60a5fa' : '#c084fc',
-                        border: `1px solid ${coin.coin_type === 'MAJOR' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(147, 51, 234, 0.4)'}`,
-                      }}>
-                        {coin.coin_type || 'MEME'}
-                      </span>
-                    </td>
-                    <td>{formatNumber(coin.current_price)} G</td>
-                    <td>{formatNumber(coin.circulating_supply)}</td>
-                    <td>{formatNumber(coin.market_cap)} G</td>
+                    <td>{stock.name}</td>
+                    <td>{formatNumber(stock.current_price)} G</td>
+                    <td>{formatNumber(stock.circulating_supply)}</td>
+                    <td>{formatNumber(stock.market_cap)} G</td>
                     <td>
                       <span style={{ fontSize: '12px', color: '#9ca3af' }}>
-                        {coin.min_volatility ? (parseFloat(coin.min_volatility.toString()) * 100).toFixed(3) : '0.001'}% ~ {coin.max_volatility ? (parseFloat(coin.max_volatility.toString()) * 100).toFixed(3) : '0.1'}%
+                        {stock.min_volatility ? (parseFloat(stock.min_volatility.toString()) * 100).toFixed(3) : '0.001'}% ~ {stock.max_volatility ? (parseFloat(stock.max_volatility.toString()) * 100).toFixed(3) : '0.1'}%
                       </span>
                     </td>
                     <td>
-                      <span className={`status-badge ${coin.status.toLowerCase()}`}>
-                        {coin.status}
+                      <span className={`status-badge ${stock.status.toLowerCase()}`}>
+                        {stock.status}
                       </span>
                     </td>
                     <td>
                       <div className="action-buttons">
-                        <button className="edit-button" onClick={() => handleEditClick(coin)}>
+                        <button className="edit-button" onClick={() => handleEditClick(stock)}>
                           수정
                         </button>
                         <button
                           className="delete-button"
-                          onClick={() => handleDeleteCoin(coin.id)}
+                          onClick={() => handleDeleteStock(stock.id)}
                         >
                           삭제
                         </button>
@@ -397,8 +395,8 @@ const AdminDashboard = () => {
                 <th>지갑 주소</th>
                 <th>Minecraft 닉네임</th>
                 <th>Gold 잔액</th>
-                <th>코인 보유 가치</th>
-                <th>보유 코인 수</th>
+                <th>주식 보유 가치</th>
+                <th>보유 종목 수</th>
                 <th>상태</th>
                 <th>작업</th>
               </tr>
@@ -414,8 +412,8 @@ const AdminDashboard = () => {
                     <td className="monospace">{user.wallet_address}</td>
                     <td>{user.minecraft_username}</td>
                     <td>{formatNumber(user.gold_balance)} G</td>
-                    <td>{formatNumber(user.total_coin_value)} G</td>
-                    <td>{user.coin_count || 0}</td>
+                    <td>{formatNumber(user.total_stock_value)} G</td>
+                    <td>{user.stock_count || 0}</td>
                     <td>
                       <span className={`status-badge ${user.status?.toLowerCase() || 'active'}`}>
                         {user.status === 'ACTIVE' ? '활성' :
@@ -456,7 +454,7 @@ const AdminDashboard = () => {
             <thead>
               <tr>
                 <th>시간</th>
-                <th>코인</th>
+                <th>종목</th>
                 <th>매수자</th>
                 <th>매도자</th>
                 <th>가격</th>
@@ -496,14 +494,14 @@ const AdminDashboard = () => {
       {activeTab === 'charts' && (
         <div className="charts-container">
           <div className="chart-controls">
-            <label>코인 선택:</label>
+            <label>종목 선택:</label>
             <select
-              value={selectedCoin}
-              onChange={(e) => setSelectedCoin(e.target.value)}
+              value={selectedStock}
+              onChange={(e) => setSelectedStock(e.target.value)}
             >
-              {coins.map((coin) => (
-                <option key={coin.id} value={coin.id}>
-                  {coin.symbol} - {coin.name}
+              {stocks.map((stock) => (
+                <option key={stock.id} value={stock.id}>
+                  {stock.symbol} - {stock.name}
                 </option>
               ))}
             </select>
@@ -531,8 +529,8 @@ const AdminDashboard = () => {
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>코인 생성</h2>
-            <form onSubmit={handleCreateCoin}>
+            <h2>종목 생성</h2>
+            <form onSubmit={handleCreateStock}>
               <div className="form-group">
                 <label>심볼 *</label>
                 <input
@@ -540,7 +538,7 @@ const AdminDashboard = () => {
                   value={formData.symbol}
                   onChange={(e) => setFormData({ ...formData, symbol: e.target.value.toUpperCase() })}
                   required
-                  placeholder="BTC"
+                  placeholder="AAPL"
                 />
               </div>
               <div className="form-group">
@@ -550,7 +548,7 @@ const AdminDashboard = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  placeholder="Bitcoin"
+                  placeholder="Apple Inc."
                 />
               </div>
               <div className="form-group">
@@ -568,43 +566,36 @@ const AdminDashboard = () => {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  placeholder="코인에 대한 설명"
+                  placeholder="종목에 대한 설명"
                 />
               </div>
               <div className="form-group">
-                <label>코인 타입 *</label>
-                <select
-                  value={formData.coin_type}
-                  onChange={(e) => setFormData({ ...formData, coin_type: e.target.value as 'MAJOR' | 'MEME', base_currency_id: '' })}
-                  required
-                >
-                  <option value="MEME">MEME (밈코인 - MAJOR로 거래)</option>
-                  <option value="MAJOR">MAJOR (기축코인 - Gold로 거래)</option>
-                </select>
-                <small style={{ color: '#9ca3af', fontSize: '12px' }}>
-                  MEME: 밈코인, MAJOR 코인으로 거래 | MAJOR: 기축코인, Gold로 거래
-                </small>
+                <label>산업 ID</label>
+                <input
+                  type="text"
+                  value={formData.industry_id}
+                  onChange={(e) => setFormData({ ...formData, industry_id: e.target.value })}
+                  placeholder="산업 ID (선택)"
+                />
               </div>
-              {formData.coin_type === 'MEME' && (
-                <div className="form-group">
-                  <label>거래 기준 코인 (MAJOR) *</label>
-                  <select
-                    value={formData.base_currency_id}
-                    onChange={(e) => setFormData({ ...formData, base_currency_id: e.target.value })}
-                    required
-                  >
-                    <option value="">선택하세요</option>
-                    {coins.filter(c => c.coin_type === 'MAJOR').map((coin) => (
-                      <option key={coin.id} value={coin.id}>
-                        {coin.symbol} - {coin.name}
-                      </option>
-                    ))}
-                  </select>
-                  <small style={{ color: '#9ca3af', fontSize: '12px' }}>
-                    이 밈코인을 거래할 때 사용할 MAJOR 코인을 선택하세요
-                  </small>
-                </div>
-              )}
+              <div className="form-group">
+                <label>그룹 ID</label>
+                <input
+                  type="text"
+                  value={formData.group_id}
+                  onChange={(e) => setFormData({ ...formData, group_id: e.target.value })}
+                  placeholder="그룹 ID (선택)"
+                />
+              </div>
+              <div className="form-group">
+                <label>창업자 UUID</label>
+                <input
+                  type="text"
+                  value={formData.founder_uuid}
+                  onChange={(e) => setFormData({ ...formData, founder_uuid: e.target.value })}
+                  placeholder="창업자 UUID (선택)"
+                />
+              </div>
               <div className="form-group">
                 <label>유통량 *</label>
                 <input
@@ -616,7 +607,7 @@ const AdminDashboard = () => {
                 />
               </div>
               <div className="form-group">
-                <label>현재 가격 (GOLD) *</label>
+                <label>현재 가격 (G) *</label>
                 <input
                   type="number"
                   value={formData.current_price}
@@ -664,11 +655,11 @@ const AdminDashboard = () => {
       )}
 
       {/* 수정 모달 */}
-      {editingCoin && (
-        <div className="modal-overlay" onClick={() => setEditingCoin(null)}>
+      {editingStock && (
+        <div className="modal-overlay" onClick={() => setEditingStock(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>코인 수정</h2>
-            <form onSubmit={handleUpdateCoin}>
+            <h2>종목 수정</h2>
+            <form onSubmit={handleUpdateStock}>
               <div className="form-group">
                 <label>심볼</label>
                 <input type="text" value={formData.symbol} disabled />
@@ -709,7 +700,7 @@ const AdminDashboard = () => {
                 />
               </div>
               <div className="form-group">
-                <label>현재 가격 (GOLD) *</label>
+                <label>현재 가격 (G) *</label>
                 <input
                   type="number"
                   value={formData.current_price}
@@ -748,7 +739,7 @@ const AdminDashboard = () => {
                 <small style={{ color: '#9ca3af', fontSize: '12px' }}>범위: 0.001% ~ 0.999%</small>
               </div>
               <div className="modal-actions">
-                <button type="button" onClick={() => setEditingCoin(null)}>
+                <button type="button" onClick={() => setEditingStock(null)}>
                   취소
                 </button>
                 <button type="submit">수정</button>
@@ -762,4 +753,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

@@ -59,10 +59,11 @@ CREATE TABLE stocks (
     description TEXT NULL,
     industry_id CHAR(36) NULL COMMENT '산업 분류',
     group_id CHAR(36) NULL COMMENT '그룹(계열사)',
+    founder_uuid VARCHAR(36) NOT NULL COMMENT '창업자 Minecraft UUID (매도 제한 적용)',
     initial_supply BIGINT NOT NULL COMMENT '초기 발행량',
     circulating_supply BIGINT NOT NULL COMMENT '현재 유통량',
-    initial_price DECIMAL(20, 2) NOT NULL COMMENT '초기 가격 (원)',
-    current_price DECIMAL(20, 2) NOT NULL COMMENT '현재 가격 (원)',
+    initial_price DECIMAL(20, 2) NOT NULL COMMENT '초기 가격 (Gold)',
+    current_price DECIMAL(20, 2) NOT NULL COMMENT '현재 가격 (Gold)',
     price_change_24h DECIMAL(10, 2) DEFAULT 0 COMMENT '24시간 가격 변동률 (%)',
     volume_24h BIGINT DEFAULT 0 COMMENT '24시간 거래량',
     market_cap BIGINT AS (circulating_supply * current_price) STORED COMMENT '시가총액',
@@ -76,7 +77,8 @@ CREATE TABLE stocks (
     INDEX idx_symbol (symbol),
     INDEX idx_status (status),
     INDEX idx_industry (industry_id),
-    INDEX idx_group (group_id)
+    INDEX idx_group (group_id),
+    INDEX idx_founder (founder_uuid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CK 지수 테이블
@@ -112,7 +114,7 @@ CREATE TABLE user_wallets (
     minecraft_username VARCHAR(16) UNIQUE NOT NULL,
     minecraft_uuid VARCHAR(36) UNIQUE,
     bank_account_number VARCHAR(20) NULL COMMENT 'Bank 계좌번호 연동',
-    krw_balance BIGINT DEFAULT 0 COMMENT '원화 잔액 (LICO 전용, Bank와 별도)',
+    gold_balance BIGINT DEFAULT 0 COMMENT 'Gold 잔액 (LICO 전용, Bank와 별도)',
     total_deposit BIGINT DEFAULT 0 COMMENT '총 입금액',
     total_withdrawal BIGINT DEFAULT 0 COMMENT '총 출금액',
     questionnaire_completed BOOLEAN DEFAULT FALSE COMMENT '설문조사 완료 여부',
@@ -137,8 +139,8 @@ CREATE TABLE user_stock_balances (
     available_amount DECIMAL(20, 8) DEFAULT 0 COMMENT '사용 가능한 주식 수',
     locked_amount DECIMAL(20, 8) DEFAULT 0 COMMENT '주문 중 잠금 수량',
     total_amount DECIMAL(20, 8) AS (available_amount + locked_amount) STORED,
-    average_buy_price DECIMAL(20, 2) DEFAULT 0 COMMENT '평균 매수가 (원)',
-    total_profit_loss DECIMAL(20, 2) DEFAULT 0 COMMENT '총 손익 (원)',
+    average_buy_price DECIMAL(20, 2) DEFAULT 0 COMMENT '평균 매수가 (Gold)',
+    total_profit_loss DECIMAL(20, 2) DEFAULT 0 COMMENT '총 손익 (Gold)',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (wallet_id) REFERENCES user_wallets(id),
     FOREIGN KEY (stock_id) REFERENCES stocks(id),
@@ -154,12 +156,12 @@ CREATE TABLE orders (
     stock_id CHAR(36) NOT NULL,
     order_type ENUM('BUY', 'SELL') NOT NULL,
     order_method ENUM('MARKET', 'LIMIT') NOT NULL COMMENT '시장가/지정가',
-    price DECIMAL(20, 2) NULL COMMENT '지정가 (LIMIT만, 원)',
+    price DECIMAL(20, 2) NULL COMMENT '지정가 (LIMIT만, Gold)',
     quantity DECIMAL(20, 8) NOT NULL COMMENT '주문 수량',
     filled_quantity DECIMAL(20, 8) DEFAULT 0 COMMENT '체결된 수량',
     remaining_quantity DECIMAL(20, 8) AS (quantity - filled_quantity) STORED,
-    total_amount DECIMAL(20, 2) AS (quantity * price) STORED COMMENT '총 금액 (원)',
-    fee DECIMAL(20, 2) DEFAULT 0 COMMENT '수수료 (원)',
+    total_amount DECIMAL(20, 2) AS (quantity * price) STORED COMMENT '총 금액 (Gold)',
+    fee DECIMAL(20, 2) DEFAULT 0 COMMENT '수수료 (Gold)',
     status ENUM('PENDING', 'PARTIAL', 'FILLED', 'CANCELLED', 'EXPIRED') DEFAULT 'PENDING',
     is_admin_order BOOLEAN DEFAULT FALSE COMMENT 'ADMIN 주문 여부',
     is_ai_order BOOLEAN DEFAULT FALSE COMMENT 'AI 주문 여부 (뉴스 영향)',
@@ -182,11 +184,11 @@ CREATE TABLE trades (
     sell_order_id CHAR(36) NULL COMMENT '매도 주문 ID (AI 봇 직접 거래 시 NULL)',
     buyer_wallet_id CHAR(36) NOT NULL,
     seller_wallet_id CHAR(36) NOT NULL,
-    price DECIMAL(20, 2) NOT NULL COMMENT '체결 가격 (원)',
+    price DECIMAL(20, 2) NOT NULL COMMENT '체결 가격 (Gold)',
     quantity DECIMAL(20, 8) NOT NULL COMMENT '체결 수량',
     total_amount DECIMAL(20, 2) AS (price * quantity) STORED,
-    buy_fee DECIMAL(20, 2) DEFAULT 0 COMMENT '매수 수수료 (5%, 원)',
-    sell_fee DECIMAL(20, 2) DEFAULT 0 COMMENT '매도 수수료 (5%, 원)',
+    buy_fee DECIMAL(20, 2) DEFAULT 0 COMMENT '매수 수수료 (5%, Gold)',
+    sell_fee DECIMAL(20, 2) DEFAULT 0 COMMENT '매도 수수료 (5%, Gold)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (stock_id) REFERENCES stocks(id),
     FOREIGN KEY (buy_order_id) REFERENCES orders(id) ON DELETE SET NULL,
@@ -224,8 +226,8 @@ CREATE TABLE blockchain_transactions (
     tx_hash VARCHAR(64) UNIQUE NOT NULL COMMENT '거래 해시',
     from_address VARCHAR(42) NOT NULL COMMENT '송신 지갑',
     to_address VARCHAR(42) NOT NULL COMMENT '수신 지갑',
-    amount DECIMAL(20, 2) NOT NULL COMMENT '금액 (원)',
-    fee DECIMAL(20, 2) NOT NULL COMMENT '수수료 (원)',
+    amount DECIMAL(20, 2) NOT NULL COMMENT '금액 (Gold)',
+    fee DECIMAL(20, 2) NOT NULL COMMENT '수수료 (Gold)',
     tx_type ENUM('TRANSFER', 'TRADE', 'DEPOSIT', 'WITHDRAWAL', 'MINING_REWARD') NOT NULL,
     status ENUM('PENDING', 'CONFIRMED', 'FAILED') DEFAULT 'PENDING',
     reference_id CHAR(36) NULL COMMENT '원본 거래 ID (trades, transfers 등)',
@@ -246,8 +248,8 @@ CREATE TABLE fee_settings (
     id INT PRIMARY KEY AUTO_INCREMENT,
     fee_type ENUM('TRADING', 'WITHDRAWAL', 'TRANSFER') NOT NULL UNIQUE,
     fee_percentage DECIMAL(5, 2) NOT NULL COMMENT '수수료율 (%)',
-    min_fee DECIMAL(20, 2) DEFAULT 0 COMMENT '최소 수수료 (원)',
-    max_fee DECIMAL(20, 2) NULL COMMENT '최대 수수료 (원)',
+    min_fee DECIMAL(20, 2) DEFAULT 0 COMMENT '최소 수수료 (Gold)',
+    max_fee DECIMAL(20, 2) NULL COMMENT '최대 수수료 (Gold)',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_type (fee_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -314,7 +316,7 @@ CREATE TABLE bank_transactions (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     wallet_id CHAR(36) NOT NULL,
     transaction_type ENUM('DEPOSIT', 'WITHDRAWAL') NOT NULL,
-    amount BIGINT NOT NULL COMMENT '금액 (원)',
+    amount BIGINT NOT NULL COMMENT '금액 (Gold)',
     bank_transaction_id CHAR(36) NULL COMMENT 'Bank 시스템 거래 ID',
     status ENUM('PENDING', 'COMPLETED', 'FAILED', 'CANCELLED') DEFAULT 'PENDING',
     notes TEXT NULL,
@@ -342,6 +344,30 @@ CREATE TABLE ai_trade_logs (
     INDEX idx_stock (stock_id),
     INDEX idx_created (created_at),
     INDEX idx_news (news_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 창업자 매도 요청 테이블 (창업자는 자사 주식 매도 시 관리자 승인 필요)
+CREATE TABLE founder_sell_requests (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    stock_id CHAR(36) NOT NULL COMMENT '매도 대상 주식',
+    wallet_id CHAR(36) NOT NULL COMMENT '창업자 지갑 ID',
+    founder_uuid VARCHAR(36) NOT NULL COMMENT '창업자 Minecraft UUID',
+    order_method ENUM('MARKET', 'LIMIT') NOT NULL COMMENT '주문 방식',
+    price DECIMAL(20, 2) NULL COMMENT '지정가 (LIMIT인 경우, Gold)',
+    quantity DECIMAL(20, 8) NOT NULL COMMENT '매도 수량',
+    reason TEXT NULL COMMENT '매도 사유',
+    status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
+    reviewed_by CHAR(36) NULL COMMENT '검토한 관리자 ID',
+    reviewed_at TIMESTAMP NULL COMMENT '검토 시간',
+    admin_comment TEXT NULL COMMENT '관리자 코멘트',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (stock_id) REFERENCES stocks(id),
+    FOREIGN KEY (wallet_id) REFERENCES user_wallets(id),
+    FOREIGN KEY (reviewed_by) REFERENCES admins(id),
+    INDEX idx_stock (stock_id),
+    INDEX idx_wallet (wallet_id),
+    INDEX idx_status (status),
+    INDEX idx_founder_uuid (founder_uuid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 시스템 설정 테이블
@@ -431,14 +457,15 @@ CREATE TABLE news_comments (
 INSERT INTO admins (username, password, role) VALUES
 ('admin', '$2b$10$YourHashedPasswordHere', 'SUPER_ADMIN');
 
--- 샘플 주식 데이터 (그룹 포함)
-INSERT INTO stocks (symbol, name, logo_url, industry_id, group_id, initial_supply, circulating_supply, initial_price, current_price, description)
+-- 샘플 주식 데이터 (그룹 포함, founder_uuid는 실제 마인크래프트 UUID로 교체 필요)
+INSERT INTO stocks (symbol, name, logo_url, industry_id, group_id, founder_uuid, initial_supply, circulating_supply, initial_price, current_price, description)
 SELECT
     'LSE',
     'Lico Stock Exchange',
     '/images/stocks/lse.png',
     i.id,
     g.id,
+    '00000000-0000-0000-0000-000000000001',
     1000000000,
     100000000,
     10000.00,
@@ -448,13 +475,14 @@ FROM industries i, stock_groups g
 WHERE i.name = 'IT/기술' AND g.name = '리코그룹'
 LIMIT 1;
 
-INSERT INTO stocks (symbol, name, logo_url, industry_id, group_id, initial_supply, circulating_supply, initial_price, current_price, description)
+INSERT INTO stocks (symbol, name, logo_url, industry_id, group_id, founder_uuid, initial_supply, circulating_supply, initial_price, current_price, description)
 SELECT
     'CKB',
     'CK Bank',
     '/images/stocks/ckb.png',
     i.id,
     g.id,
+    '00000000-0000-0000-0000-000000000002',
     500000000,
     50000000,
     50000.00,
@@ -464,13 +492,14 @@ FROM industries i, stock_groups g
 WHERE i.name = '금융' AND g.name = 'CK그룹'
 LIMIT 1;
 
-INSERT INTO stocks (symbol, name, logo_url, industry_id, group_id, initial_supply, circulating_supply, initial_price, current_price, description)
+INSERT INTO stocks (symbol, name, logo_url, industry_id, group_id, founder_uuid, initial_supply, circulating_supply, initial_price, current_price, description)
 SELECT
     'LICT',
     'Lico Technology',
     '/images/stocks/lict.png',
     i.id,
     g.id,
+    '00000000-0000-0000-0000-000000000001',
     300000000,
     30000000,
     15000.00,
@@ -480,13 +509,14 @@ FROM industries i, stock_groups g
 WHERE i.name = 'IT/기술' AND g.name = '리코그룹'
 LIMIT 1;
 
-INSERT INTO stocks (symbol, name, logo_url, industry_id, group_id, initial_supply, circulating_supply, initial_price, current_price, description)
+INSERT INTO stocks (symbol, name, logo_url, industry_id, group_id, founder_uuid, initial_supply, circulating_supply, initial_price, current_price, description)
 SELECT
     'CKCS',
     'CK Construction',
     '/images/stocks/ckcs.png',
     i.id,
     g.id,
+    '00000000-0000-0000-0000-000000000002',
     200000000,
     20000000,
     25000.00,

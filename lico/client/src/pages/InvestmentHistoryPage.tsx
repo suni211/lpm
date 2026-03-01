@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { tradingService, walletService } from '../services/coinService';
+import { tradingService, walletService } from '../services/stockService';
 import api from '../services/api';
-import type { Order, CoinBalance, Trade } from '../types';
+import type { Order, StockBalance, Trade } from '../types';
 import './InvestmentHistoryPage.css';
 
 const InvestmentHistoryPage = () => {
   const [activeTab, setActiveTab] = useState<'holdings' | 'orders' | 'trades'>('holdings');
-  const [holdings, setHoldings] = useState<CoinBalance[]>([]);
+  const [holdings, setHoldings] = useState<StockBalance[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [walletAddress, setWalletAddress] = useState<string>('');
@@ -112,7 +112,7 @@ const InvestmentHistoryPage = () => {
             className={'tab-nav-btn ' + (activeTab === 'holdings' ? 'active' : '')}
             onClick={() => setActiveTab('holdings')}
           >
-            보유 코인
+            보유 주식
           </button>
           <button
             className={'tab-nav-btn ' + (activeTab === 'orders' ? 'active' : '')}
@@ -134,12 +134,12 @@ const InvestmentHistoryPage = () => {
           ) : activeTab === 'holdings' ? (
             <div className="holdings-table">
               {holdings.length === 0 ? (
-                <div className="empty-state">보유한 코인이 없습니다</div>
+                <div className="empty-state">보유한 주식이 없습니다</div>
               ) : (
                 <table>
                   <thead>
                     <tr>
-                      <th>코인</th>
+                      <th>종목</th>
                       <th>보유량</th>
                       <th>평균 매수가</th>
                       <th>현재가</th>
@@ -196,7 +196,7 @@ const InvestmentHistoryPage = () => {
                   <thead>
                     <tr>
                       <th>시간</th>
-                      <th>코인</th>
+                      <th>종목</th>
                       <th>유형</th>
                       <th>가격</th>
                       <th>수량</th>
@@ -258,7 +258,7 @@ const InvestmentHistoryPage = () => {
                   <thead>
                     <tr>
                       <th>시간</th>
-                      <th>코인</th>
+                      <th>종목</th>
                       <th>유형</th>
                       <th>가격</th>
                       <th>수량</th>

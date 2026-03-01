@@ -1,13 +1,13 @@
 import './TradingViewWidgets.css';
 
-// Ticker Tape 컴포넌트 (가상 코인은 TradingView에서 인식하지 못하므로 제거)
+// Ticker Tape 컴포넌트 (가상 종목은 TradingView에서 인식하지 못하므로 제거)
 export const TickerTape = () => {
   return null;
 };
 
 // Market Data 컴포넌트
-export const MarketData = ({ coinSymbol }: { coinSymbol?: string }) => {
-  const symbol = coinSymbol ? `LICO:${coinSymbol}` : 'LICO:BTC';
+export const MarketData = ({ stockSymbol }: { stockSymbol?: string }) => {
+  const symbol = stockSymbol ? `LICO:${stockSymbol}` : 'LICO:BTC';
 
   return (
     <div className="tradingview-widget-container market-data">

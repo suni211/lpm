@@ -1,81 +1,79 @@
 import { useState, useEffect } from 'react';
-import { tradingService, walletService } from '../services/coinService';
-import type { Coin, CoinBalance } from '../types';
+import { tradingService, walletService } from '../services/stockService';
+import type { Stock, StockBalance } from '../types';
 import './OrderForm.css';
 
 interface OrderFormProps {
-  coin: Coin;
+  stock: Stock;
   walletAddress: string;
   goldBalance: number;
-  baseCurrency: Coin | null;
   onOrderSuccess: () => void;
 }
 
 type OrderType = 'BUY' | 'SELL';
 
-const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSuccess }: OrderFormProps) => {
-  const currencySymbol = baseCurrency?.symbol || 'G';
+const OrderForm = ({ stock, walletAddress, goldBalance, onOrderSuccess }: OrderFormProps) => {
   const [orderType, setOrderType] = useState<OrderType>('BUY');
   const [inputMode, setInputMode] = useState<'quantity' | 'amount'>('amount'); // 금액 모드 기본
   const [orderMethod, setOrderMethod] = useState<'LIMIT' | 'MARKET'>('LIMIT'); // 지정가/시장가 선택
   const [price, setPrice] = useState(() => {
-    const priceValue = typeof coin.current_price === 'string' ? parseFloat(coin.current_price) : (coin.current_price || 0);
+    const priceValue = typeof stock.current_price === 'string' ? parseFloat(stock.current_price) : (stock.current_price || 0);
     return isNaN(priceValue) ? '0' : priceValue.toString();
   });
   const [quantity, setQuantity] = useState('');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [coinBalance, setCoinBalance] = useState<CoinBalance | null>(null);
+  const [stockBalance, setStockBalance] = useState<StockBalance | null>(null);
 
-  // 코인 잔액 조회
+  // 주식 잔액 조회
   useEffect(() => {
-    const fetchCoinBalance = async () => {
+    const fetchStockBalance = async () => {
       try {
         const balances = await walletService.getMyBalances(walletAddress);
-        const balance = balances.balances?.find((b: CoinBalance) => b.coin_id === coin.id);
+        const balance = balances.balances?.find((b: StockBalance) => b.stock_id === stock.id);
         // 잔액이 없어도 기본값으로 설정 (표시를 위해)
         if (balance) {
-          setCoinBalance(balance);
+          setStockBalance(balance);
         } else {
           // 잔액이 없을 때도 기본 구조로 설정하여 항상 표시되도록
-          setCoinBalance({
+          setStockBalance({
             id: '',
             wallet_id: walletAddress,
-            coin_id: coin.id,
+            stock_id: stock.id,
             total_amount: 0,
             available_amount: 0,
             locked_amount: 0,
             average_buy_price: 0,
             total_profit_loss: 0,
             updated_at: new Date().toISOString(),
-            symbol: coin.symbol,
-            name: coin.name,
+            symbol: stock.symbol,
+            name: stock.name,
           });
         }
       } catch (error) {
-        console.error('Failed to fetch coin balance:', error);
+        console.error('Failed to fetch stock balance:', error);
         // 조회 실패 시에도 기본값 설정
-        setCoinBalance({
+        setStockBalance({
           id: '',
           wallet_id: walletAddress,
-          coin_id: coin.id,
+          stock_id: stock.id,
           total_amount: 0,
           available_amount: 0,
           locked_amount: 0,
           average_buy_price: 0,
           total_profit_loss: 0,
           updated_at: new Date().toISOString(),
-          symbol: coin.symbol,
-          name: coin.name,
+          symbol: stock.symbol,
+          name: stock.name,
         });
       }
     };
 
-    if (walletAddress && coin.id) {
-      fetchCoinBalance();
+    if (walletAddress && stock.id) {
+      fetchStockBalance();
     }
-  }, [walletAddress, coin.id]);
+  }, [walletAddress, stock.id]);
 
   const calculateTotal = () => {
     const p = parseFloat(price) || 0;
@@ -124,7 +122,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
 
     // 시장가 주문인 경우 가격은 현재가 사용
     const p = orderMethod === 'MARKET'
-      ? (typeof coin.current_price === 'string' ? parseFloat(coin.current_price) : (coin.current_price || 0))
+      ? (typeof stock.current_price === 'string' ? parseFloat(stock.current_price) : (stock.current_price || 0))
       : parseFloat(price);
 
     if (!p || p <= 0) {
@@ -162,40 +160,40 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
     if (orderType === 'BUY') {
       const totalRequired = calculateTotalWithFee();
       if (goldBalance < totalRequired) {
-        setError(`잔액 부족 (필요: ${formatNumber(totalRequired)} ${currencySymbol}, 보유: ${formatNumber(goldBalance)} ${currencySymbol})`);
+        setError(`잔액 부족 (필요: ${formatNumber(totalRequired)} G, 보유: ${formatNumber(goldBalance)} G)`);
         return;
       }
     } else {
-      // 매도: 코인 잔액 체크 (예약 주문이므로 total_amount 체크)
-      if (!coinBalance) {
-        // 코인 잔액을 다시 조회
+      // 매도: 주식 잔액 체크 (예약 주문이므로 total_amount 체크)
+      if (!stockBalance) {
+        // 주식 잔액을 다시 조회
         try {
           const balances = await walletService.getMyBalances(walletAddress);
-          const balance = balances.balances?.find((b: CoinBalance) => b.coin_id === coin.id);
+          const balance = balances.balances?.find((b: StockBalance) => b.stock_id === stock.id);
           if (!balance || (typeof balance.total_amount === 'string' ? parseFloat(balance.total_amount) : (balance.total_amount || 0)) <= 0) {
-            setError('매도할 수 있는 코인이 없습니다');
+            setError('매도할 수 있는 주식이 없습니다');
             return;
           }
         } catch (err) {
-          setError('코인 잔액을 확인할 수 없습니다');
+          setError('주식 잔액을 확인할 수 없습니다');
           return;
         }
       } else {
-        const totalAmount = typeof coinBalance.total_amount === 'string' ? parseFloat(coinBalance.total_amount) : (coinBalance.total_amount || 0);
-        const availableAmount = typeof coinBalance.available_amount === 'string' ? parseFloat(coinBalance.available_amount) : (coinBalance.available_amount || 0);
-        
+        const totalAmount = typeof stockBalance.total_amount === 'string' ? parseFloat(stockBalance.total_amount) : (stockBalance.total_amount || 0);
+        const availableAmount = typeof stockBalance.available_amount === 'string' ? parseFloat(stockBalance.available_amount) : (stockBalance.available_amount || 0);
+
         // 예약 주문이므로 total_amount가 있으면 가능하지만, 입력한 수량이 total_amount를 초과하면 안 됨
         if (totalAmount <= 0) {
-          setError('매도할 수 있는 코인이 없습니다');
+          setError('매도할 수 있는 주식이 없습니다');
           return;
         }
-        
+
         // 입력한 수량이 보유량을 초과하는지 체크
         if (finalQuantity > totalAmount) {
-          setError(`보유량 부족 (보유: ${formatNumber(totalAmount)} ${coin.symbol}, 요청: ${formatNumber(finalQuantity)} ${coin.symbol})`);
+          setError(`보유량 부족 (보유: ${formatNumber(totalAmount)} ${stock.symbol}, 요청: ${formatNumber(finalQuantity)} ${stock.symbol})`);
           return;
         }
-        
+
         // available_amount가 부족하면 경고만 (예약 주문이므로 가능)
         if (finalQuantity > availableAmount) {
           // 경고만 표시하고 계속 진행 (다른 주문이 체결되면 사용 가능해질 수 있음)
@@ -209,7 +207,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
     try {
       const orderData: any = {
         wallet_address: walletAddress,
-        coin_id: coin.id,
+        stock_id: stock.id,
         order_type: orderType,
         order_method: orderMethod,
         price: orderMethod === 'LIMIT' ? p : undefined,
@@ -222,29 +220,40 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
         orderData.quantity = finalQuantity;
       }
 
-      await tradingService.createOrder(orderData);
+      const result = await tradingService.createOrder(orderData);
+
+      // 창업자 매도 제한 응답 처리
+      if (result.founder_sell_request) {
+        alert(`창업자 매도 요청이 접수되었습니다. 관리자 승인 후 처리됩니다.`);
+      } else if (orderMethod === 'MARKET') {
+        alert('시장가 주문이 체결되었습니다!');
+      } else {
+        alert('지정가 주문이 등록되었습니다!');
+      }
 
       setQuantity('');
       setAmount('');
       setError('');
 
-      // 코인 잔액 다시 조회
+      // 주식 잔액 다시 조회
       try {
         const balances = await walletService.getMyBalances(walletAddress);
-        const balance = balances.balances?.find((b: CoinBalance) => b.coin_id === coin.id);
-        setCoinBalance(balance || null);
+        const balance = balances.balances?.find((b: StockBalance) => b.stock_id === stock.id);
+        setStockBalance(balance || null);
       } catch (err) {
-        console.error('Failed to refresh coin balance:', err);
+        console.error('Failed to refresh stock balance:', err);
       }
 
-      if (orderMethod === 'MARKET') {
-        alert('시장가 주문이 체결되었습니다!');
-      } else {
-        alert('지정가 주문이 등록되었습니다!');
-      }
       onOrderSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.error || '주문 실패');
+      const errorMsg = err.response?.data?.error || '주문 실패';
+      // 창업자 매도 제한 에러 메시지 처리
+      if (err.response?.data?.founder_sell_request) {
+        alert(`창업자 매도 요청이 접수되었습니다. 관리자 승인 후 처리됩니다.`);
+        onOrderSuccess();
+      } else {
+        setError(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -276,9 +285,9 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
         }
       }
     } else {
-      // 매도: 코인 잔액 사용 (total_amount 사용, 예약 주문이므로)
-      if (coinBalance) {
-        const totalAmount = typeof coinBalance.total_amount === 'string' ? parseFloat(coinBalance.total_amount) : (coinBalance.total_amount || 0);
+      // 매도: 주식 잔액 사용 (total_amount 사용, 예약 주문이므로)
+      if (stockBalance) {
+        const totalAmount = typeof stockBalance.total_amount === 'string' ? parseFloat(stockBalance.total_amount) : (stockBalance.total_amount || 0);
         if (totalAmount > 0) {
           if (inputMode === 'amount') {
             const p = parseFloat(price) || 0;
@@ -299,9 +308,9 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
   // 전량 매수/매도
   const handleFullOrder = async () => {
     setError('');
-    
+
     if (orderType === 'BUY') {
-      // 전량 매수: 골드 잔액 전부 사용 (수수료 5% 제외)
+      // 전량 매수: Gold 잔액 전부 사용 (수수료 5% 제외)
       const maxAmount = Math.floor(goldBalance / 1.05);
       if (maxAmount <= 0) {
         setError('매수할 수 있는 금액이 없습니다');
@@ -317,31 +326,31 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
         }
       }, 100);
     } else {
-      // 전량 매도: 코인 잔액 전부 사용 (예약 주문이므로 total_amount 사용)
-      if (!coinBalance) {
-        // 코인 잔액을 다시 조회
+      // 전량 매도: 주식 잔액 전부 사용 (예약 주문이므로 total_amount 사용)
+      if (!stockBalance) {
+        // 주식 잔액을 다시 조회
         try {
           const balances = await walletService.getMyBalances(walletAddress);
-          const balance = balances.balances?.find((b: CoinBalance) => b.coin_id === coin.id);
+          const balance = balances.balances?.find((b: StockBalance) => b.stock_id === stock.id);
           if (!balance) {
-            setError('코인 잔액을 확인할 수 없습니다');
+            setError('주식 잔액을 확인할 수 없습니다');
             return;
           }
           const totalAmount = typeof balance.total_amount === 'string' ? parseFloat(balance.total_amount) : (balance.total_amount || 0);
           if (totalAmount <= 0) {
-            setError('매도할 수 있는 코인이 없습니다');
+            setError('매도할 수 있는 주식이 없습니다');
             return;
           }
           setQuantity(totalAmount.toString());
           handleQuantityChange(totalAmount.toString());
         } catch (err) {
-          setError('코인 잔액을 확인할 수 없습니다');
+          setError('주식 잔액을 확인할 수 없습니다');
           return;
         }
       } else {
-        const totalAmount = typeof coinBalance.total_amount === 'string' ? parseFloat(coinBalance.total_amount) : (coinBalance.total_amount || 0);
+        const totalAmount = typeof stockBalance.total_amount === 'string' ? parseFloat(stockBalance.total_amount) : (stockBalance.total_amount || 0);
         if (totalAmount <= 0) {
-          setError('매도할 수 있는 코인이 없습니다');
+          setError('매도할 수 있는 주식이 없습니다');
           return;
         }
         setQuantity(totalAmount.toString());
@@ -453,7 +462,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
 
         {orderMethod === 'LIMIT' && (
           <div className="form-group">
-            <label>가격 ({currencySymbol})</label>
+            <label>가격 (G)</label>
             <input
               type="number"
               value={price}
@@ -467,10 +476,10 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
 
         {orderMethod === 'MARKET' && (
           <div className="form-group">
-            <label>시장가 (현재가: {formatNumber(coin.current_price)} {currencySymbol})</label>
+            <label>시장가 (현재가: {formatNumber(stock.current_price)} G)</label>
             <input
               type="text"
-              value={`${formatNumber(coin.current_price)} ${currencySymbol}`}
+              value={`${formatNumber(stock.current_price)} G`}
               disabled
               style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
             />
@@ -480,7 +489,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
         {inputMode === 'amount' ? (
           <div className="form-group">
             <label>
-              {orderType === 'BUY' ? '구매 금액' : '판매 금액'} ({currencySymbol})
+              {orderType === 'BUY' ? '구매 금액' : '판매 금액'} (G)
               {orderType === 'BUY' && (
                 <button
                   type="button"
@@ -501,14 +510,14 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
             />
             {amount && (
               <div className="calculated-info">
-                ≈ {formatNumber(calculateQuantityFromAmount())} {coin.symbol}
+                ≈ {formatNumber(calculateQuantityFromAmount())} {stock.symbol}
               </div>
             )}
           </div>
         ) : (
           <div className="form-group">
             <label>
-              {orderType === 'BUY' ? '구매 수량' : '판매 수량'} ({coin.symbol})
+              {orderType === 'BUY' ? '구매 수량' : '판매 수량'} ({stock.symbol})
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 {orderType === 'BUY' && (
                   <button
@@ -548,7 +557,7 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
             />
             {quantity && (
               <div className="calculated-info">
-                ≈ {formatNumber(calculateAmountFromQuantity())} {currencySymbol}
+                ≈ {formatNumber(calculateAmountFromQuantity())} G
               </div>
             )}
           </div>
@@ -557,58 +566,58 @@ const OrderForm = ({ coin, walletAddress, goldBalance, baseCurrency, onOrderSucc
         <div className="order-summary">
           <div className="summary-row">
             <span>주문 금액</span>
-            <span>{formatNumber(calculateTotal())} {currencySymbol}</span>
+            <span>{formatNumber(calculateTotal())} G</span>
           </div>
           <div className="summary-row fee-row">
             <span>수수료 (5%)</span>
-            <span>{formatNumber(calculateFee())} {currencySymbol}</span>
+            <span>{formatNumber(calculateFee())} G</span>
           </div>
           <div className="summary-row total-row">
             <span>{orderType === 'BUY' ? '총 지불 금액' : '총 받을 금액'}</span>
-            <span>{formatNumber(calculateTotalWithFee())} {currencySymbol}</span>
+            <span>{formatNumber(calculateTotalWithFee())} G</span>
           </div>
         </div>
 
         <div className="balance-info">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span>보유 골드</span>
+            <span>보유 Gold</span>
             <span className="balance-amount">{formatNumber(goldBalance)} G</span>
           </div>
           {(() => {
-            // coinBalance가 없으면 기본값 0으로 표시
-            const totalAmount = coinBalance 
-              ? (typeof coinBalance.total_amount === 'string' ? parseFloat(coinBalance.total_amount) : (coinBalance.total_amount || 0))
+            // stockBalance가 없으면 기본값 0으로 표시
+            const totalAmount = stockBalance
+              ? (typeof stockBalance.total_amount === 'string' ? parseFloat(stockBalance.total_amount) : (stockBalance.total_amount || 0))
               : 0;
-            const availableAmount = coinBalance
-              ? (typeof coinBalance.available_amount === 'string' ? parseFloat(coinBalance.available_amount) : (coinBalance.available_amount || 0))
+            const availableAmount = stockBalance
+              ? (typeof stockBalance.available_amount === 'string' ? parseFloat(stockBalance.available_amount) : (stockBalance.available_amount || 0))
               : 0;
-            const lockedAmount = coinBalance
-              ? (typeof coinBalance.locked_amount === 'string' ? parseFloat(coinBalance.locked_amount) : (coinBalance.locked_amount || 0))
+            const lockedAmount = stockBalance
+              ? (typeof stockBalance.locked_amount === 'string' ? parseFloat(stockBalance.locked_amount) : (stockBalance.locked_amount || 0))
               : 0;
-            
-            // 항상 코인 잔액 표시 (0이어도 표시)
+
+            // 항상 주식 잔액 표시 (0이어도 표시)
             return (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>보유 {coin.symbol}</span>
-                  <span className="balance-amount">{formatNumber(totalAmount)} {coin.symbol}</span>
+                  <span>보유 {stock.symbol}</span>
+                  <span className="balance-amount">{formatNumber(totalAmount)} {stock.symbol}</span>
                 </div>
                 {availableAmount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#9ca3af' }}>
                     <span>사용 가능</span>
-                    <span>{formatNumber(availableAmount)} {coin.symbol}</span>
+                    <span>{formatNumber(availableAmount)} {stock.symbol}</span>
                   </div>
                 )}
                 {lockedAmount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f59e0b' }}>
                     <span>주문 중</span>
-                    <span>{formatNumber(lockedAmount)} {coin.symbol}</span>
+                    <span>{formatNumber(lockedAmount)} {stock.symbol}</span>
                   </div>
                 )}
                 {totalAmount === 0 && availableAmount === 0 && lockedAmount === 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#9ca3af' }}>
-                    <span>보유 코인 없음</span>
-                    <span>0 {coin.symbol}</span>
+                    <span>보유 주식 없음</span>
+                    <span>0 {stock.symbol}</span>
                   </div>
                 )}
               </>

@@ -10,8 +10,8 @@ router.get('/dashboard', isAdmin, async (req: Request, res: Response) => {
     // 전체 사용자 수
     const usersCount = await query('SELECT COUNT(*) as count FROM user_wallets WHERE status = "ACTIVE"');
     
-    // 전체 코인 수
-    const coinsCount = await query('SELECT COUNT(*) as count FROM coins WHERE status = "ACTIVE"');
+    // 전체 주식 수
+    const stocksCount = await query('SELECT COUNT(*) as count FROM stocks WHERE status = "ACTIVE"');
     
     // 전체 Gold 잔액
     const totalGold = await query('SELECT COALESCE(SUM(gold_balance), 0) as total FROM user_wallets WHERE status = "ACTIVE"');
@@ -25,11 +25,11 @@ router.get('/dashboard', isAdmin, async (req: Request, res: Response) => {
     
     // 최근 거래 내역
     const recentTrades = await query(
-      `SELECT t.*, c.symbol, c.name,
+      `SELECT t.*, s.symbol, s.name,
               bw.minecraft_username as buyer_username,
               sw.minecraft_username as seller_username
        FROM trades t
-       JOIN coins c ON t.coin_id = c.id
+       JOIN stocks s ON t.stock_id = s.id
        JOIN user_wallets bw ON t.buyer_wallet_id = bw.id
        JOIN user_wallets sw ON t.seller_wallet_id = sw.id
        ORDER BY t.created_at DESC
@@ -47,7 +47,7 @@ router.get('/dashboard', isAdmin, async (req: Request, res: Response) => {
     res.json({
       stats: {
         totalUsers: usersCount[0]?.count || 0,
-        totalCoins: coinsCount[0]?.count || 0,
+        totalStocks: stocksCount[0]?.count || 0,
         totalGold: totalGold[0]?.total || 0,
         todayTrades: {
           count: todayTrades[0]?.count || 0,
@@ -69,12 +69,12 @@ router.get('/users', isAdmin, async (req: Request, res: Response) => {
     const { page = 1, limit = 50, status } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
-    let sql = `SELECT w.*, 
-               COALESCE(SUM(ucb.total_amount * c.current_price), 0) as total_coin_value,
-               COUNT(DISTINCT ucb.coin_id) as coin_count
+    let sql = `SELECT w.*,
+               COALESCE(SUM(ucb.total_amount * s.current_price), 0) as total_stock_value,
+               COUNT(DISTINCT ucb.stock_id) as stock_count
                FROM user_wallets w
-               LEFT JOIN user_coin_balances ucb ON w.id = ucb.wallet_id
-               LEFT JOIN coins c ON ucb.coin_id = c.id`;
+               LEFT JOIN user_stock_balances ucb ON w.id = ucb.wallet_id
+               LEFT JOIN stocks s ON ucb.stock_id = s.id`;
     const params: any[] = [];
 
     if (status) {
@@ -122,21 +122,21 @@ router.patch('/users/:id/status', isAdmin, async (req: Request, res: Response) =
 // 전체 거래 내역 (관리자)
 router.get('/trades', isAdmin, async (req: Request, res: Response) => {
   try {
-    const { page = 1, limit = 50, coin_id } = req.query;
+    const { page = 1, limit = 50, stock_id } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
-    let sql = `SELECT t.*, c.symbol, c.name,
+    let sql = `SELECT t.*, s.symbol, s.name,
                bw.minecraft_username as buyer_username,
                sw.minecraft_username as seller_username
                FROM trades t
-               JOIN coins c ON t.coin_id = c.id
+               JOIN stocks s ON t.stock_id = s.id
                JOIN user_wallets bw ON t.buyer_wallet_id = bw.id
                JOIN user_wallets sw ON t.seller_wallet_id = sw.id`;
     const params: any[] = [];
 
-    if (coin_id) {
-      sql += ' WHERE t.coin_id = ?';
-      params.push(coin_id);
+    if (stock_id) {
+      sql += ' WHERE t.stock_id = ?';
+      params.push(stock_id);
     }
 
     sql += ' ORDER BY t.created_at DESC LIMIT ? OFFSET ?';
@@ -157,10 +157,10 @@ router.get('/trades', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
-// 코인별 가격 변동 그래프 데이터 (관리자)
-router.get('/coins/:coin_id/price-history', isAdmin, async (req: Request, res: Response) => {
+// 주식별 가격 변동 그래프 데이터 (관리자)
+router.get('/stocks/:stock_id/price-history', isAdmin, async (req: Request, res: Response) => {
   try {
-    const { coin_id } = req.params;
+    const { stock_id } = req.params;
     const { interval = '1h', limit = 100 } = req.query;
 
     let tableName = '';
@@ -176,10 +176,10 @@ router.get('/coins/:coin_id/price-history', isAdmin, async (req: Request, res: R
 
     const candles = await query(
       `SELECT * FROM ${tableName}
-       WHERE coin_id = ?
+       WHERE stock_id = ?
        ORDER BY open_time DESC
        LIMIT ?`,
-      [coin_id, Number(limit)]
+      [stock_id, Number(limit)]
     );
 
     res.json({ candles: candles.reverse() });
@@ -198,7 +198,7 @@ router.post('/reset-trading-data', isAdmin, async (req: Request, res: Response) 
     const beforeStats = {
       trades: await query('SELECT COUNT(*) as count FROM trades'),
       orders: await query('SELECT COUNT(*) as count FROM orders'),
-      balances: await query('SELECT COUNT(*) as count FROM user_coin_balances'),
+      balances: await query('SELECT COUNT(*) as count FROM user_stock_balances'),
       wallets: await query('SELECT COUNT(*) as count FROM user_wallets'),
     };
 
@@ -217,9 +217,9 @@ router.post('/reset-trading-data', isAdmin, async (req: Request, res: Response) 
     await query('TRUNCATE TABLE orders');
     console.log('✓ orders 테이블 초기화 완료');
 
-    // 3. 사용자 코인 잔액 삭제
-    await query('TRUNCATE TABLE user_coin_balances');
-    console.log('✓ user_coin_balances 테이블 초기화 완료');
+    // 3. 사용자 주식 잔액 삭제
+    await query('TRUNCATE TABLE user_stock_balances');
+    console.log('✓ user_stock_balances 테이블 초기화 완료');
 
     // 4. 캔들 데이터 삭제
     await query('TRUNCATE TABLE candles_1m');
@@ -231,16 +231,16 @@ router.post('/reset-trading-data', isAdmin, async (req: Request, res: Response) 
     await query('TRUNCATE TABLE ai_trade_logs');
     console.log('✓ AI 로그 초기화 완료');
 
-    // 6. 코인 가격 초기화
+    // 6. 주식 가격 초기화
     await query(`
-      UPDATE coins
+      UPDATE stocks
       SET current_price = initial_price,
           price_change_24h = 0,
           volume_24h = 0,
           market_cap = initial_price * circulating_supply
       WHERE status = 'ACTIVE'
     `);
-    console.log('✓ 코인 가격 초기화 완료');
+    console.log('✓ 주식 가격 초기화 완료');
 
     // 7. AI 봇 지갑 찾기
     const aiWallet = await query(
@@ -251,11 +251,11 @@ router.post('/reset-trading-data', isAdmin, async (req: Request, res: Response) 
       const aiWalletId = aiWallet[0].id;
 
       // AI 봇의 기존 잔액 삭제
-      await query('DELETE FROM user_coin_balances WHERE wallet_id = ?', [aiWalletId]);
+      await query('DELETE FROM user_stock_balances WHERE wallet_id = ?', [aiWalletId]);
 
-      // 각 코인마다 AI 봇에게 전체 발행량 재배포
+      // 각 주식마다 AI 봇에게 전체 발행량 재배포
       await query(`
-        INSERT INTO user_coin_balances (id, wallet_id, coin_id, available_amount, locked_amount, average_buy_price)
+        INSERT INTO user_stock_balances (id, wallet_id, stock_id, available_amount, locked_amount, average_buy_price)
         SELECT
           UUID(),
           ?,
@@ -263,20 +263,20 @@ router.post('/reset-trading-data', isAdmin, async (req: Request, res: Response) 
           circulating_supply,
           0,
           initial_price
-        FROM coins
+        FROM stocks
         WHERE status = 'ACTIVE'
       `, [aiWalletId]);
 
-      console.log('✓ AI 봇 코인 재배포 완료');
+      console.log('✓ AI 봇 주식 재배포 완료');
     }
 
     // 초기화 후 데이터 확인
     const afterStats = {
       trades: await query('SELECT COUNT(*) as count FROM trades'),
       orders: await query('SELECT COUNT(*) as count FROM orders'),
-      balances: await query('SELECT COUNT(*) as count FROM user_coin_balances'),
+      balances: await query('SELECT COUNT(*) as count FROM user_stock_balances'),
       wallets: await query('SELECT COUNT(*) as count FROM user_wallets'),
-      coins: await query('SELECT COUNT(*) as count FROM coins WHERE status = "ACTIVE"'),
+      stocks: await query('SELECT COUNT(*) as count FROM stocks WHERE status = "ACTIVE"'),
     };
 
     console.log('📊 초기화 후 데이터:', {
@@ -284,13 +284,13 @@ router.post('/reset-trading-data', isAdmin, async (req: Request, res: Response) 
       orders: afterStats.orders[0].count,
       balances: afterStats.balances[0].count,
       wallets: afterStats.wallets[0].count,
-      coins: afterStats.coins[0].count,
+      stocks: afterStats.stocks[0].count,
     });
 
     res.json({
       success: true,
       message: '✅ LICO 거래 데이터 초기화 완료!',
-      note: '⚠️ 유저 지갑은 유지되었습니다 (골드 잔액 포함)',
+      note: '⚠️ 유저 지갑은 유지되었습니다 (Gold 잔액 포함)',
       before: {
         trades: beforeStats.trades[0].count,
         orders: beforeStats.orders[0].count,
@@ -302,7 +302,7 @@ router.post('/reset-trading-data', isAdmin, async (req: Request, res: Response) 
         orders: afterStats.orders[0].count,
         balances: afterStats.balances[0].count,
         wallets: afterStats.wallets[0].count,
-        activeCoins: afterStats.coins[0].count,
+        activeStocks: afterStats.stocks[0].count,
       },
     });
   } catch (error: any) {
@@ -311,50 +311,6 @@ router.post('/reset-trading-data', isAdmin, async (req: Request, res: Response) 
       error: '거래 데이터 초기화 실패',
       message: error.message,
     });
-  }
-});
-
-/**
- * PATCH /api/admin/coins/:coinId/type
- * 코인 타입 변경 (MAJOR 또는 MEME)
- */
-router.patch('/coins/:coinId/type', isAdmin, async (req: Request, res: Response) => {
-  try {
-    const { coinId } = req.params;
-    const { coinType, baseCurrencyId } = req.body;
-
-    if (!coinType || !['MAJOR', 'MEME'].includes(coinType)) {
-      return res.status(400).json({ error: '코인 타입은 MAJOR 또는 MEME이어야 합니다' });
-    }
-
-    // MEME 코인인 경우 baseCurrencyId 필수
-    if (coinType === 'MEME' && !baseCurrencyId) {
-      return res.status(400).json({ error: 'MEME 코인은 기준 화폐(MAJOR 코인)가 필요합니다' });
-    }
-
-    // MAJOR 코인인 경우 baseCurrencyId는 NULL
-    if (coinType === 'MAJOR') {
-      await query(
-        'UPDATE coins SET coin_type = ?, base_currency_id = NULL WHERE id = ?',
-        [coinType, coinId]
-      );
-    } else {
-      await query(
-        'UPDATE coins SET coin_type = ?, base_currency_id = ? WHERE id = ?',
-        [coinType, baseCurrencyId, coinId]
-      );
-    }
-
-    const updatedCoin = await query('SELECT * FROM coins WHERE id = ?', [coinId]);
-
-    res.json({
-      success: true,
-      message: '코인 타입이 업데이트되었습니다',
-      data: updatedCoin[0],
-    });
-  } catch (error: any) {
-    console.error('코인 타입 업데이트 오류:', error);
-    res.status(500).json({ error: '코인 타입 업데이트에 실패했습니다' });
   }
 });
 

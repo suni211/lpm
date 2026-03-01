@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import './PortfolioSummary.css';
 
-interface CoinBalance {
-  coin_id: string;
+interface StockBalance {
+  stock_id: string;
   symbol: string;
   name: string;
   logo_url?: string;
@@ -18,7 +18,7 @@ interface PortfolioSummaryProps {
 }
 
 const PortfolioSummary = ({ walletAddress }: PortfolioSummaryProps) => {
-  const [balances, setBalances] = useState<CoinBalance[]>([]);
+  const [balances, setBalances] = useState<StockBalance[]>([]);
   const [goldBalance, setGoldBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +35,7 @@ const PortfolioSummary = ({ walletAddress }: PortfolioSummaryProps) => {
           );
         }
 
-        // 코인 보유 현황
+        // 주식 보유 현황
         const balancesRes = await api.get(`/wallets/${walletAddress}/balances`);
         setBalances(balancesRes.data.balances || []);
       } catch (error) {
@@ -63,30 +63,30 @@ const PortfolioSummary = ({ walletAddress }: PortfolioSummaryProps) => {
   };
 
   const calculateTotalValue = () => {
-    const coinValue = balances.reduce((sum, balance) => {
-      const amount = typeof balance.total_amount === 'string' 
-        ? parseFloat(balance.total_amount) 
+    const stockValue = balances.reduce((sum, balance) => {
+      const amount = typeof balance.total_amount === 'string'
+        ? parseFloat(balance.total_amount)
         : (balance.total_amount || 0);
-      const price = typeof balance.current_price === 'string' 
-        ? parseFloat(balance.current_price) 
+      const price = typeof balance.current_price === 'string'
+        ? parseFloat(balance.current_price)
         : (balance.current_price || 0);
       return sum + (amount * price);
     }, 0);
-    return goldBalance + coinValue;
+    return goldBalance + stockValue;
   };
 
   const calculateTotalPL = () => {
     return balances.reduce((sum, balance) => {
-      const amount = typeof balance.total_amount === 'string' 
-        ? parseFloat(balance.total_amount) 
+      const amount = typeof balance.total_amount === 'string'
+        ? parseFloat(balance.total_amount)
         : (balance.total_amount || 0);
-      const avgPrice = typeof balance.average_buy_price === 'string' 
-        ? parseFloat(balance.average_buy_price) 
+      const avgPrice = typeof balance.average_buy_price === 'string'
+        ? parseFloat(balance.average_buy_price)
         : (balance.average_buy_price || 0);
-      const currentPrice = typeof balance.current_price === 'string' 
-        ? parseFloat(balance.current_price) 
+      const currentPrice = typeof balance.current_price === 'string'
+        ? parseFloat(balance.current_price)
         : (balance.current_price || 0);
-      
+
       const cost = amount * avgPrice;
       const value = amount * currentPrice;
       return sum + (value - cost);
@@ -95,11 +95,11 @@ const PortfolioSummary = ({ walletAddress }: PortfolioSummaryProps) => {
 
   const calculatePLPercent = () => {
     const totalCost = balances.reduce((sum, balance) => {
-      const amount = typeof balance.total_amount === 'string' 
-        ? parseFloat(balance.total_amount) 
+      const amount = typeof balance.total_amount === 'string'
+        ? parseFloat(balance.total_amount)
         : (balance.total_amount || 0);
-      const avgPrice = typeof balance.average_buy_price === 'string' 
-        ? parseFloat(balance.average_buy_price) 
+      const avgPrice = typeof balance.average_buy_price === 'string'
+        ? parseFloat(balance.average_buy_price)
         : (balance.average_buy_price || 0);
       return sum + (amount * avgPrice);
     }, 0);
@@ -126,14 +126,14 @@ const PortfolioSummary = ({ walletAddress }: PortfolioSummaryProps) => {
       <div className="portfolio-header">
         <h3>포트폴리오</h3>
       </div>
-      
+
       <div className="portfolio-stats">
         <div className="stat-row">
           <span className="stat-label">총 자산</span>
           <span className="stat-value">{formatNumber(totalValue)} G</span>
         </div>
         <div className="stat-row">
-          <span className="stat-label">보유 GOLD</span>
+          <span className="stat-label">보유 Gold</span>
           <span className="stat-value">{formatNumber(goldBalance)} G</span>
         </div>
         <div className="stat-row">
@@ -145,29 +145,29 @@ const PortfolioSummary = ({ walletAddress }: PortfolioSummaryProps) => {
       </div>
 
       <div className="portfolio-holdings">
-        <div className="holdings-header">보유 코인</div>
+        <div className="holdings-header">보유 주식</div>
         <div className="holdings-list">
           {balances.length === 0 ? (
-            <div className="no-holdings">보유한 코인이 없습니다</div>
+            <div className="no-holdings">보유한 주식이 없습니다</div>
           ) : (
             balances.slice(0, 5).map((balance) => {
-              const amount = typeof balance.total_amount === 'string' 
-                ? parseFloat(balance.total_amount) 
+              const amount = typeof balance.total_amount === 'string'
+                ? parseFloat(balance.total_amount)
                 : (balance.total_amount || 0);
-              const currentPrice = typeof balance.current_price === 'string' 
-                ? parseFloat(balance.current_price) 
+              const currentPrice = typeof balance.current_price === 'string'
+                ? parseFloat(balance.current_price)
                 : (balance.current_price || 0);
-              const avgPrice = typeof balance.average_buy_price === 'string' 
-                ? parseFloat(balance.average_buy_price) 
+              const avgPrice = typeof balance.average_buy_price === 'string'
+                ? parseFloat(balance.average_buy_price)
                 : (balance.average_buy_price || 0);
-              
+
               const value = amount * currentPrice;
               const cost = amount * avgPrice;
               const pl = value - cost;
               const plPercent = cost > 0 ? ((pl / cost) * 100) : 0;
 
               return (
-                <div key={balance.coin_id} className="holding-item">
+                <div key={balance.stock_id} className="holding-item">
                   <div className="holding-coin">
                     {balance.logo_url && (
                       <img src={balance.logo_url} alt={balance.symbol} className="coin-logo" />
@@ -194,4 +194,3 @@ const PortfolioSummary = ({ walletAddress }: PortfolioSummaryProps) => {
 };
 
 export default PortfolioSummary;
-

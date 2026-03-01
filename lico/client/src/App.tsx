@@ -19,9 +19,7 @@ import WalletRecoveryPage from './pages/WalletRecoveryPage';
 import WalletInfoPage from './pages/WalletInfoPage';
 import NewsPage from './pages/NewsPage';
 import NewsDetailPage from './pages/NewsDetailPage';
-import ExchangePage from './pages/ExchangePage';
-import MemeCoinApplicationPage from './pages/MemeCoinApplicationPage';
-import AdminMemeApplicationsPage from './pages/AdminMemeApplicationsPage';
+import AdminFounderSellRequestsPage from './pages/AdminFounderSellRequestsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -92,7 +90,7 @@ function App() {
               }
             />
             <Route
-              path="/trading/:coinSymbol?"
+              path="/trading/:stockSymbol?"
               element={
                 <ProtectedRoute>
                   <TradingPage />
@@ -104,14 +102,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DepositWithdrawPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/exchange"
-              element={
-                <ProtectedRoute>
-                  <ExchangePage />
                 </ProtectedRoute>
               }
             />
@@ -172,18 +162,10 @@ function App() {
               }
             />
             <Route
-              path="/admin/meme-applications"
+              path="/admin/founder-sell-requests"
               element={
                 <ProtectedRoute requireAdmin>
-                  <AdminMemeApplicationsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/meme-application"
-              element={
-                <ProtectedRoute>
-                  <MemeCoinApplicationPage />
+                  <AdminFounderSellRequestsPage />
                 </ProtectedRoute>
               }
             />

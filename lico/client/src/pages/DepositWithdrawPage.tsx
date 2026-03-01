@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { walletService } from '../services/coinService';
+import { walletService } from '../services/stockService';
 import api from '../services/api';
 import './DepositWithdrawPage.css';
 
@@ -73,7 +73,7 @@ const DepositWithdrawPage = () => {
         console.log('입금 완료:', result);
       } else {
         const result = await walletService.withdraw(walletAddress, amt);
-        setMessage('✅ 출금이 완료되었습니다! (수수료: ' + result.fee + ' G)');
+        setMessage('✅ 출금이 완료되었습니다! (수수료: ' + result.fee + ' Gold)');
         console.log('출금 완료:', result);
       }
 
@@ -142,7 +142,7 @@ const DepositWithdrawPage = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label>금액 (GOLD) - 정수만 입력 가능</label>
+              <label>금액 (Gold) - 정수만 입력 가능</label>
               <input
                 type="number"
                 step="1"
@@ -182,8 +182,8 @@ const DepositWithdrawPage = () => {
           <ul>
             <li>Bank에서 LICO로 입금은 즉시 처리됩니다</li>
             <li>LICO에서 Bank로 출금 시 5% 수수료가 부과됩니다</li>
-            <li>최소 입출금 금액은 100 GOLD입니다</li>
-            <li>출금은 최소 금액 100 GOLD 이상이어야 합니다</li>
+            <li>최소 입출금 금액은 100 Gold입니다</li>
+            <li>출금은 최소 금액 100 Gold 이상이어야 합니다</li>
           </ul>
         </div>
       </div>

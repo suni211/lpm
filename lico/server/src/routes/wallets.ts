@@ -119,7 +119,7 @@ router.get('/username/:minecraft_username', async (req: Request, res: Response) 
   }
 });
 
-// 내 코인 보유 현황 - 로그인 필요
+// 내 주식 보유 현황 - 로그인 필요
 router.get('/:wallet_address/balances', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { wallet_address } = req.params;
@@ -135,19 +135,19 @@ router.get('/:wallet_address/balances', isAuthenticated, async (req: Request, re
 
     const wallet = wallets[0];
 
-    // 코인 보유 현황 조회
+    // 주식 보유 현황 조회
     const balances = await query(
       `SELECT
          ucb.*,
          (ucb.available_amount + ucb.locked_amount) as total_amount,
-         c.symbol,
-         c.name,
-         c.current_price,
-         c.logo_url
-       FROM user_coin_balances ucb
-       JOIN coins c ON ucb.coin_id = c.id
+         s.symbol,
+         s.name,
+         s.current_price,
+         s.logo_url
+       FROM user_stock_balances ucb
+       JOIN stocks s ON ucb.stock_id = s.id
        WHERE ucb.wallet_id = ? AND (ucb.available_amount + ucb.locked_amount) > 0
-       ORDER BY ((ucb.available_amount + ucb.locked_amount) * c.current_price) DESC`,
+       ORDER BY ((ucb.available_amount + ucb.locked_amount) * s.current_price) DESC`,
       [wallet.id]
     );
 

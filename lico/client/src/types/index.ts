@@ -1,9 +1,12 @@
-export interface Coin {
+export interface Stock {
   id: string;
   symbol: string;
   name: string;
   logo_url: string | null;
   description: string | null;
+  industry_id: string | null;
+  group_id: string | null;
+  founder_uuid: string | null;
   initial_supply: number;
   circulating_supply: number;
   initial_price: number;
@@ -14,15 +17,13 @@ export interface Coin {
   status: 'ACTIVE' | 'PAUSED' | 'DELISTED';
   min_volatility?: number;
   max_volatility?: number;
-  coin_type?: 'MAJOR' | 'MEME';
-  base_currency_id?: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface Candle {
   id: string;
-  coin_id: string;
+  stock_id: string;
   open_time: string;
   close_time: string;
   open_price: number;
@@ -36,7 +37,7 @@ export interface Candle {
 export interface Order {
   id: string;
   wallet_id: string;
-  coin_id: string;
+  stock_id: string;
   order_type: 'BUY' | 'SELL';
   order_method: 'MARKET' | 'LIMIT';
   price: number | null;
@@ -55,7 +56,7 @@ export interface Order {
 
 export interface Trade {
   id: string;
-  coin_id: string;
+  stock_id: string;
   buy_order_id: string;
   sell_order_id: string;
   buyer_wallet_id: string;
@@ -100,10 +101,10 @@ export interface Wallet {
   updated_at: string;
 }
 
-export interface CoinBalance {
+export interface StockBalance {
   id: string;
   wallet_id: string;
-  coin_id: string;
+  stock_id: string;
   available_amount: number;
   locked_amount: number;
   total_amount: number;
