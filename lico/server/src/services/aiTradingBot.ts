@@ -85,9 +85,17 @@ export class AITradingBot {
     const dynamicVolatility = Math.min(baseVolatility, maxVolatility);
 
     // 랜덤 가격 변동 (-volatility% ~ +volatility%)
-    // 거래가 없으면 작은 변동, 거래가 있으면 큰 변동
-    const priceChange = (Math.random() * 2 - 1) * dynamicVolatility;
-    const newPrice = Math.max(currentPrice * (1 + priceChange), currentPrice * 0.5); // 최대 50% 하락 방지
+    // 저가 주식(10G 이하)은 변동성 비율을 높여서 소수점 단위로도 움직이도록
+    let adjustedVolatility = dynamicVolatility;
+    if (currentPrice < 10) {
+      // 저가 주식은 최소 0.5%~2% 변동성 보장
+      adjustedVolatility = Math.max(dynamicVolatility, 0.005 + Math.random() * 0.015);
+    }
+
+    const priceChange = (Math.random() * 2 - 1) * adjustedVolatility;
+    const rawNewPrice = currentPrice * (1 + priceChange);
+    // 소수점 3자리까지 반올림, 최소 0.01G
+    const newPrice = Math.max(parseFloat(rawNewPrice.toFixed(3)), 0.01);
 
     // 24시간 전 가격 조회 (캔들스틱 데이터에서)
     const candles24h = await query(
@@ -158,7 +166,7 @@ export class AITradingBot {
       ]
     );
 
-    console.log(`📊 [실시간] ${stock.symbol}: ${currentPrice.toFixed(2)} → ${newPrice.toFixed(2)} (${(priceChange * 100).toFixed(2)}%, 변동성: ${(dynamicVolatility * 100).toFixed(2)}%)`);
+    console.log(`📊 [실시간] ${stock.symbol}: ${currentPrice.toFixed(3)} → ${newPrice.toFixed(3)} (${(priceChange * 100).toFixed(3)}%, 변동성: ${(adjustedVolatility * 100).toFixed(3)}%)`);
   }
 
   // 가격 조정 (변동성 추가) - 0.01% ~ 5% 범위
@@ -246,7 +254,7 @@ export class AITradingBot {
       [uuidv4(), aiWallet.id, stock.id, sellPrice, sellQuantity]
     );
 
-    console.log(`💧 [실시간] ${stock.symbol} 유동성 공급: 매수 ${buyQuantity.toFixed(2)}@${buyPrice.toFixed(2)}, 매도 ${sellQuantity.toFixed(2)}@${sellPrice.toFixed(2)}`);
+    console.log(`💧 [실시간] ${stock.symbol} 유동성 공급: 매수 ${buyQuantity.toFixed(2)}@${buyPrice.toFixed(3)}, 매도 ${sellQuantity.toFixed(2)}@${sellPrice.toFixed(3)}`);
   }
 
   // 유동성 공급 (거래 활성화)

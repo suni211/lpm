@@ -1,0 +1,476 @@
+/* ========================================
+   Futures Page - Dark Theme
+   ======================================== */
+
+.futures-page {
+  min-height: calc(100vh - 64px);
+  background: #0f1117;
+  padding: 24px;
+}
+
+.futures-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.futures-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 24px 0;
+}
+
+/* Balance Card */
+.futures-balance-card {
+  background: #1a1d29;
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.futures-balance-label {
+  font-size: 14px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.futures-balance-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+/* Layout: Left (order) + Right (positions) */
+.futures-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+/* Card shared style */
+.futures-card {
+  background: #1a1d29;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.futures-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.futures-position-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  background: #3b82f6;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Form groups */
+.futures-form-group {
+  margin-bottom: 16px;
+}
+
+.futures-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.futures-form-group select,
+.futures-form-group input[type="number"] {
+  width: 100%;
+  padding: 12px;
+  background: #2a2e3e;
+  border: 1px solid #3a3e4e;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.futures-form-group select:focus,
+.futures-form-group input[type="number"]:focus {
+  border-color: #3b82f6;
+}
+
+.futures-form-group select option {
+  background: #1a1d29;
+  color: #fff;
+}
+
+/* Position type toggle */
+.futures-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.futures-type-btn {
+  padding: 12px 16px;
+  background: #2a2e3e;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.futures-type-btn:hover {
+  background: #3a3e4e;
+}
+
+.futures-type-btn.long.active {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.futures-type-btn.short.active {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* Leverage slider */
+.futures-leverage-value {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+.futures-leverage-slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #2a2e3e;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.futures-leverage-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #fff;
+  transition: transform 0.15s;
+}
+
+.futures-leverage-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.futures-leverage-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #fff;
+}
+
+.futures-leverage-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Calculated panel */
+.futures-calc-panel {
+  background: #12141e;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.futures-calc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.futures-calc-row:not(:last-child) {
+  border-bottom: 1px solid #1e2130;
+}
+
+.futures-calc-label {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.futures-calc-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.futures-calc-value.highlight {
+  color: #3b82f6;
+}
+
+.futures-calc-value.warning {
+  color: #f59e0b;
+}
+
+/* Messages */
+.futures-message {
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.futures-message.success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid #22c55e;
+  color: #22c55e;
+}
+
+.futures-message.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+}
+
+/* Submit button */
+.futures-submit-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.futures-submit-btn.long {
+  background: #22c55e;
+}
+
+.futures-submit-btn.long:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.futures-submit-btn.short {
+  background: #ef4444;
+}
+
+.futures-submit-btn.short:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.futures-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Positions panel */
+.futures-positions-panel .futures-card {
+  height: 100%;
+}
+
+.futures-no-positions {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Positions table */
+.futures-positions-table-wrapper {
+  overflow-x: auto;
+}
+
+.futures-positions-table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.futures-positions-table thead th {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #2a2e3e;
+}
+
+.futures-positions-table tbody td {
+  padding: 12px;
+  font-size: 13px;
+  color: #d1d5db;
+  border-bottom: 1px solid #1e2130;
+}
+
+.futures-positions-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.futures-pos-stock {
+  font-weight: 600;
+  color: #fff !important;
+}
+
+.futures-pos-type {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.futures-pos-type.long {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.futures-pos-type.short {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* PnL coloring */
+.futures-pnl {
+  font-weight: 600;
+}
+
+.futures-pnl.positive {
+  color: #22c55e;
+}
+
+.futures-pnl.negative {
+  color: #ef4444;
+}
+
+/* Close position button */
+.futures-close-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid #ef4444;
+  border-radius: 4px;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.futures-close-btn:hover:not(:disabled) {
+  background: #ef4444;
+  color: #fff;
+}
+
+.futures-close-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Info section */
+.futures-info-section {
+  background: #1a1d29;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.futures-info-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 16px 0;
+}
+
+.futures-info-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.futures-info-section li {
+  padding: 8px 0;
+  color: #9ca3af;
+  font-size: 14px;
+  position: relative;
+  padding-left: 20px;
+}
+
+.futures-info-section li::before {
+  content: '\2022';
+  position: absolute;
+  left: 0;
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+/* ========================================
+   Responsive
+   ======================================== */
+
+@media (max-width: 900px) {
+  .futures-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .futures-positions-table-wrapper {
+    margin: 0 -12px;
+    padding: 0 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .futures-page {
+    padding: 16px;
+  }
+
+  .futures-title {
+    font-size: 24px;
+  }
+
+  .futures-balance-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .futures-balance-value {
+    font-size: 20px;
+  }
+
+  .futures-card {
+    padding: 16px;
+  }
+}

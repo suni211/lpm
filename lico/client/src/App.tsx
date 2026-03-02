@@ -20,6 +20,9 @@ import WalletInfoPage from './pages/WalletInfoPage';
 import NewsPage from './pages/NewsPage';
 import NewsDetailPage from './pages/NewsDetailPage';
 import RulesPage from './pages/RulesPage';
+import FuturesPage from './pages/FuturesPage';
+import OptionsPage from './pages/OptionsPage';
+import SwapPage from './pages/SwapPage';
 import AdminFounderSellRequestsPage from './pages/AdminFounderSellRequestsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -41,6 +44,30 @@ function App() {
           <Navbar />
           <Routes>
             <Route path="/rules" element={<RulesPage />} />
+            <Route
+              path="/futures"
+              element={
+                <ProtectedRoute>
+                  <FuturesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/options"
+              element={
+                <ProtectedRoute>
+                  <OptionsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/swap"
+              element={
+                <ProtectedRoute>
+                  <SwapPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route

@@ -47,7 +47,7 @@ const RecentTradesWidget = ({ stockId, limit = 20 }: RecentTradesWidgetProps) =>
     if (isNaN(numPrice)) return '0';
     return numPrice.toLocaleString('ko-KR', {
       minimumFractionDigits: 0,
-      maximumFractionDigits: 8,
+      maximumFractionDigits: 3,
     });
   };
 

@@ -44,6 +44,50 @@
   color: #60a5fa;
 }
 
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ck-index-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.ck-index-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #3b82f6;
+  letter-spacing: 0.5px;
+}
+
+.ck-index-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.ck-index-change {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.ck-index-change.positive {
+  color: #22c55e;
+}
+
+.ck-index-change.negative {
+  color: #ef4444;
+}
+
 .navbar-menu {
   display: flex;
   list-style: none;

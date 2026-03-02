@@ -543,8 +543,8 @@ const TradingPage = () => {
           wickDownColor: '#ef4444',
           priceFormat: {
             type: 'price',
-            precision: 8,
-            minMove: 0.00000001,
+            precision: 3,
+            minMove: 0.001,
           },
         }) as ISeriesApi<'Candlestick'>;
 

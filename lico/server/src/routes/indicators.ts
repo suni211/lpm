@@ -7,8 +7,35 @@ import {
   calculateSMA,
   calculateVolumeMA,
 } from '../utils/technicalIndicators';
+import ckIndexService from '../services/ckIndexService';
 
 const router = express.Router();
+
+// CK 지수 최신값 조회
+router.get('/ck-index', async (req: Request, res: Response) => {
+  try {
+    const latest = await ckIndexService.getLatestCKIndex();
+    res.json({
+      value: latest.value,
+      change: latest.change,
+    });
+  } catch (error) {
+    console.error('CK 지수 조회 오류:', error);
+    res.status(500).json({ error: 'CK 지수 조회 실패' });
+  }
+});
+
+// CK 지수 히스토리 조회
+router.get('/ck-index/history', async (req: Request, res: Response) => {
+  try {
+    const { hours = 24 } = req.query;
+    const history = await ckIndexService.getCKIndexHistory(Number(hours));
+    res.json({ history });
+  } catch (error) {
+    console.error('CK 지수 히스토리 조회 오류:', error);
+    res.status(500).json({ error: 'CK 지수 히스토리 조회 실패' });
+  }
+});
 
 // 기술적 지표 계산 (공개 API)
 router.get('/indicators/:stock_id', async (req: Request, res: Response) => {

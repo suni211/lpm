@@ -704,10 +704,13 @@ export class TradingEngine {
       ? parseFloat(low24hResult[0].low_price.toString())
       : finalPrice;
 
+    // 가격 하한선 적용 (최소 0.01G), 소수점 3자리
+    const clampedFinalPrice = Math.max(parseFloat(finalPrice.toFixed(3)), 0.01);
+
     // 주식 현재가, 24시간 변동률, 24시간 거래량, 최고가/최저가 업데이트
     await query(
       'UPDATE stocks SET current_price = ?, price_change_24h = ?, volume_24h = ?, high_24h = ?, low_24h = ? WHERE id = ?',
-      [finalPrice, finalPriceChange24h, volume24h, high24h, low24h, coinId]
+      [clampedFinalPrice, finalPriceChange24h, volume24h, high24h, low24h, coinId]
     );
 
     // 캔들스틱 데이터 업데이트
@@ -826,7 +829,7 @@ export class TradingEngine {
           [preciseAmount, newAvgBuyPrice, walletId, coinId]
         );
 
-        console.log(`평균 매수가 업데이트: ${oldAvgBuyPrice.toFixed(2)} G -> ${newAvgBuyPrice.toFixed(2)} G (매수량: ${preciseAmount})`);
+        console.log(`평균 매수가 업데이트: ${oldAvgBuyPrice.toFixed(3)} G -> ${newAvgBuyPrice.toFixed(3)} G (매수량: ${preciseAmount})`);
       } else {
         // 매도 거래인 경우 평균 매수가 유지
         await query(

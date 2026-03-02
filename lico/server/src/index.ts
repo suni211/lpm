@@ -87,6 +87,9 @@ import newsCommentsRoutes from './routes/newsComments';
 import fixRoutes from './routes/fix';
 import indicatorsRoutes from './routes/indicators';
 import founderSellRequestsRoutes from './routes/founderSellRequests';
+import futuresRoutes from './routes/futures';
+import optionsRoutes from './routes/options';
+import swapRoutes from './routes/swap';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questionnaire', questionnaireRoutes);
@@ -100,6 +103,9 @@ app.use('/api/news-comments', newsCommentsRoutes);
 app.use('/api/fix', fixRoutes);
 app.use('/api/indicators', indicatorsRoutes);
 app.use('/api/founder-sell-requests', founderSellRequestsRoutes);
+app.use('/api/futures', futuresRoutes);
+app.use('/api/options', optionsRoutes);
+app.use('/api/swap', swapRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {
@@ -149,6 +155,11 @@ httpServer.listen(PORT, async () => {
   // Initialize Stop Order Monitor
   stopOrderMonitor.start();
   console.log('✅ Stop Order Monitor started');
+
+  // Initialize CK Index Service
+  const ckIndexService = (await import('./services/ckIndexService')).default;
+  ckIndexService.startAutoUpdate();
+  console.log('✅ CK Index Service started');
 });
 
 // Graceful shutdown

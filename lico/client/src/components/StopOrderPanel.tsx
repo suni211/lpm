@@ -246,14 +246,14 @@ const StopOrderPanel: React.FC<StopOrderPanelProps> = ({
                       <span>트레일링: {order.trailing_percent}%</span>
                       {order.trailing_price && (
                         <span className="trailing-price">
-                          추적가: {parseFloat(order.trailing_price.toString()).toFixed(2)} G
+                          추적가: {parseFloat(order.trailing_price.toString()).toFixed(3)} G
                         </span>
                       )}
                     </>
                   ) : (
                     <span>
                       {order.stop_type === 'STOP_LOSS' ? '손절가' : '익절가'}:{' '}
-                      {order.stop_price?.toFixed(2)} G
+                      {order.stop_price?.toFixed(3)} G
                     </span>
                   )}
                 </div>

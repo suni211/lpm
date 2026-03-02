@@ -40,7 +40,7 @@ const Orderbook = ({ stockId }: OrderbookProps) => {
     if (isNaN(numPrice)) return '0';
     return numPrice.toLocaleString('ko-KR', {
       minimumFractionDigits: 0,
-      maximumFractionDigits: 8,
+      maximumFractionDigits: 3,
     });
   };
 
