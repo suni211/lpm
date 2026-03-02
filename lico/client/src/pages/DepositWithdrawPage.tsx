@@ -19,7 +19,7 @@ const DepositWithdrawPage = () => {
         const response = await api.get('/auth/me');
         if (response.data.user) {
           setWalletAddress(response.data.user.wallet_address || '');
-          setGoldBalance(response.data.user.gold_balance || 0);
+          setGoldBalance(response.data.user.krw_balance || 0);
           setBankBalance(response.data.user.bank_balance || 0);
         }
       } catch (error) {
@@ -80,7 +80,7 @@ const DepositWithdrawPage = () => {
       // 잔액 새로고침
       const response = await api.get('/auth/me');
       if (response.data.user) {
-        setGoldBalance(response.data.user.gold_balance || 0);
+        setGoldBalance(response.data.user.krw_balance || 0);
         setBankBalance(response.data.user.bank_balance || 0);
       }
 

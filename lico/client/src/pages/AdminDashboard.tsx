@@ -411,7 +411,7 @@ const AdminDashboard = () => {
                   <tr key={user.id}>
                     <td className="monospace">{user.wallet_address}</td>
                     <td>{user.minecraft_username}</td>
-                    <td>{formatNumber(user.gold_balance)} G</td>
+                    <td>{formatNumber(user.krw_balance)} G</td>
                     <td>{formatNumber(user.total_stock_value)} G</td>
                     <td>{user.stock_count || 0}</td>
                     <td>

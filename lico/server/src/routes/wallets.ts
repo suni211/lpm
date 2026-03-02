@@ -89,7 +89,7 @@ router.get('/address/:wallet_address', async (req: Request, res: Response) => {
       wallet: {
         wallet_address: wallet.wallet_address,
         minecraft_username: wallet.minecraft_username,
-        gold_balance: wallet.gold_balance,
+        krw_balance: wallet.krw_balance,
         status: wallet.status,
       }
     });
@@ -154,7 +154,7 @@ router.get('/:wallet_address/balances', isAuthenticated, async (req: Request, re
     res.json({
       wallet: {
         wallet_address: wallet.wallet_address,
-        gold_balance: wallet.gold_balance,
+        krw_balance: wallet.krw_balance,
         minecraft_username: wallet.minecraft_username,
       },
       balances,
@@ -287,7 +287,7 @@ router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) =
 
       // 잔액 업데이트 (정확한 금액만)
       const updateResult: any = await query(
-        'UPDATE user_wallets SET gold_balance = gold_balance + ?, total_deposit = total_deposit + ? WHERE id = ? AND status = "ACTIVE"',
+        'UPDATE user_wallets SET krw_balance = krw_balance + ?, total_deposit = total_deposit + ? WHERE id = ? AND status = "ACTIVE"',
         [depositAmount, depositAmount, wallet.id]
       );
 
@@ -385,9 +385,9 @@ router.post('/withdraw', strictRateLimiter, async (req: Request, res: Response) 
       const totalDeduction = withdrawAmount + fee;
 
       // 잔액 확인 (정확한 타입 변환)
-      const currentBalance = typeof wallet.gold_balance === 'string'
-        ? parseInt(wallet.gold_balance, 10)
-        : Math.floor(wallet.gold_balance || 0);
+      const currentBalance = typeof wallet.krw_balance === 'string'
+        ? parseInt(wallet.krw_balance, 10)
+        : Math.floor(wallet.krw_balance || 0);
 
       if (currentBalance < totalDeduction) {
         await query('ROLLBACK');
@@ -411,7 +411,7 @@ router.post('/withdraw', strictRateLimiter, async (req: Request, res: Response) 
 
       // ========== 4단계: 잔액 차감 (조건부 - 잔액 재확인) ==========
       const updateResult: any = await query(
-        'UPDATE user_wallets SET gold_balance = gold_balance - ?, total_withdrawal = total_withdrawal + ? WHERE id = ? AND status = "ACTIVE" AND gold_balance >= ?',
+        'UPDATE user_wallets SET krw_balance = krw_balance - ?, total_withdrawal = total_withdrawal + ? WHERE id = ? AND status = "ACTIVE" AND krw_balance >= ?',
         [totalDeduction, withdrawAmount, wallet.id, totalDeduction]
       );
 

@@ -92,7 +92,7 @@ export interface Wallet {
   minecraft_username: string;
   minecraft_uuid: string | null;
   bank_account_number: string | null;
-  gold_balance: number;
+  krw_balance: number;
   total_deposit: number;
   total_withdrawal: number;
   questionnaire_completed: boolean;

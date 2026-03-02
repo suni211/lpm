@@ -246,7 +246,7 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
           minecraft_username: req.session.username,
           wallet_address: null,
           bank_account_number: bankAccount?.account_number || null,
-          gold_balance: 0,
+          krw_balance: 0,
           bank_balance: bankAccount?.balance || 0,
           requires_questionnaire: true,
         },
@@ -273,7 +273,7 @@ router.get('/me', isAuthenticated, async (req: Request, res: Response) => {
         minecraft_username: wallet.minecraft_username,
         wallet_address: wallet.address_shown ? null : wallet.wallet_address, // 한 번만 표시
         bank_account_number: wallet.bank_account_number,
-        gold_balance: wallet.gold_balance || 0,
+        krw_balance: wallet.krw_balance || 0,
         bank_balance: bankBalance,
         requires_questionnaire: false,
         address_shown: wallet.address_shown || false,

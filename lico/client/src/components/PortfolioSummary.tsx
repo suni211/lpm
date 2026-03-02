@@ -29,9 +29,9 @@ const PortfolioSummary = ({ walletAddress }: PortfolioSummaryProps) => {
         const walletRes = await api.get(`/wallets/address/${walletAddress}`);
         if (walletRes.data.wallet) {
           setGoldBalance(
-            typeof walletRes.data.wallet.gold_balance === 'string'
-              ? parseFloat(walletRes.data.wallet.gold_balance)
-              : walletRes.data.wallet.gold_balance || 0
+            typeof walletRes.data.wallet.krw_balance === 'string'
+              ? parseFloat(walletRes.data.wallet.krw_balance)
+              : walletRes.data.wallet.krw_balance || 0
           );
         }
 

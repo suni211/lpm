@@ -119,7 +119,7 @@ export class BlockchainService {
     // 채굴 보상 지급
     if (minerAddress && newBlock.reward > 0) {
       await query(
-        'UPDATE user_wallets SET gold_balance = gold_balance + ? WHERE wallet_address = ?',
+        'UPDATE user_wallets SET krw_balance = krw_balance + ? WHERE wallet_address = ?',
         [newBlock.reward, minerAddress]
       );
 

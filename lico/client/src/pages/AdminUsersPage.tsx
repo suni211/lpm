@@ -114,7 +114,7 @@ function AdminUsersPage({ setAuth }: AdminUsersPageProps) {
                   <tr key={user.id}>
                     <td className="monospace">{user.wallet_address}</td>
                     <td>{user.minecraft_username}</td>
-                    <td className="balance">{Number(user.gold_balance || 0).toLocaleString()} G</td>
+                    <td className="balance">{Number(user.krw_balance || 0).toLocaleString()} G</td>
                     <td className="balance">{Number(user.total_stock_value || 0).toLocaleString()} G</td>
                     <td>{user.stock_count || 0}개</td>
                     <td>

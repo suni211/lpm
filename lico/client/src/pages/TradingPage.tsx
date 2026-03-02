@@ -56,7 +56,7 @@ const TradingPage = () => {
         const response = await api.get('/auth/me');
         if (response.data.user) {
           setWalletAddress(response.data.user.wallet_address);
-          setGoldBalance(response.data.user.gold_balance || 0);
+          setGoldBalance(response.data.user.krw_balance || 0);
         }
       } catch (error) {
         console.error('Failed to fetch user info:', error);

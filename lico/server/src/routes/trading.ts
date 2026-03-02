@@ -228,7 +228,7 @@ router.post('/orders/:order_id/cancel', isAuthenticated, async (req: Request, re
 
       console.log(`📝 주문 취소 환불 계산: 가격=${orderPrice}, 남은수량=${remainingQty}, 전체수량=${totalQuantity}, 주문수수료=${orderFee}, 환불수수료=${refundFee}, 총환불=${totalRefund}`);
 
-      await query('UPDATE user_wallets SET gold_balance = gold_balance + ? WHERE id = ?', [Number(totalRefund), order.wallet_id]);
+      await query('UPDATE user_wallets SET krw_balance = krw_balance + ? WHERE id = ?', [Number(totalRefund), order.wallet_id]);
     } else if (order.order_type === 'SELL') {
       // 매도 취소: 주식 잠금 해제 (남은 수량 기준)
       const remainingQtyNum = Number(remainingQty);

@@ -405,7 +405,7 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
       if (aiWallets.length === 0) {
         const aiWalletId = uuidv4();
         await query(
-          `INSERT INTO user_wallets (id, minecraft_username, minecraft_uuid, gold_balance, wallet_address)
+          `INSERT INTO user_wallets (id, minecraft_username, minecraft_uuid, krw_balance, wallet_address)
            VALUES (?, 'AI_BOT', 'AI_BOT_UUID', 999999999999, ?)`,
           [aiWalletId, `AI_BOT_${aiWalletId.substring(0, 8)}`]
         );

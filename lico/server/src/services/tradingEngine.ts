@@ -44,16 +44,16 @@ export class TradingEngine {
       throw new Error('지갑을 찾을 수 없습니다');
     }
 
-    const goldBalance = typeof wallets[0].gold_balance === 'string'
-      ? parseFloat(wallets[0].gold_balance)
-      : (wallets[0].gold_balance || 0);
+    const goldBalance = typeof wallets[0].krw_balance === 'string'
+      ? parseFloat(wallets[0].krw_balance)
+      : (wallets[0].krw_balance || 0);
 
     if (goldBalance < totalRequired) {
       throw new Error(`Gold 잔액이 부족합니다 (필요: ${totalRequired}, 보유: ${goldBalance})`);
     }
 
     // Gold 잠금 (차감)
-    await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
+    await query('UPDATE user_wallets SET krw_balance = krw_balance - ? WHERE id = ?', [
       totalRequired,
       walletId,
     ]);
@@ -188,9 +188,9 @@ export class TradingEngine {
     let totalCost = 0;
 
     // 1. 유저 매도 주문과 매칭
-    const walletBalance = typeof wallet.gold_balance === 'string' 
-      ? parseFloat(wallet.gold_balance) 
-      : (wallet.gold_balance || 0);
+    const walletBalance = typeof wallet.krw_balance === 'string' 
+      ? parseFloat(wallet.krw_balance) 
+      : (wallet.krw_balance || 0);
 
     for (const sellOrder of sellOrders) {
       if (remainingQty <= 0) break;
@@ -242,9 +242,9 @@ export class TradingEngine {
         const totalRequired = totalAmount + fee;
 
         // Gold 잔액 확인 및 차감
-        const walletBalanceCheck = typeof wallet.gold_balance === 'string'
-          ? parseFloat(wallet.gold_balance)
-          : (wallet.gold_balance || 0);
+        const walletBalanceCheck = typeof wallet.krw_balance === 'string'
+          ? parseFloat(wallet.krw_balance)
+          : (wallet.krw_balance || 0);
 
         if (walletBalanceCheck < totalCost + totalRequired) {
           throw new Error('잔액이 부족합니다');
@@ -258,7 +258,7 @@ export class TradingEngine {
         );
 
         // Gold 잠금
-        await query('UPDATE user_wallets SET gold_balance = gold_balance - ? WHERE id = ?', [
+        await query('UPDATE user_wallets SET krw_balance = krw_balance - ? WHERE id = ?', [
           totalRequired,
           walletId,
         ]);
@@ -312,9 +312,9 @@ export class TradingEngine {
       const totalRequired = matchCost + fee;
 
       // 잔액 확인 (이미 사용한 금액 포함)
-      const walletBalance = typeof wallet.gold_balance === 'string' 
-        ? parseFloat(wallet.gold_balance) 
-        : (wallet.gold_balance || 0);
+      const walletBalance = typeof wallet.krw_balance === 'string' 
+        ? parseFloat(wallet.krw_balance) 
+        : (wallet.krw_balance || 0);
 
       if (walletBalance < totalCost + totalRequired) {
         throw new Error('잔액이 부족합니다');
@@ -789,7 +789,7 @@ export class TradingEngine {
   // 지갑 잔액 업데이트
   private async updateWalletBalance(walletId: string, amount: number) {
     await query(
-      'UPDATE user_wallets SET gold_balance = gold_balance + ? WHERE id = ?',
+      'UPDATE user_wallets SET krw_balance = krw_balance + ? WHERE id = ?',
       [amount, walletId]
     );
   }

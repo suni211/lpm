@@ -14,7 +14,7 @@ router.get('/dashboard', isAdmin, async (req: Request, res: Response) => {
     const stocksCount = await query('SELECT COUNT(*) as count FROM stocks WHERE status = "ACTIVE"');
     
     // 전체 Gold 잔액
-    const totalGold = await query('SELECT COALESCE(SUM(gold_balance), 0) as total FROM user_wallets WHERE status = "ACTIVE"');
+    const totalGold = await query('SELECT COALESCE(SUM(krw_balance), 0) as total FROM user_wallets WHERE status = "ACTIVE"');
     
     // 오늘 거래량
     const todayTrades = await query(
