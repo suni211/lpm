@@ -347,6 +347,21 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
     }
 
     const stockId = uuidv4();
+
+    // industry_id가 이름(텍스트)으로 전달된 경우 UUID로 변환
+    let resolvedIndustryId = industry_id || null;
+    if (resolvedIndustryId && !resolvedIndustryId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-/i)) {
+      const industries = await query('SELECT id FROM industries WHERE name = ?', [resolvedIndustryId]);
+      resolvedIndustryId = industries.length > 0 ? industries[0].id : null;
+    }
+
+    // group_id가 이름(텍스트)으로 전달된 경우 UUID로 변환
+    let resolvedGroupId = group_id || null;
+    if (resolvedGroupId && !resolvedGroupId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-/i)) {
+      const groups = await query('SELECT id FROM stock_groups WHERE name = ?', [resolvedGroupId]);
+      resolvedGroupId = groups.length > 0 ? groups[0].id : null;
+    }
+
     // initial_supply는 circulating_supply와 동일하게 설정, initial_price는 current_price와 동일하게 설정
     await query(
       `INSERT INTO stocks
@@ -358,8 +373,8 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
         name,
         logo_url || null,
         description || null,
-        industry_id || null,
-        group_id || null,
+        resolvedIndustryId,
+        resolvedGroupId,
         founder_uuid,
         circulating_supply, // initial_supply = circulating_supply
         circulating_supply,
