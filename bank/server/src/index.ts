@@ -21,7 +21,7 @@ const io = new Server(httpServer, {
     credentials: true,
   },
 });
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5002;
 
 // WebSocket 연결 관리
 const userSockets = new Map<string, string>(); // userId -> socketId

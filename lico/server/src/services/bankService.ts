@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const BANK_API_URL = process.env.BANK_URL || 'http://localhost:5001';
+const BANK_API_URL = process.env.BANK_URL || 'http://localhost:5002';
 
 const bankApi = axios.create({
   baseURL: `${BANK_API_URL}/api`,

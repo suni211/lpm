@@ -167,7 +167,7 @@ router.get('/:wallet_address/balances', isAuthenticated, async (req: Request, re
 
 // Bank에서 LICO로 입금 (BANK 잔액 확인 및 차감 필수!)
 router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) => {
-  const BANK_API_URL = process.env.BANK_URL || 'http://localhost:5001';
+  const BANK_API_URL = process.env.BANK_URL || 'http://localhost:5002';
   const LICO_API_SECRET = process.env.LICO_API_SECRET || 'lico-internal-secret-key-change-in-production';
 
   try {
@@ -325,7 +325,7 @@ router.post('/deposit', strictRateLimiter, async (req: Request, res: Response) =
 
 // LICO에서 Bank로 출금 (5% 수수료) - BANK 입금 연동
 router.post('/withdraw', strictRateLimiter, async (req: Request, res: Response) => {
-  const BANK_API_URL = process.env.BANK_URL || 'http://localhost:5001';
+  const BANK_API_URL = process.env.BANK_URL || 'http://localhost:5002';
   const LICO_API_SECRET = process.env.LICO_API_SECRET || 'lico-internal-secret-key-change-in-production';
 
   try {
