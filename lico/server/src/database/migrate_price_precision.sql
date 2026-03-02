@@ -1,16 +1,18 @@
 -- 가격 정밀도 변경: DECIMAL(20,2) → DECIMAL(20,3)
 -- 소수점 3자리까지 가격 움직임 허용
--- 이미 (20,3)인 컬럼은 건너뜀
 
 -- stocks 테이블
 ALTER TABLE stocks MODIFY initial_price DECIMAL(20,3) NOT NULL;
 ALTER TABLE stocks MODIFY current_price DECIMAL(20,3) NOT NULL;
 ALTER TABLE stocks MODIFY price_change_24h DECIMAL(10,3) DEFAULT 0;
 
--- orders 테이블 (fee 컬럼이 존재하면)
-ALTER TABLE orders MODIFY price DECIMAL(20,3) NULL;
+-- orders 테이블
+ALTER TABLE orders MODIFY fee DECIMAL(20,3) DEFAULT 0;
+ALTER TABLE orders MODIFY stop_price DECIMAL(20,3) NULL;
+ALTER TABLE orders MODIFY trailing_percent DECIMAL(10,3) NULL;
+ALTER TABLE orders MODIFY trailing_price DECIMAL(20,3) NULL;
 
--- trades 테이블 (fee → buy_fee, sell_fee)
+-- trades 테이블
 ALTER TABLE trades MODIFY buy_fee DECIMAL(20,3) DEFAULT 0;
 ALTER TABLE trades MODIFY sell_fee DECIMAL(20,3) DEFAULT 0;
 
