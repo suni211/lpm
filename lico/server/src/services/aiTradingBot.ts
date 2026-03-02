@@ -206,18 +206,11 @@ export class AITradingBot {
       return;
     }
 
-    // 기존 AI 주문 확인 (너무 많으면 생성 안 함)
-    const existingOrders = await query(
-      `SELECT COUNT(*) as count FROM orders
-       WHERE stock_id = ? AND is_admin_order = TRUE AND status IN ('PENDING', 'PARTIAL')`,
+    // 기존 AI 미체결 주문 모두 취소 후 새로 생성
+    await query(
+      `DELETE FROM orders WHERE stock_id = ? AND is_admin_order = TRUE AND status IN ('PENDING', 'PARTIAL')`,
       [stock.id]
     );
-    const orderCount = existingOrders[0]?.count || 0;
-
-    // 이미 충분한 주문이 있으면 스킵 (최대 10개)
-    if (orderCount >= 10) {
-      return;
-    }
 
     // AI 매수 주문 생성 (시장 안정화)
     // 가격 범위를 넓혀서 더 많은 거래 기회 제공
@@ -273,8 +266,13 @@ export class AITradingBot {
           continue;
         }
 
+        // 기존 AI 미체결 주문 모두 취소 후 새로 생성
+        await query(
+          `DELETE FROM orders WHERE stock_id = ? AND is_admin_order = TRUE AND status IN ('PENDING', 'PARTIAL')`,
+          [stock.id]
+        );
+
         // AI 매수 주문 생성 (시장 안정화)
-        // 가격 범위를 넓혀서 더 많은 거래 기회 제공
         const buyPrice = currentPrice * (0.95 + Math.random() * 0.03); // 현재가 -5% ~ -2%
         const buyQuantity = Math.random() * 8 + 2; // 2 ~ 10
 
