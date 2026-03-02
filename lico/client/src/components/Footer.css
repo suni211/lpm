@@ -28,3 +28,12 @@
   color: #60a5fa;
   text-decoration: underline;
 }
+
+.footer-links {
+  margin-bottom: 8px;
+}
+
+.footer-divider {
+  color: #4b5563;
+  margin: 0 12px;
+}

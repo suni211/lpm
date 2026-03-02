@@ -69,6 +69,14 @@ const Navbar = () => {
           </li>
           <li>
             <Link
+              to="/rules"
+              className={'navbar-link ' + (isActive('/rules') ? 'active' : '')}
+            >
+              이용규칙
+            </Link>
+          </li>
+          <li>
+            <Link
               to="/admin"
               className={'navbar-link ' + (isActive('/admin') ? 'active' : '')}
             >

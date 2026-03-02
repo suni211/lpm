@@ -22,6 +22,7 @@ function Sidebar({ userData }: SidebarProps) {
     { path: '/lico-connection', icon: '📈', label: 'Lico 연동' },
     { path: '/stats', icon: '📊', label: '통계 및 분석' },
     { path: '/transactions', icon: '📋', label: '거래 내역' },
+    { path: '/rules', icon: '📜', label: '이용규칙' },
   ];
 
   return (

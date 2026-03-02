@@ -19,6 +19,7 @@ import WalletRecoveryPage from './pages/WalletRecoveryPage';
 import WalletInfoPage from './pages/WalletInfoPage';
 import NewsPage from './pages/NewsPage';
 import NewsDetailPage from './pages/NewsDetailPage';
+import RulesPage from './pages/RulesPage';
 import AdminFounderSellRequestsPage from './pages/AdminFounderSellRequestsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -39,6 +40,7 @@ function App() {
         <div className="app">
           <Navbar />
           <Routes>
+            <Route path="/rules" element={<RulesPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route

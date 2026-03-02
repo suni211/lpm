@@ -14,6 +14,7 @@ import SavingsGoalsPage from './pages/SavingsGoalsPage';
 import LicoConnectionPage from './pages/LicoConnectionPage';
 import StatsPage from './pages/StatsPage';
 import TransactionsPage from './pages/TransactionsPage';
+import RulesPage from './pages/RulesPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminDepositsPage from './pages/AdminDepositsPage';
 import AdminWithdrawalsPage from './pages/AdminWithdrawalsPage';
@@ -102,6 +103,7 @@ function App() {
           <Route path="/transactions" element={
             isAuthenticated ? <TransactionsPage userData={userData} setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
           } />
+          <Route path="/rules" element={<RulesPage />} />
           <Route path="/admin" element={<AdminDashboardPage setAuth={setIsAuthenticated} />} />
           <Route path="/admin/deposits" element={<AdminDepositsPage setAuth={setIsAuthenticated} />} />
           <Route path="/admin/withdrawals" element={<AdminWithdrawalsPage setAuth={setIsAuthenticated} />} />
