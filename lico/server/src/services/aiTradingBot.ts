@@ -222,11 +222,11 @@ export class AITradingBot {
     // AI 매수 주문 생성 (시장 안정화)
     // 가격 범위를 넓혀서 더 많은 거래 기회 제공
     const buyPrice = currentPrice * (0.95 + Math.random() * 0.03); // 현재가 -5% ~ -2%
-    const buyQuantity = Math.random() * 2000 + 1000; // 1000 ~ 3000
+    const buyQuantity = Math.random() * 8 + 2; // 2 ~ 10
 
     // AI 매도 주문 생성
     const sellPrice = currentPrice * (1.02 + Math.random() * 0.03); // 현재가 +2% ~ +5%
-    const sellQuantity = Math.random() * 2000 + 1000; // 1000 ~ 3000
+    const sellQuantity = Math.random() * 8 + 2; // 2 ~ 10
 
     // AI 지갑 생성 (없으면)
     let aiWallet = (await query('SELECT * FROM user_wallets WHERE minecraft_username = "AI_BOT"'))[0];
@@ -276,11 +276,11 @@ export class AITradingBot {
         // AI 매수 주문 생성 (시장 안정화)
         // 가격 범위를 넓혀서 더 많은 거래 기회 제공
         const buyPrice = currentPrice * (0.95 + Math.random() * 0.03); // 현재가 -5% ~ -2%
-        const buyQuantity = Math.random() * 2000 + 1000; // 1000 ~ 3000
+        const buyQuantity = Math.random() * 8 + 2; // 2 ~ 10
 
         // AI 매도 주문 생성
         const sellPrice = currentPrice * (1.02 + Math.random() * 0.03); // 현재가 +2% ~ +5%
-        const sellQuantity = Math.random() * 2000 + 1000; // 1000 ~ 3000
+        const sellQuantity = Math.random() * 8 + 2; // 2 ~ 10
 
         // AI 지갑 생성 (없으면)
         let aiWallet = (await query('SELECT * FROM user_wallets WHERE minecraft_username = "AI_BOT"'))[0];
