@@ -223,10 +223,11 @@ export class AITradingBot {
     // AI 지갑 생성 (없으면)
     let aiWallet = (await query('SELECT * FROM user_wallets WHERE minecraft_username = "AI_BOT"'))[0];
     if (!aiWallet) {
+      const aiWalletId = uuidv4();
       await query(
-        `INSERT INTO user_wallets (id, minecraft_username, minecraft_uuid, gold_balance)
-         VALUES (?, 'AI_BOT', 'AI_BOT_UUID', 999999999999)`,
-        [uuidv4()]
+        `INSERT INTO user_wallets (id, wallet_address, minecraft_username, minecraft_uuid, questionnaire_completed)
+         VALUES (?, ?, 'AI_BOT', 'AI_BOT_UUID', TRUE)`,
+        [aiWalletId, 'AI_BOT_WALLET_' + aiWalletId.substring(0, 18)]
       );
       aiWallet = (await query('SELECT * FROM user_wallets WHERE minecraft_username = "AI_BOT"'))[0];
     }
@@ -276,10 +277,11 @@ export class AITradingBot {
         // AI 지갑 생성 (없으면)
         let aiWallet = (await query('SELECT * FROM user_wallets WHERE minecraft_username = "AI_BOT"'))[0];
         if (!aiWallet) {
+          const aiWalletId = uuidv4();
           await query(
-            `INSERT INTO user_wallets (id, minecraft_username, minecraft_uuid, gold_balance)
-             VALUES (?, 'AI_BOT', 'AI_BOT_UUID', 999999999999)`,
-            [uuidv4()]
+            `INSERT INTO user_wallets (id, wallet_address, minecraft_username, minecraft_uuid, questionnaire_completed)
+             VALUES (?, ?, 'AI_BOT', 'AI_BOT_UUID', TRUE)`,
+            [aiWalletId, 'AI_BOT_WALLET_' + aiWalletId.substring(0, 18)]
           );
           aiWallet = (await query('SELECT * FROM user_wallets WHERE minecraft_username = "AI_BOT"'))[0];
         }

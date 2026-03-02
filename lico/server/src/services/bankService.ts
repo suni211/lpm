@@ -17,9 +17,17 @@ export const bankService = {
   // BANK 사용자 로그인 (인증 코드 기반)
   async loginWithAuthCode(authCode: string) {
     try {
+      console.log(`[BANK] 로그인 시도 -> ${BANK_API_URL}/api/auth/login`);
       const response = await bankApi.post('/auth/login', { auth_code: authCode });
+      console.log('[BANK] 로그인 응답:', JSON.stringify(response.data));
       return response.data;
     } catch (error: any) {
+      console.error('[BANK] 로그인 실패 상세:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        url: `${BANK_API_URL}/api/auth/login`,
+      });
       throw new Error(error.response?.data?.error || 'BANK 로그인 실패');
     }
   },
