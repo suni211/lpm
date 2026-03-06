@@ -85,12 +85,12 @@ const OrderForm = ({ stock, walletAddress, goldBalance, onOrderSuccess }: OrderF
     }
   };
 
-  // 금액 모드일 때 수량 계산
+  // 금액 모드일 때 수량 계산 (정수로 내림)
   const calculateQuantityFromAmount = () => {
     const p = parseFloat(price) || 0;
     const a = parseFloat(amount) || 0;
     if (p > 0 && a > 0) {
-      return parseFloat((a / p).toFixed(8));
+      return Math.floor(a / p);
     }
     return 0;
   };
@@ -143,14 +143,14 @@ const OrderForm = ({ stock, walletAddress, goldBalance, onOrderSuccess }: OrderF
       finalAmount = a;
       finalQuantity = calculateQuantityFromAmount();
       if (finalQuantity <= 0) {
-        setError('입력한 금액으로는 구매할 수 있는 수량이 없습니다');
+        setError('입력한 금액으로는 1주 이상 구매할 수 없습니다');
         return;
       }
     } else {
-      // 수량 모드
-      const q = parseFloat(quantity);
+      // 수량 모드 (정수만)
+      const q = parseInt(quantity);
       if (!q || q <= 0) {
-        setError('유효하지 않은 수량입니다');
+        setError('최소 1주 이상 입력해주세요');
         return;
       }
       finalQuantity = q;
@@ -264,7 +264,7 @@ const OrderForm = ({ stock, walletAddress, goldBalance, onOrderSuccess }: OrderF
     if (isNaN(numValue)) return '0';
     return numValue.toLocaleString('ko-KR', {
       minimumFractionDigits: 0,
-      maximumFractionDigits: 8,
+      maximumFractionDigits: 2,
     });
   };
 
@@ -276,10 +276,10 @@ const OrderForm = ({ stock, walletAddress, goldBalance, onOrderSuccess }: OrderF
         setAmount(maxAmount.toString());
         handleAmountChange(maxAmount.toString());
       } else {
-        // 수량 모드: 최대 수량 설정
+        // 수량 모드: 최대 수량 설정 (정수)
         const p = parseFloat(price) || 0;
         if (p > 0) {
-          const maxQty = parseFloat((goldBalance / (p * 1.05)).toFixed(8));
+          const maxQty = Math.floor(goldBalance / (p * 1.05));
           setQuantity(maxQty.toString());
           handleQuantityChange(maxQty.toString());
         }
@@ -288,17 +288,18 @@ const OrderForm = ({ stock, walletAddress, goldBalance, onOrderSuccess }: OrderF
       // 매도: 주식 잔액 사용 (total_amount 사용, 예약 주문이므로)
       if (stockBalance) {
         const totalAmount = typeof stockBalance.total_amount === 'string' ? parseFloat(stockBalance.total_amount) : (stockBalance.total_amount || 0);
-        if (totalAmount > 0) {
+        const intTotal = Math.floor(totalAmount);
+        if (intTotal > 0) {
           if (inputMode === 'amount') {
             const p = parseFloat(price) || 0;
             if (p > 0) {
-              const maxAmount = parseFloat((totalAmount * p).toFixed(8));
+              const maxAmount = Math.floor(intTotal * p);
               setAmount(maxAmount.toString());
               handleAmountChange(maxAmount.toString());
             }
           } else {
-            setQuantity(totalAmount.toString());
-            handleQuantityChange(totalAmount.toString());
+            setQuantity(intTotal.toString());
+            handleQuantityChange(intTotal.toString());
           }
         }
       }
@@ -374,29 +375,31 @@ const OrderForm = ({ stock, walletAddress, goldBalance, onOrderSuccess }: OrderF
       const calculatedAmount = calculateAmountFromQuantity();
       setAmount(calculatedAmount > 0 ? calculatedAmount.toString() : '');
     } else {
-      // 금액 모드에서 수량 모드로: 수량 계산
+      // 금액 모드에서 수량 모드로: 수량 계산 (정수)
       const calculatedQuantity = calculateQuantityFromAmount();
       setQuantity(calculatedQuantity > 0 ? calculatedQuantity.toString() : '');
     }
   };
 
-  // 금액 입력 시 수량 자동 계산
+  // 금액 입력 시 수량 자동 계산 (정수)
   const handleAmountChange = (value: string) => {
     setAmount(value);
     const a = parseFloat(value) || 0;
     const p = parseFloat(price) || 0;
     if (p > 0 && a > 0) {
-      const q = parseFloat((a / p).toFixed(8));
-      setQuantity(q.toString());
+      const q = Math.floor(a / p);
+      setQuantity(q > 0 ? q.toString() : '');
     } else {
       setQuantity('');
     }
   };
 
-  // 수량 입력 시 금액 자동 계산
+  // 수량 입력 시 금액 자동 계산 (정수만 허용)
   const handleQuantityChange = (value: string) => {
-    setQuantity(value);
-    const q = parseFloat(value) || 0;
+    // 소수점 제거 (정수만 허용)
+    const intValue = value.includes('.') ? value.split('.')[0] : value;
+    setQuantity(intValue);
+    const q = parseInt(intValue) || 0;
     const p = parseFloat(price) || 0;
     if (p > 0 && q > 0) {
       const a = p * q;
@@ -551,8 +554,9 @@ const OrderForm = ({ stock, walletAddress, goldBalance, onOrderSuccess }: OrderF
               type="number"
               value={quantity}
               onChange={(e) => handleQuantityChange(e.target.value)}
-              placeholder="수량 입력"
-              step="any"
+              placeholder="수량 입력 (정수)"
+              step="1"
+              min="1"
               required
             />
             {quantity && (

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { createChart, ColorType, CandlestickSeries } from 'lightweight-charts';
+import { createChart, ColorType, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, CandlestickData, UTCTimestamp } from 'lightweight-charts';
 import { io, Socket } from 'socket.io-client';
 import { stockService } from '../services/stockService';
@@ -30,6 +30,7 @@ const TradingPage = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const [chartInterval, setChartInterval] = useState<'1m' | '1h' | '1d'>('1h');
   const [candles, setCandles] = useState<Candle[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
@@ -557,6 +558,25 @@ const TradingPage = () => {
         });
 
         candlestickSeriesRef.current = candlestickSeries;
+
+        // 거래량 시리즈 추가
+        const volumeSeries = chart.addSeries(HistogramSeries, {
+          color: '#26a69a',
+          priceFormat: {
+            type: 'volume',
+          },
+          priceScaleId: 'volume',
+        }) as ISeriesApi<'Histogram'>;
+
+        volumeSeries.priceScale().applyOptions({
+          scaleMargins: {
+            top: 0.8,
+            bottom: 0,
+          },
+        });
+
+        volumeSeriesRef.current = volumeSeries;
+
         chartInitializedRef.current = true;
         console.log('Chart initialized successfully');
         return true;
@@ -766,6 +786,27 @@ const TradingPage = () => {
 
             if (safeData.length > 0) {
               candlestickSeriesRef.current.setData(safeData);
+
+              // 거래량 데이터 설정
+              if (volumeSeriesRef.current) {
+                const volumeData = candles
+                  .filter((candle: Candle) => candle && candle.open_time)
+                  .map((candle: Candle) => {
+                    const t = Math.floor(new Date(candle.open_time).getTime() / 1000);
+                    const vol = typeof candle.volume === 'string' ? parseFloat(candle.volume) : (candle.volume || 0);
+                    const o = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
+                    const c = typeof candle.close_price === 'string' ? parseFloat(candle.close_price) : (candle.close_price || 0);
+                    return {
+                      time: t as UTCTimestamp,
+                      value: vol,
+                      color: c >= o ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)',
+                    };
+                  })
+                  .filter((d: any) => isFinite(d.time) && d.time > 0 && isFinite(d.value));
+                if (volumeData.length > 0) {
+                  volumeSeriesRef.current.setData(volumeData);
+                }
+              }
             } else {
               console.error('All data filtered out before setData call');
             }
@@ -894,6 +935,27 @@ const TradingPage = () => {
 
             if (safeData.length > 0) {
               candlestickSeriesRef.current.setData(safeData);
+
+              // 거래량 실시간 업데이트
+              if (volumeSeriesRef.current) {
+                const volumeData = candles
+                  .filter((candle: Candle) => candle && candle.open_time)
+                  .map((candle: Candle) => {
+                    const t = Math.floor(new Date(candle.open_time).getTime() / 1000);
+                    const vol = typeof candle.volume === 'string' ? parseFloat(candle.volume) : (candle.volume || 0);
+                    const o = typeof candle.open_price === 'string' ? parseFloat(candle.open_price) : (candle.open_price || 0);
+                    const c = typeof candle.close_price === 'string' ? parseFloat(candle.close_price) : (candle.close_price || 0);
+                    return {
+                      time: t as UTCTimestamp,
+                      value: vol,
+                      color: c >= o ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)',
+                    };
+                  })
+                  .filter((d: any) => isFinite(d.time) && d.time > 0 && isFinite(d.value));
+                if (volumeData.length > 0) {
+                  volumeSeriesRef.current.setData(volumeData);
+                }
+              }
             } else {
               console.warn('All realtime data filtered out before setData call');
             }

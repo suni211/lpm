@@ -12,6 +12,34 @@ export function setWebSocketInstance(ws: any) {
 
 // 주문 매칭 엔진
 export class TradingEngine {
+  // 가격 제한 조회 (상한가/하한가)
+  async getPriceLimit(stockId: string): Promise<{ lower: number; upper: number; prevClose: number }> {
+    // 주식 정보 조회 (exchange_type, initial_price)
+    const stocks = await query('SELECT exchange_type, initial_price FROM stocks WHERE id = ?', [stockId]);
+    if (stocks.length === 0) throw new Error('주식을 찾을 수 없습니다');
+    const stock = stocks[0];
+
+    const exchangeType = stock.exchange_type || 'CK';
+    const limitPercent = exchangeType === 'LK' ? 0.5 : 0.2;
+
+    // 전일 종가 조회 (candles_1d에서 어제 이전 가장 최근 종가)
+    const prevCandles = await query(
+      `SELECT close_price FROM candles_1d
+       WHERE stock_id = ? AND open_time < CURDATE()
+       ORDER BY open_time DESC LIMIT 1`,
+      [stockId]
+    );
+
+    const prevClose = prevCandles.length > 0
+      ? parseFloat(prevCandles[0].close_price)
+      : parseFloat(stock.initial_price);
+
+    const lower = Math.max(prevClose * (1 - limitPercent), 0.01);
+    const upper = prevClose * (1 + limitPercent);
+
+    return { lower: parseFloat(lower.toFixed(3)), upper: parseFloat(upper.toFixed(3)), prevClose };
+  }
+
   // 매수 주문 처리
   async processBuyOrder(
     walletId: string,
@@ -704,8 +732,15 @@ export class TradingEngine {
       ? parseFloat(low24hResult[0].low_price.toString())
       : finalPrice;
 
-    // 가격 하한선 적용 (최소 0.01G), 소수점 3자리
-    const clampedFinalPrice = Math.max(parseFloat(finalPrice.toFixed(3)), 0.01);
+    // 상한가/하한가 제한 적용
+    let clampedFinalPrice = parseFloat(finalPrice.toFixed(3));
+    try {
+      const priceLimit = await this.getPriceLimit(coinId);
+      clampedFinalPrice = Math.max(priceLimit.lower, Math.min(priceLimit.upper, clampedFinalPrice));
+    } catch (e) {
+      // 가격 제한 조회 실패 시 기본 하한선만 적용
+      clampedFinalPrice = Math.max(clampedFinalPrice, 0.01);
+    }
 
     // 주식 현재가, 24시간 변동률, 24시간 거래량, 최고가/최저가 업데이트
     await query(

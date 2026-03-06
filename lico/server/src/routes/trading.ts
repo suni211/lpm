@@ -7,10 +7,24 @@ import { isAuthenticated } from '../middleware/auth';
 
 const router = express.Router();
 
+// 장 시간 체크 (KST 15:00 ~ 01:00)
+function isMarketOpen(): boolean {
+  const now = new Date();
+  // KST = UTC + 9
+  const kstHour = (now.getUTCHours() + 9) % 24;
+  // 15:00 ~ 23:59 또는 00:00 ~ 00:59
+  return kstHour >= 15 || kstHour < 1;
+}
+
 // 주문 생성 (매수/매도) - 로그인 필요
 router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { wallet_address, stock_id, order_type, order_method, price, quantity, amount } = req.body;
+
+    // 장 시간 체크
+    if (!isMarketOpen()) {
+      return res.status(400).json({ error: '장 시간이 아닙니다 (15:00~01:00 KST)' });
+    }
 
     // 지갑 조회
     const wallets = await query('SELECT * FROM user_wallets WHERE wallet_address = ?', [
@@ -39,18 +53,35 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(400).json({ error: '유효하지 않은 가격입니다' });
     }
 
+    // 지정가 주문: 상한가/하한가 검증
+    if (order_method === 'LIMIT' && price) {
+      try {
+        const priceLimit = await tradingEngine.getPriceLimit(stock_id);
+        if (price < priceLimit.lower || price > priceLimit.upper) {
+          return res.status(400).json({
+            error: `가격이 허용 범위를 벗어났습니다 (하한가: ${priceLimit.lower.toLocaleString()} G, 상한가: ${priceLimit.upper.toLocaleString()} G)`
+          });
+        }
+      } catch (e) {
+        console.error('가격 제한 조회 오류:', e);
+      }
+    }
+
     // 금액 기반 주문 지원: amount가 있으면 quantity 계산
     let finalQuantity = quantity;
     if (amount && amount > 0) {
-      // 금액으로 수량 계산 (소수점 8자리까지)
-      finalQuantity = parseFloat((amount / orderPrice).toFixed(8));
+      // 금액으로 수량 계산 (정수로 내림)
+      finalQuantity = Math.floor(amount / orderPrice);
       if (finalQuantity <= 0) {
         return res.status(400).json({ error: '입력한 금액으로는 구매할 수 있는 수량이 없습니다' });
       }
     }
 
+    // 소수점 제거 (정수 단위만 거래 가능)
+    finalQuantity = Math.floor(finalQuantity);
+
     if (!finalQuantity || finalQuantity <= 0) {
-      return res.status(400).json({ error: '유효하지 않은 수량입니다' });
+      return res.status(400).json({ error: '최소 1주 이상 주문해야 합니다' });
     }
 
     // 창업자 매도 제한 체크

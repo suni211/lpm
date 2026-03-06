@@ -70,30 +70,6 @@ const Navbar = () => {
           </li>
           <li>
             <Link
-              to="/futures"
-              className={'navbar-link ' + (isActive('/futures') ? 'active' : '')}
-            >
-              선물
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/options"
-              className={'navbar-link ' + (isActive('/options') ? 'active' : '')}
-            >
-              옵션
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/swap"
-              className={'navbar-link ' + (isActive('/swap') ? 'active' : '')}
-            >
-              스왑
-            </Link>
-          </li>
-          <li>
-            <Link
               to="/deposit-withdraw"
               className={'navbar-link ' + (isActive('/deposit-withdraw') ? 'active' : '')}
             >
