@@ -11,10 +11,17 @@ interface DashboardPageProps {
 function DashboardPage({ userData }: DashboardPageProps) {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showInterestPopup, setShowInterestPopup] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchAccounts();
+    // 로그인 후 이자 안내 팝업 표시
+    const hasSeenPopup = sessionStorage.getItem('interestPopupShown');
+    if (!hasSeenPopup) {
+      setShowInterestPopup(true);
+      sessionStorage.setItem('interestPopupShown', 'true');
+    }
   }, []);
 
   const fetchAccounts = async () => {
@@ -220,6 +227,55 @@ function DashboardPage({ userData }: DashboardPageProps) {
           )}
         </div>
       </div>
+
+      {showInterestPopup && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setShowInterestPopup(false)}>
+          <div style={{
+            backgroundColor: '#1f2937',
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '400px',
+            width: '90%',
+            border: '2px solid rgba(102, 126, 234, 0.5)',
+            textAlign: 'center',
+            animation: 'fadeIn 0.3s ease-out'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏦</div>
+            <h2 style={{ color: '#fff', fontSize: '22px', marginBottom: '12px' }}>이자 안내</h2>
+            <p style={{
+              color: '#86efac',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              marginBottom: '8px'
+            }}>
+              계좌 입금 시, 이자 0.1% (월)
+            </p>
+            <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '24px' }}>
+              매월 계좌 잔액에 대해 0.1%의 이자가 지급됩니다.
+            </p>
+            <button
+              onClick={() => setShowInterestPopup(false)}
+              style={{
+                padding: '12px 32px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

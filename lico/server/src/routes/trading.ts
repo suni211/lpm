@@ -84,6 +84,35 @@ router.post('/order', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(400).json({ error: '최소 1주 이상 주문해야 합니다' });
     }
 
+    // 매수 주문: 한 종목 최대 10% 보유 제한
+    if (order_type === 'BUY') {
+      const circulatingSupply = typeof stock.circulating_supply === 'string'
+        ? parseFloat(stock.circulating_supply)
+        : (stock.circulating_supply || 0);
+      const maxHoldable = Math.floor(circulatingSupply * 0.1); // 유통량의 10%
+
+      // 현재 보유량 조회
+      const currentHoldings = await query(
+        'SELECT COALESCE(total_amount, 0) as total_amount FROM user_stock_balances WHERE wallet_id = ? AND stock_id = ?',
+        [wallet.id, stock_id]
+      );
+      const currentlyHeld = currentHoldings.length > 0
+        ? parseFloat(currentHoldings[0].total_amount || '0')
+        : 0;
+
+      if (currentlyHeld + finalQuantity > maxHoldable) {
+        const canBuyMore = Math.floor(maxHoldable - currentlyHeld);
+        if (canBuyMore <= 0) {
+          return res.status(400).json({
+            error: `이미 최대 보유 한도(유통량의 10%, ${maxHoldable}주)에 도달했습니다`
+          });
+        }
+        return res.status(400).json({
+          error: `한 종목당 최대 유통량의 10%(${maxHoldable}주)까지 보유 가능합니다. 현재 ${currentlyHeld}주 보유 중이므로 최대 ${canBuyMore}주 추가 구매 가능합니다.`
+        });
+      }
+    }
+
     // 창업자 매도 제한 체크
     if (order_type === 'SELL' && stock.founder_uuid) {
       if (wallet.minecraft_uuid === stock.founder_uuid) {

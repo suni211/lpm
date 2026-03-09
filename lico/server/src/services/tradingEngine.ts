@@ -62,6 +62,26 @@ export class TradingEngine {
     }
     const stock = stocks[0];
 
+    // 10% 보유 제한 체크
+    const circulatingSupply = typeof stock.circulating_supply === 'string'
+      ? parseFloat(stock.circulating_supply)
+      : (stock.circulating_supply || 0);
+    const maxHoldable = Math.floor(circulatingSupply * 0.1);
+
+    const currentHoldings = await query(
+      'SELECT COALESCE(total_amount, 0) as total_amount FROM user_stock_balances WHERE wallet_id = ? AND stock_id = ?',
+      [walletId, coinId]
+    );
+    const currentlyHeld = parseFloat(currentHoldings[0]?.total_amount || '0');
+
+    if (currentlyHeld + quantity > maxHoldable) {
+      const canBuyMore = Math.floor(maxHoldable - currentlyHeld);
+      if (canBuyMore <= 0) {
+        throw new Error(`이미 최대 보유 한도(유통량의 10%, ${maxHoldable}주)에 도달했습니다`);
+      }
+      throw new Error(`한 종목당 최대 유통량의 10%(${maxHoldable}주)까지 보유 가능합니다. 현재 ${currentlyHeld}주 보유 중이므로 최대 ${canBuyMore}주 추가 구매 가능합니다.`);
+    }
+
     const totalAmount = price! * quantity;
     const fee = Math.floor(totalAmount * 0.05);
     const totalRequired = totalAmount + fee;
@@ -201,6 +221,28 @@ export class TradingEngine {
     const currentPrice = typeof stock.current_price === 'string'
       ? parseFloat(stock.current_price)
       : (stock.current_price || 0);
+
+    // 10% 보유 제한 체크
+    const circulatingSupply = typeof stock.circulating_supply === 'string'
+      ? parseFloat(stock.circulating_supply)
+      : (stock.circulating_supply || 0);
+    const maxHoldable = Math.floor(circulatingSupply * 0.1);
+
+    const currentHoldings = await query(
+      'SELECT COALESCE(total_amount, 0) as total_amount FROM user_stock_balances WHERE wallet_id = ? AND stock_id = ?',
+      [walletId, coinId]
+    );
+    const currentlyHeld = parseFloat(currentHoldings[0]?.total_amount || '0');
+
+    if (currentlyHeld >= maxHoldable) {
+      throw new Error(`이미 최대 보유 한도(유통량의 10%, ${maxHoldable}주)에 도달했습니다`);
+    }
+
+    // 10% 한도까지만 구매 가능하도록 수량 제한
+    const maxBuyable = Math.floor(maxHoldable - currentlyHeld);
+    if (quantity > maxBuyable) {
+      quantity = maxBuyable;
+    }
 
     // 최저가 매도 주문들 조회 (유저 매도 주문, 자기 자신 제외)
     const sellOrders = await query(
