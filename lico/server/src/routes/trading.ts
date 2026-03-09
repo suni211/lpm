@@ -309,22 +309,24 @@ router.get('/orderbook/:stock_id', async (req: Request, res: Response) => {
     const { stock_id } = req.params;
     const { limit = 20 } = req.query;
 
-    // 매수 호가 (높은 가격 순)
+    // 매수 호가 (높은 가격 순) - AI 봇 주문 제외
     const buyOrders = await query(
       `SELECT price, SUM(remaining_quantity) as total_quantity, COUNT(*) as order_count
        FROM orders
        WHERE stock_id = ? AND order_type = 'BUY' AND status IN ('PENDING', 'PARTIAL')
+         AND wallet_id NOT IN (SELECT id FROM user_wallets WHERE minecraft_username = 'AI_BOT')
        GROUP BY price
        ORDER BY price DESC
        LIMIT ?`,
       [stock_id, Number(limit)]
     );
 
-    // 매도 호가 (낮은 가격 순)
+    // 매도 호가 (낮은 가격 순) - AI 봇 주문 제외
     const sellOrders = await query(
       `SELECT price, SUM(remaining_quantity) as total_quantity, COUNT(*) as order_count
        FROM orders
        WHERE stock_id = ? AND order_type = 'SELL' AND status IN ('PENDING', 'PARTIAL')
+         AND wallet_id NOT IN (SELECT id FROM user_wallets WHERE minecraft_username = 'AI_BOT')
        GROUP BY price
        ORDER BY price ASC
        LIMIT ?`,
